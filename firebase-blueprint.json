@@ -1,0 +1,245 @@
+{
+  "entities": {
+    "Campus": {
+      "title": "Campus",
+      "description": "A school campus",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "admin": { "type": "string" },
+        "teachers": { "type": "number" },
+        "students": { "type": "number" }
+      },
+      "required": ["name", "address"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "A campus administrator",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "campusId": { "type": "string" },
+        "campusName": { "type": "string" },
+        "avatar": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      },
+      "required": ["name", "email", "role", "campusId"]
+    },
+    "Teacher": {
+      "title": "Teacher",
+      "description": "A teacher",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "campusId": { "type": "string" },
+        "campusName": { "type": "string" },
+        "avatar": { "type": "string" },
+        "documentNumber": { "type": "string" },
+        "subject": { "type": "string" },
+        "secondarySubject": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "address": { "type": "string" },
+        "observation": { "type": "string" },
+        "professionalProfile": { "type": "string" }
+      },
+      "required": ["name", "email", "role", "campusId", "documentNumber", "subject", "phone"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "A student",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "campusId": { "type": "string" },
+        "campusName": { "type": "string" },
+        "avatar": { "type": "string" },
+        "class": { "type": "string" },
+        "section": { "type": "string" },
+        "rollNumber": { "type": "string" },
+        "schoolPeriod": { "type": "string" },
+        "schoolYear": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "documentNumber": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "observation": { "type": "string" },
+        "fatherName": { "type": "string" },
+        "fatherPhone": { "type": "string" },
+        "motherName": { "type": "string" },
+        "motherPhone": { "type": "string" }
+      },
+      "required": ["name", "email", "role", "campusId", "class", "section", "schoolYear", "documentNumber"]
+    },
+    "Grade": {
+      "title": "Grade",
+      "description": "A student grade",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "subject": { "type": "string" },
+        "class": { "type": "string" },
+        "assignmentTitle": { "type": "string" },
+        "score": { "type": "number" },
+        "percentage": { "type": "number" },
+        "date": { "type": "string" },
+        "comments": { "type": "string" },
+        "conceptCode": { "type": "string" }
+      },
+      "required": ["studentId", "subject", "class", "assignmentTitle", "score", "percentage", "date"]
+    },
+    "Communication": {
+      "title": "Communication",
+      "description": "A school communication",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileType": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "campusId": { "type": "string" },
+        "campusName": { "type": "string" },
+        "date": { "type": "string" },
+        "targetRoles": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["title", "description", "date"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A direct message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["senderId", "recipientId", "text", "timestamp"]
+    },
+    "ClassSchedule": {
+      "title": "ClassSchedule",
+      "description": "A class schedule entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "dayOfWeek": { "type": "number" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "subject": { "type": "string" },
+        "class": { "type": "string" },
+        "section": { "type": "string" }
+      },
+      "required": ["teacherId", "dayOfWeek", "startTime", "endTime", "subject", "class", "section"]
+    },
+    "Exam": {
+      "title": "Exam",
+      "description": "An exam",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "schoolYear": { "type": "number" },
+        "schoolPeriod": { "type": "string" },
+        "maxScore": { "type": "number" },
+        "status": { "type": "string" },
+        "campusId": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "subject": { "type": "string" },
+        "class": { "type": "string" },
+        "time": { "type": "string" }
+      },
+      "required": ["title", "startDate", "schoolYear", "schoolPeriod", "maxScore", "status"]
+    },
+    "TeacherCourseAssignment": {
+      "title": "TeacherCourseAssignment",
+      "description": "Assignment of a teacher to a course",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "subject": { "type": "string" },
+        "class": { "type": "string" },
+        "section": { "type": "string" },
+        "jornada": { "type": "string" },
+        "intensidadHoraria": { "type": "number" }
+      },
+      "required": ["teacherId", "subject", "class", "section"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "An attendance record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string" },
+        "count": { "type": "number" },
+        "period": { "type": "number" }
+      },
+      "required": ["studentId", "date", "status", "period"]
+    },
+    "SchoolEvent": {
+      "title": "SchoolEvent",
+      "description": "A school event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "campusId": { "type": "string" },
+        "description": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileType": { "type": "string" },
+        "fileUrl": { "type": "string" }
+      },
+      "required": ["title", "date"]
+    },
+    "UserSetting": {
+      "title": "UserSetting",
+      "description": "Global or user-specific settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "key": { "type": "string" },
+        "value": { "type": "object" }
+      },
+      "required": ["user_id", "key", "value"]
+    }
+  },
+  "firestore": {
+    "/campuses/{campusId}": { "schema": "Campus", "description": "School campuses" },
+    "/admins/{adminId}": { "schema": "AdminUser", "description": "Campus administrators" },
+    "/teachers/{teacherId}": { "schema": "Teacher", "description": "Teachers" },
+    "/students/{studentId}": { "schema": "Student", "description": "Students" },
+    "/grades/{gradeId}": { "schema": "Grade", "description": "Student grades" },
+    "/communications/{communicationId}": { "schema": "Communication", "description": "School communications" },
+    "/messages/{messageId}": { "schema": "Message", "description": "Direct messages" },
+    "/schedules/{scheduleId}": { "schema": "ClassSchedule", "description": "Class schedules" },
+    "/exams/{examId}": { "schema": "Exam", "description": "Exams" },
+    "/assignments/{assignmentId}": { "schema": "TeacherCourseAssignment", "description": "Teacher course assignments" },
+    "/attendance/{attendanceId}": { "schema": "AttendanceRecord", "description": "Attendance records" },
+    "/events/{eventId}": { "schema": "SchoolEvent", "description": "School events" },
+    "/user_settings/{settingId}": { "schema": "UserSetting", "description": "Global and user settings" }
+  }
+}

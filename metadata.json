@@ -1,0 +1,5 @@
+{
+  "name": "Remix: I.E A San Martin De Porres",
+  "description": "Una aplicación web completa para gestionar múltiples campus escolares, con funciones para administradores, profesores, estudiantes y padres. Cubre admisiones, finanzas, académicos y comunicación.",
+  "requestFramePermissions": []
+}
