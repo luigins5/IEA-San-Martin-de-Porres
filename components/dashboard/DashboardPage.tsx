@@ -18,10 +18,22 @@ const iconForFileType = (type: string) => {
 
 export const UpcomingEventsCard: React.FC<{ className?: string }> = ({ className = '' }) => {
     const { user } = useAuth();
-    const { events: allEvents } = useData();
+    const { events: allEvents, admins, teachers, students } = useData();
     
     const upcomingEvents = useMemo(() => {
         if (!user) return [];
+        
+        let campusId = user.campusId;
+        if (!campusId) {
+            if (user.role === UserRole.CAMPUS_ADMIN || user.role === UserRole.SUPER_ADMIN) {
+                campusId = admins.find(a => a.email === user.email)?.campusId;
+            } else if (user.role === UserRole.TEACHER) {
+                campusId = teachers.find(t => t.email === user.email)?.campusId;
+            } else if (user.role === UserRole.STUDENT) {
+                campusId = students.find(s => s.email === user.email)?.campusId;
+            }
+        }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -30,12 +42,12 @@ export const UpcomingEventsCard: React.FC<{ className?: string }> = ({ className
                 const evtDate = new Date(evt.date);
                 evtDate.setHours(0, 0, 0, 0);
                 const isFuture = evtDate >= today;
-                const campusMatch = user.role === UserRole.SUPER_ADMIN || !evt.campusId || evt.campusId === user.campusId;
+                const campusMatch = user.role === UserRole.SUPER_ADMIN || !evt.campusId || evt.campusId === campusId;
                 return isFuture && campusMatch;
             })
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
             .slice(0, 4);
-    }, [user, allEvents]);
+    }, [user, allEvents, admins, teachers, students]);
 
     return (
         <div className={`bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col h-full ${className}`}>
@@ -86,19 +98,31 @@ export const UpcomingEventsCard: React.FC<{ className?: string }> = ({ className
 
 const RecentCommunications: React.FC<{ className?: string }> = ({ className = '' }) => {
     const { user } = useAuth();
-    const { communications: allComms } = useData();
+    const { communications: allComms, admins, teachers, students } = useData();
     const [communications, setCommunications] = useState<Communication[]>([]);
 
     useEffect(() => {
         if (!user) return;
+        
+        let campusId = user.campusId;
+        if (!campusId) {
+            if (user.role === UserRole.CAMPUS_ADMIN || user.role === UserRole.SUPER_ADMIN) {
+                campusId = admins.find(a => a.email === user.email)?.campusId;
+            } else if (user.role === UserRole.TEACHER) {
+                campusId = teachers.find(t => t.email === user.email)?.campusId;
+            } else if (user.role === UserRole.STUDENT) {
+                campusId = students.find(s => s.email === user.email)?.campusId;
+            }
+        }
+
         const filteredComms = allComms.filter(comm => {
-            const campusMatch = user.role === UserRole.SUPER_ADMIN || !comm.campusId || comm.campusId === user.campusId;
+            const campusMatch = user.role === UserRole.SUPER_ADMIN || !comm.campusId || comm.campusId === campusId;
             if (!campusMatch) return false;
             if (user.role === UserRole.SUPER_ADMIN || user.role === UserRole.CAMPUS_ADMIN) return true;
             return !comm.targetRoles || comm.targetRoles.length === 0 || comm.targetRoles.includes(user.role);
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 3);
         setCommunications(filteredComms);
-    }, [user, allComms]);
+    }, [user, allComms, admins, teachers, students]);
 
     return (
         <div className={`bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col h-full ${className}`}>
@@ -158,18 +182,22 @@ const SuperAdminDashboard: React.FC = () => {
 
 const CampusAdminDashboard: React.FC = () => {
     const { user } = useAuth();
-    const { students, teachers, exams } = useData();
+    const { students, teachers, exams, admins } = useData();
     const [stats, setStats] = useState({ students: 0, staff: 0, upcomingExams: 0 });
 
     useEffect(() => {
-        if (!user?.campusId) return;
+        const adminRecord = admins.find(a => a.email === user?.email);
+        const campusId = adminRecord?.campusId || user?.campusId;
+        
+        if (!campusId) return;
+        
         const today = new Date().toISOString().split('T')[0];
-        const campusUpcomingExams = exams.filter(e => e.campusId === user.campusId && e.status === 'Programado' && e.startDate >= today);
-        const campusStudents = students.filter(s => s.campusId === user.campusId);
-        const campusTeachers = teachers.filter(t => t.campusId === user.campusId);
+        const campusUpcomingExams = exams.filter(e => e.campusId === campusId && e.status === 'Programado' && e.startDate >= today);
+        const campusStudents = students.filter(s => s.campusId === campusId);
+        const campusTeachers = teachers.filter(t => t.campusId === campusId);
 
         setStats({ students: campusStudents.length, staff: campusTeachers.length, upcomingExams: campusUpcomingExams.length });
-    }, [user, students, teachers, exams]);
+    }, [user, admins, students, teachers, exams]);
 
     return (
         <div className="space-y-6">
@@ -202,14 +230,15 @@ const TeacherDashboard: React.FC = () => {
 
     useEffect(() => {
         if (user) {
-            const currentTeacher = teachers.find(t => t.id === user.id);
+            const currentTeacher = teachers.find(t => t.email === user.email);
+            const teacherId = currentTeacher?.id || user.id;
             setTeacher(currentTeacher || null);
-            const teacherSchedules = schedules.filter(s => s.teacherId === user.id);
+            const teacherSchedules = schedules.filter(s => s.teacherId === teacherId);
             setMySchedules(teacherSchedules);
             const latest = communications.filter(c => !c.campusId || c.campusId === user.campusId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
             setLatestAnnouncement(latest || null);
             if (currentTeacher) {
-                const teacherExams = exams.filter(ex => ex.campusId === currentTeacher.campusId && (ex.teacherId === currentTeacher.id || !ex.teacherId));
+                const teacherExams = exams.filter(ex => ex.campusId === currentTeacher.campusId && (ex.teacherId === teacherId || !ex.teacherId));
                 setMyExams(teacherExams);
             }
         }

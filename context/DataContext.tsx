@@ -573,19 +573,44 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const updateUserAvatar = async (userId: string, role: UserRole, avatar: string) => {
         let col = '';
+        let docId = userId;
+        const email = auth.currentUser?.email;
+        
         switch(role) {
-            case UserRole.CAMPUS_ADMIN: col = 'admins'; break;
-            case UserRole.TEACHER: col = 'teachers'; break;
-            case UserRole.STUDENT: case UserRole.PARENT: col = 'students'; break;
+            case UserRole.CAMPUS_ADMIN: 
+                col = 'admins'; 
+                const admin = admins.find(a => a.email === email);
+                if (admin) docId = admin.id;
+                break;
+            case UserRole.TEACHER: 
+                col = 'teachers'; 
+                const teacher = teachers.find(t => t.email === email);
+                if (teacher) docId = teacher.id;
+                break;
+            case UserRole.STUDENT:
+                col = 'students'; 
+                const student = students.find(s => s.email === email);
+                if (student) docId = student.id;
+                break;
+            case UserRole.PARENT:
+            case UserRole.SUPER_ADMIN:
+            default:
+                col = '';
+                break;
         }
-        if (col) {
-            try {
-                await updateDoc(doc(db, col, userId), sanitizeData({ avatar }));
-                // Also update the user profile in 'users' collection
-                await updateDoc(doc(db, 'users', userId), sanitizeData({ avatar }));
-            } catch (error) {
-                handleFirestoreError(error, OperationType.UPDATE, `${col}/${userId}`);
+        try {
+            if (col) {
+                // Check if the document exists in the specific collection before updating
+                const docRef = doc(db, col, docId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    await updateDoc(docRef, sanitizeData({ avatar }));
+                }
             }
+            // Always update the user profile in 'users' collection
+            await updateDoc(doc(db, 'users', userId), sanitizeData({ avatar }));
+        } catch (error) {
+            handleFirestoreError(error, OperationType.UPDATE, col ? `${col}/${docId}` : `users/${userId}`);
         }
     };
 

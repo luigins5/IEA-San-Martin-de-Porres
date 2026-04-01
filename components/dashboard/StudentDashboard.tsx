@@ -8,11 +8,15 @@ import { useData } from '../../context/DataContext';
 
 const StudentDashboard: React.FC = () => {
     const { user } = useAuth();
-    const student = user as Student;
+    
+    const { students, grades: allGrades, exams: allExams, schedules: allSchedules, teachers } = useData();
 
-    const { grades: allGrades, exams: allExams, schedules: allSchedules, teachers } = useData();
+    // Find the actual student document by email to get the correct ID
+    const studentRecord = students.find(s => s.email === user?.email);
+    const studentId = studentRecord?.id || user?.id;
+    const student = { ...user, ...studentRecord } as Student;
 
-    const grades = allGrades.filter(g => g.studentId === student.id);
+    const grades = allGrades.filter(g => g.studentId === studentId);
     const exams = allExams.filter(e => e.campusId === student.campusId);
     const schedules = allSchedules.filter(s => s.class === student.class && s.section === student.section);
     
