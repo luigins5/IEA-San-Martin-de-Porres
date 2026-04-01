@@ -5,6 +5,8 @@ import { auth, db } from '../firebase';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut, 
   onAuthStateChanged, 
   sendPasswordResetEmail 
@@ -16,6 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string, role: UserRole) => Promise<void>;
+  loginWithGoogle: (role: UserRole) => Promise<void>;
   logout: () => void;
   sendPasswordReset: (email: string) => Promise<void>;
 }
@@ -65,6 +68,36 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
 
     return () => unsubscribe();
   }, []);
+
+  const loginWithGoogle = async (role: UserRole): Promise<void> => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const firebaseUser = userCredential.user;
+
+      // Fetch user profile from Firestore
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data() as User;
+        setUser(userData);
+      } else {
+        const defaultUser: User = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
+          email: firebaseUser.email || '',
+          role: role,
+          avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`
+        };
+        await setDoc(userDocRef, defaultUser);
+        setUser(defaultUser);
+      }
+    } catch (error: any) {
+      console.error("Error en login con Google:", error);
+      throw new Error('Error al iniciar sesión con Google.');
+    }
+  };
 
   const login = async (email: string, password: string, role: UserRole): Promise<void> => {
     try {
@@ -141,7 +174,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout, sendPasswordReset }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, loginWithGoogle, logout, sendPasswordReset }}>
       {children}
     </AuthContext.Provider>
   );

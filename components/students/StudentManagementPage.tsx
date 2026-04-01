@@ -206,7 +206,7 @@ const StudentFormModal: React.FC<{
         class: studentToEdit?.class || '',
         section: studentToEdit?.section || '',
         status: studentToEdit?.status || 'active',
-        campusId: studentToEdit?.campusId || (user?.role === UserRole.CAMPUS_ADMIN ? user.campusId : ''),
+        campusId: studentToEdit?.campusId || (user?.role === UserRole.CAMPUS_ADMIN ? (user.campusId || '') : ''),
         schoolPeriod: studentToEdit?.schoolPeriod || 'A',
         schoolYear: studentToEdit?.schoolYear || new Date().getFullYear(),
     });

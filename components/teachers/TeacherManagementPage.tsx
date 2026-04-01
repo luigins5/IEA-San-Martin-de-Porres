@@ -237,7 +237,7 @@ const TeacherFormModal: React.FC<{
         email: teacherToEdit?.email || '',
         phone: teacherToEdit?.phone || '',
         subject: teacherToEdit?.subject || '',
-        campusId: teacherToEdit?.campusId || (user?.role === UserRole.CAMPUS_ADMIN ? user.campusId : ''),
+        campusId: teacherToEdit?.campusId || (user?.role === UserRole.CAMPUS_ADMIN ? (user.campusId || '') : ''),
         status: teacherToEdit?.status || 'active',
     });
 

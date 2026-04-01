@@ -180,7 +180,7 @@ const ExamsManagementPage: React.FC = () => {
                 const newExamData = {
                     ...examData,
                     status: 'Programado' as Exam['status'],
-                    campusId: user?.campusId,
+                    campusId: user?.campusId || '',
                 };
                 await addExam(newExamData);
             }

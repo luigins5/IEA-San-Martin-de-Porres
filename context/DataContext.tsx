@@ -299,16 +299,26 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
 
     // Generic CRUD Mappings using Firestore
+    const sanitizeData = (data: any) => {
+        const sanitized = { ...data };
+        Object.keys(sanitized).forEach(key => {
+            if (sanitized[key] === undefined) {
+                delete sanitized[key];
+            }
+        });
+        return sanitized;
+    };
+
     const addCampus = async (data: any) => {
         try {
-            await addDoc(collection(db, 'campuses'), data);
+            await addDoc(collection(db, 'campuses'), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'campuses');
         }
     };
     const updateCampus = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'campuses', id), data);
+            await updateDoc(doc(db, 'campuses', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `campuses/${id}`);
         }
@@ -323,14 +333,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     
     const addAdmin = async (data: any) => {
         try {
-            await addDoc(collection(db, 'admins'), { ...data, role: UserRole.CAMPUS_ADMIN });
+            await addDoc(collection(db, 'admins'), sanitizeData({ ...data, role: UserRole.CAMPUS_ADMIN }));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'admins');
         }
     };
     const updateAdmin = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'admins', id), data);
+            await updateDoc(doc(db, 'admins', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `admins/${id}`);
         }
@@ -345,14 +355,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addTeacher = async (data: any) => {
         try {
-            await addDoc(collection(db, 'teachers'), { ...data, role: UserRole.TEACHER });
+            await addDoc(collection(db, 'teachers'), sanitizeData({ ...data, role: UserRole.TEACHER }));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'teachers');
         }
     };
     const updateTeacher = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'teachers', id), data);
+            await updateDoc(doc(db, 'teachers', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `teachers/${id}`);
         }
@@ -367,14 +377,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addStudent = async (data: any) => {
         try {
-            await addDoc(collection(db, 'students'), { ...data, role: UserRole.STUDENT });
+            await addDoc(collection(db, 'students'), sanitizeData({ ...data, role: UserRole.STUDENT }));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'students');
         }
     };
     const updateStudent = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'students', id), data);
+            await updateDoc(doc(db, 'students', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `students/${id}`);
         }
@@ -389,14 +399,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addGrade = async (data: any) => {
         try {
-            await addDoc(collection(db, 'grades'), data);
+            await addDoc(collection(db, 'grades'), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'grades');
         }
     };
     const updateGrade = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'grades', id), data);
+            await updateDoc(doc(db, 'grades', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `grades/${id}`);
         }
@@ -411,14 +421,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addCommunication = async (data: any) => {
         try {
-            await addDoc(collection(db, 'communications'), { ...data, date: new Date().toISOString() });
+            await addDoc(collection(db, 'communications'), sanitizeData({ ...data, date: new Date().toISOString() }));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'communications');
         }
     };
     const updateCommunication = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'communications', id), data);
+            await updateDoc(doc(db, 'communications', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `communications/${id}`);
         }
@@ -433,14 +443,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addMessage = async (data: any) => {
         try {
-            await addDoc(collection(db, 'messages'), { ...data, timestamp: new Date().toISOString(), read: false });
+            await addDoc(collection(db, 'messages'), sanitizeData({ ...data, timestamp: new Date().toISOString(), read: false }));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'messages');
         }
     };
     const updateMessage = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'messages', id), data);
+            await updateDoc(doc(db, 'messages', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `messages/${id}`);
         }
@@ -455,14 +465,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addEvent = async (data: any) => {
         try {
-            await addDoc(collection(db, 'events'), data);
+            await addDoc(collection(db, 'events'), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'events');
         }
     };
     const updateEvent = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'events', id), data);
+            await updateDoc(doc(db, 'events', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `events/${id}`);
         }
@@ -477,14 +487,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addExam = async (data: any) => {
         try {
-            await addDoc(collection(db, 'exams'), data);
+            await addDoc(collection(db, 'exams'), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'exams');
         }
     };
     const updateExam = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'exams', id), data);
+            await updateDoc(doc(db, 'exams', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `exams/${id}`);
         }
@@ -499,14 +509,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     
     const addSchedule = async (data: any) => {
         try {
-            await addDoc(collection(db, 'schedules'), data);
+            await addDoc(collection(db, 'schedules'), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'schedules');
         }
     };
     const updateSchedule = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'schedules', id), data);
+            await updateDoc(doc(db, 'schedules', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `schedules/${id}`);
         }
@@ -521,14 +531,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     
     const addAssignment = async (data: any) => {
         try {
-            await addDoc(collection(db, 'assignments'), data);
+            await addDoc(collection(db, 'assignments'), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'assignments');
         }
     };
     const updateAssignment = async (id: string, data: any) => {
         try {
-            await updateDoc(doc(db, 'assignments', id), data);
+            await updateDoc(doc(db, 'assignments', id), sanitizeData(data));
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `assignments/${id}`);
         }
@@ -544,9 +554,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const saveAttendance = async (data: any) => {
         try {
             if (data.id) {
-                await updateDoc(doc(db, 'attendance', data.id), data);
+                await updateDoc(doc(db, 'attendance', data.id), sanitizeData(data));
             } else {
-                await addDoc(collection(db, 'attendance'), data);
+                await addDoc(collection(db, 'attendance'), sanitizeData(data));
             }
         } catch (error) {
             handleFirestoreError(error, OperationType.WRITE, 'attendance');
@@ -570,9 +580,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
         if (col) {
             try {
-                await updateDoc(doc(db, col, userId), { avatar });
+                await updateDoc(doc(db, col, userId), sanitizeData({ avatar }));
                 // Also update the user profile in 'users' collection
-                await updateDoc(doc(db, 'users', userId), { avatar });
+                await updateDoc(doc(db, 'users', userId), sanitizeData({ avatar }));
             } catch (error) {
                 handleFirestoreError(error, OperationType.UPDATE, `${col}/${userId}`);
             }
@@ -591,7 +601,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
         if (col) {
             try {
-                await updateDoc(doc(db, col, userId), { tempPassword: tempPass });
+                await updateDoc(doc(db, col, userId), sanitizeData({ tempPassword: tempPass }));
             } catch (error) {
                 handleFirestoreError(error, OperationType.UPDATE, `${col}/${userId}`);
             }
@@ -615,7 +625,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const setUserSetting = async (userId: string, key: string, value: any) => {
         try {
-            await setDoc(doc(db, 'user_settings', userId), { user_id: userId, key, value }, { merge: true });
+            await setDoc(doc(db, 'user_settings', userId), sanitizeData({ user_id: userId, key, value }), { merge: true });
         } catch (error) {
             handleFirestoreError(error, OperationType.WRITE, `user_settings/${userId}`);
         }

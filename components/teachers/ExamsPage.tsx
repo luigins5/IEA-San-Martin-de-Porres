@@ -196,7 +196,7 @@ const TeacherExamsPage: React.FC = () => {
                 const newExamData = {
                     ...examData,
                     status: 'Programado' as Exam['status'],
-                    campusId: user?.campusId,
+                    campusId: user?.campusId || '',
                     teacherId: user?.id,
                 };
                 await addExam(newExamData);
