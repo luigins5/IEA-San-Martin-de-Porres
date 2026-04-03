@@ -367,6 +367,19 @@ const DeleteConfirmationModal: React.FC<{ teacher: Teacher; onClose: () => void;
     </div>
 );
 
+const DeleteAssignmentConfirmationModal: React.FC<{ assignment: TeacherCourseAssignment; onClose: () => void; onConfirm: () => void; }> = ({ assignment, onClose, onConfirm }) => (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
+        <Card className="w-full max-w-md">
+            <h2 className="text-lg font-bold mb-2 text-gray-800 dark:text-white">Eliminar Carga Académica</h2>
+            <p className="mb-6 text-sm text-gray-600 dark:text-gray-300">¿Está seguro de que desea eliminar la asignación de <span className="font-bold text-gray-900 dark:text-white">{assignment.subject}</span> para el curso <span className="font-bold text-gray-900 dark:text-white">{assignment.class} - {assignment.section}</span>?</p>
+            <div className="flex justify-end space-x-3">
+                <button onClick={onClose} className="bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg text-sm hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button onClick={onConfirm} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm hover:bg-red-700 shadow-sm transition-colors">Eliminar</button>
+            </div>
+        </Card>
+    </div>
+);
+
 const ResetPasswordConfirmationModal: React.FC<{ user: User; onClose: () => void; onConfirm: () => void; }> = ({ user, onClose, onConfirm }) => (
     <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
         <Card className="w-full max-w-md">
@@ -394,6 +407,7 @@ const TeacherManagementPage: React.FC = () => {
     const [isBulkOpen, setIsBulkOpen] = useState(false);
     const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
     const [deletingTeacher, setDeletingTeacher] = useState<Teacher | null>(null);
+    const [deletingAssignment, setDeletingAssignment] = useState<TeacherCourseAssignment | null>(null);
     const [resettingPasswordTeacher, setResettingPasswordTeacher] = useState<Teacher | null>(null);
     const [assigningPassTeacher, setAssigningPassTeacher] = useState<Teacher | null>(null);
     const [assigningTeacher, setAssigningTeacher] = useState<Teacher | null>(null);
@@ -431,14 +445,15 @@ const TeacherManagementPage: React.FC = () => {
         }
     };
 
-    const handleDeleteAssignment = async (assignmentId: string) => {
-        if (window.confirm('¿Está seguro de eliminar esta asignación?')) {
+    const handleDeleteAssignment = async () => {
+        if (deletingAssignment) {
             try {
-                await deleteAssignment(assignmentId);
+                await deleteAssignment(deletingAssignment.id);
                 showNotification('Carga académica eliminada', 'success');
             } catch (e) {
                 showNotification('Error al eliminar carga académica', 'error');
             }
+            setDeletingAssignment(null);
         }
     };
     
@@ -739,7 +754,7 @@ const TeacherManagementPage: React.FC = () => {
                                                                                         <button onClick={() => handleEditAssignment(assignment)} className="p-1.5 text-slate-500 hover:text-amber-600 transition-colors" title="Editar">
                                                                                             <EditIcon className="w-4 h-4" />
                                                                                         </button>
-                                                                                        <button onClick={() => handleDeleteAssignment(assignment.id)} className="p-1.5 text-slate-500 hover:text-rose-600 transition-colors" title="Eliminar">
+                                                                                        <button onClick={() => setDeletingAssignment(assignment)} className="p-1.5 text-slate-500 hover:text-rose-600 transition-colors" title="Eliminar">
                                                                                             <TrashIcon className="w-4 h-4" />
                                                                                         </button>
                                                                                     </div>
@@ -780,6 +795,7 @@ const TeacherManagementPage: React.FC = () => {
         
         {isModalOpen && <TeacherFormModal onClose={() => setIsModalOpen(false)} onSave={handleSaveTeacher} teacherToEdit={editingTeacher} user={user} campuses={campuses} />}
         {deletingTeacher && <DeleteConfirmationModal teacher={deletingTeacher} onClose={() => setDeletingTeacher(null)} onConfirm={handleDeleteTeacher} />}
+        {deletingAssignment && <DeleteAssignmentConfirmationModal assignment={deletingAssignment} onClose={() => setDeletingAssignment(null)} onConfirm={handleDeleteAssignment} />}
         {resettingPasswordTeacher && <ResetPasswordConfirmationModal user={resettingPasswordTeacher} onClose={() => setResettingPasswordTeacher(null)} onConfirm={handleSendResetLink} />}
         {assigningPassTeacher && <TempPasswordModal user={assigningPassTeacher} onClose={() => setAssigningPassTeacher(null)} onSave={handleAssignTempPass} />}
         {assigningTeacher && <AssignmentModal teacher={assigningTeacher} onClose={() => setAssigningTeacher(null)} onSave={handleSaveAssignment} />}

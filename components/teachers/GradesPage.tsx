@@ -440,6 +440,11 @@ const GradesPage: React.FC = () => {
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
+    
+    // Search and Filters
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterClass, setFilterClass] = useState('');
+    const [filterSection, setFilterSection] = useState('');
 
     useEffect(() => {
         let settings: any = null;
@@ -478,9 +483,26 @@ const GradesPage: React.FC = () => {
     // Explicitly typed return
     const myStudents = useMemo<Student[]>(() => {
         if (!user) return [];
-        const teacherAssignments = assignments.filter((a: TeacherCourseAssignment) => a.teacherId === user.id);
-        const myClasses = new Set(teacherAssignments.map((a: TeacherCourseAssignment) => `${a.class}-${a.section}`));
-        const filteredStudents = allStudents.filter((s: Student) => myClasses.has(`${s.class}-${s.section}`));
+        
+        let filteredStudents: Student[] = [];
+
+        if (user.role === UserRole.SUPER_ADMIN) {
+            filteredStudents = allStudents.filter((s: Student) => s.status === 'active');
+        } else if (user.role === UserRole.CAMPUS_ADMIN) {
+            filteredStudents = allStudents.filter((s: Student) => s.campusId === user.campusId && s.status === 'active');
+        } else {
+            const teacherAssignments = assignments.filter((a: TeacherCourseAssignment) => a.teacherId === user.id);
+            const myClasses = new Set(teacherAssignments.map((a: TeacherCourseAssignment) => `${a.class}-${a.section}`));
+            filteredStudents = allStudents.filter((s: Student) => myClasses.has(`${s.class}-${s.section}`) && s.status === 'active');
+        }
+        
+        // Apply search and filters
+        filteredStudents = filteredStudents.filter(s => {
+            const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.documentNumber.includes(searchQuery);
+            const matchesClass = filterClass ? s.class === filterClass : true;
+            const matchesSection = filterSection ? s.section === filterSection : true;
+            return matchesSearch && matchesClass && matchesSection;
+        });
         
         return filteredStudents.sort((a: Student, b: Student) => {
             const partsA = a.name.split(' ');
@@ -499,23 +521,29 @@ const GradesPage: React.FC = () => {
     }, [user, allStudents, assignments]);
 
     useEffect(() => {
-        const myStudentIds = new Set(myStudents.map((s: Student) => s.id));
-        const relevantGrades = grades.filter((g) => myStudentIds.has(g.studentId));
-        const periodsWithGrades = new Set(relevantGrades.map((g) => getPeriodFromDate(g.date, numberOfPeriods)));
-        const sortedPeriods = Array.from(periodsWithGrades).sort((a, b) => a - b);
+        const periods = Array.from({ length: numberOfPeriods }, (_, i) => i + 1);
+        setExistingPeriods(periods);
         
-        setExistingPeriods(sortedPeriods);
-        if (sortedPeriods.length > 0 && !activePeriod) {
-            setActivePeriod(sortedPeriods[0]);
-        } else if (sortedPeriods.length > 0 && activePeriod && !sortedPeriods.includes(activePeriod)) {
-            setActivePeriod(sortedPeriods[0]);
-        } else if (sortedPeriods.length === 0) {
-            setActivePeriod(null);
+        if (!activePeriod) {
+            const today = new Date().toISOString().split('T')[0];
+            const currentPeriod = getPeriodFromDate(today, numberOfPeriods);
+            setActivePeriod(currentPeriod);
         }
-    }, [grades, myStudents, activePeriod, numberOfPeriods]);
+    }, [numberOfPeriods, activePeriod]);
 
-    const teacher = user as Teacher;
-    const teacherSubjects = [teacher.subject, teacher.secondarySubject].filter(Boolean) as string[];
+    const SUBJECTS_LIST = [
+        'Matemáticas', 'Español', 'Ciencias Naturales', 'Ciencias Sociales', 
+        'Inglés', 'Tecnología e Informática', 'Educación Física', 'Artística', 
+        'Ética y Valores', 'Religión', 'Filosofía', 'Química', 'Física', 'Economía'
+    ];
+
+    const teacherSubjects = useMemo(() => {
+        if (user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) {
+            return SUBJECTS_LIST;
+        }
+        const teacher = user as Teacher;
+        return [teacher?.subject, teacher?.secondarySubject].filter(Boolean) as string[];
+    }, [user]);
 
     const calculatePeriodAverage = (studentId: string, period: number, numberOfPeriods: number): { grade: number; totalPercentage: number } | null => {
         const studentGradesForPeriod = grades.filter((g: Grade) => g.studentId === studentId && getPeriodFromDate(g.date, numberOfPeriods) === period);
@@ -631,6 +659,12 @@ const GradesPage: React.FC = () => {
         document.body.removeChild(link);
     };
 
+    const gradeOptions = [
+        { category: 'Preescolar', grades: ['Pre jardín', 'Jardín', 'Transición'] },
+        { category: 'Primaria', grades: ['1ro', '2do', '3ro', '4to', '5to'] },
+        { category: 'Secundaria', grades: ['6', '7', '8', '9', '10', '11'] }
+    ];
+
     return (
         <>
             {notification && (
@@ -641,11 +675,45 @@ const GradesPage: React.FC = () => {
             <Card>
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <h2 className="text-2xl font-bold dark:text-white">Resumen de Calificaciones</h2>
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setIsBulkUploadModalOpen(true)} className="bg-secondary text-primary-text font-bold py-2 px-4 rounded flex items-center gap-2 dark:text-gray-900">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto flex-wrap">
+                        <div className="relative group flex-grow">
+                            <input 
+                                type="text" 
+                                placeholder="Buscar estudiante..." 
+                                value={searchQuery} 
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="w-full md:w-64 pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                            />
+                            <div className="absolute left-3 top-2.5 text-slate-400 group-focus-within:text-primary transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <select 
+                            value={filterClass} 
+                            onChange={e => setFilterClass(e.target.value)}
+                            className="py-2.5 px-3 rounded-lg border border-slate-200 text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                        >
+                            <option value="">Todos los grados</option>
+                            {gradeOptions.map(cat => (
+                                <optgroup key={cat.category} label={cat.category}>
+                                    {cat.grades.map(g => <option key={g} value={g}>{g}</option>)}
+                                </optgroup>
+                            ))}
+                        </select>
+                        <select 
+                            value={filterSection} 
+                            onChange={e => setFilterSection(e.target.value)}
+                            className="py-2.5 px-3 rounded-lg border border-slate-200 text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                        >
+                            <option value="">Todas las secciones</option>
+                            {['A', 'B', 'C', '1', '2', '3'].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <button onClick={() => setIsBulkUploadModalOpen(true)} className="bg-secondary text-primary-text font-bold py-2 px-4 rounded flex items-center justify-center gap-2 dark:text-gray-900">
                             <UploadIcon className="w-5 h-5"/> Carga Masiva
                         </button>
-                        <button onClick={handleExportExcel} disabled={!activePeriod} className="bg-green-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 disabled:bg-gray-400">
+                        <button onClick={handleExportExcel} disabled={!activePeriod} className="bg-green-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2 disabled:bg-gray-400">
                             <DownloadIcon className="w-5 h-5"/> Exportar (Excel)
                         </button>
                     </div>
