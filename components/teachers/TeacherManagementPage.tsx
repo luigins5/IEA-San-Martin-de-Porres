@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Teacher, UserRole, User, Campus } from '../../types';
+import { Teacher, UserRole, User, Campus, TeacherCourseAssignment } from '../../types';
 import Card from '../ui/Card';
 import { useAuth } from '../../context/AuthContext';
 import { Action, hasPermission } from '../../utils/permissions';
@@ -388,7 +388,7 @@ const ResetPasswordConfirmationModal: React.FC<{ user: User; onClose: () => void
 
 const TeacherManagementPage: React.FC = () => {
     const { user, sendPasswordReset } = useAuth();
-    const { teachers, addTeacher, updateTeacher, deleteTeacher, assignments, addAssignment, setHomeroomAssignments, assignTemporaryPassword, campuses } = useData();
+    const { teachers, addTeacher, updateTeacher, deleteTeacher, assignments, addAssignment, updateAssignment, deleteAssignment, setHomeroomAssignments, assignTemporaryPassword, campuses } = useData();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBulkOpen, setIsBulkOpen] = useState(false);
@@ -399,6 +399,48 @@ const TeacherManagementPage: React.FC = () => {
     const [assigningTeacher, setAssigningTeacher] = useState<Teacher | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+    
+    const [expandedTeacherId, setExpandedTeacherId] = useState<string | null>(null);
+    const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+    const [editAssignmentData, setEditAssignmentData] = useState<Partial<TeacherCourseAssignment>>({});
+
+    const toggleExpand = (teacherId: string) => {
+        if (expandedTeacherId === teacherId) {
+            setExpandedTeacherId(null);
+            setEditingAssignmentId(null);
+        } else {
+            setExpandedTeacherId(teacherId);
+            setEditingAssignmentId(null);
+        }
+    };
+
+    const handleEditAssignment = (assignment: TeacherCourseAssignment) => {
+        setEditingAssignmentId(assignment.id);
+        setEditAssignmentData(assignment);
+    };
+
+    const handleSaveEditAssignment = async () => {
+        if (editingAssignmentId && editAssignmentData) {
+            try {
+                await updateAssignment(editingAssignmentId, editAssignmentData);
+                showNotification('Carga académica actualizada', 'success');
+                setEditingAssignmentId(null);
+            } catch (e) {
+                showNotification('Error al actualizar carga académica', 'error');
+            }
+        }
+    };
+
+    const handleDeleteAssignment = async (assignmentId: string) => {
+        if (window.confirm('¿Está seguro de eliminar esta asignación?')) {
+            try {
+                await deleteAssignment(assignmentId);
+                showNotification('Carga académica eliminada', 'success');
+            } catch (e) {
+                showNotification('Error al eliminar carga académica', 'error');
+            }
+        }
+    };
     
     const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
         setNotification({ message, type });
@@ -563,6 +605,7 @@ const TeacherManagementPage: React.FC = () => {
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 font-semibold tracking-wider dark:bg-slate-800 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
                             <tr>
+                                <th scope="col" className="px-6 py-4 w-10"></th>
                                 <th scope="col" className="px-6 py-4">Nombre Completo</th>
                                 <th scope="col" className="px-6 py-4">Asignatura</th>
                                 {isSuperAdmin && <th scope="col" className="px-6 py-4">Sede</th>}
@@ -575,8 +618,17 @@ const TeacherManagementPage: React.FC = () => {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {teachersForView.map((teacher) => {
                                 const assignedCoursesCount = assignments.filter(a => a.teacherId === teacher.id).length;
+                                const teacherAssignments = assignments.filter(a => a.teacherId === teacher.id);
                                 return (
-                                <tr key={teacher.id} className="bg-white hover:bg-slate-50/80 transition-colors dark:bg-slate-900 dark:hover:bg-slate-800/50">
+                                <React.Fragment key={teacher.id}>
+                                <tr className="bg-white hover:bg-slate-50/80 transition-colors dark:bg-slate-900 dark:hover:bg-slate-800/50">
+                                    <td className="px-6 py-4 text-center">
+                                        <button onClick={() => toggleExpand(teacher.id)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transform transition-transform ${expandedTeacherId === teacher.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                    </td>
                                     <td className="px-6 py-4 font-medium text-slate-900 dark:text-white whitespace-nowrap">
                                         <div className="flex items-center gap-3">
                                             <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -621,6 +673,92 @@ const TeacherManagementPage: React.FC = () => {
                                         )}
                                     </td>
                                 </tr>
+                                {expandedTeacherId === teacher.id && (
+                                    <tr className="bg-slate-50/50 dark:bg-slate-800/20">
+                                        <td colSpan={isSuperAdmin ? 8 : 7} className="px-6 py-4">
+                                            <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                                                <h4 className="font-bold text-slate-800 dark:text-white mb-4">Carga Académica</h4>
+                                                {teacherAssignments.length > 0 ? (
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-sm text-left">
+                                                            <thead className="text-xs text-slate-500 uppercase bg-slate-100 dark:bg-slate-700 dark:text-slate-400">
+                                                                <tr>
+                                                                    <th className="px-4 py-2">Asignatura</th>
+                                                                    <th className="px-4 py-2">Grado</th>
+                                                                    <th className="px-4 py-2">Grupo</th>
+                                                                    <th className="px-4 py-2">Jornada</th>
+                                                                    <th className="px-4 py-2 text-center">Intensidad (Hrs)</th>
+                                                                    <th className="px-4 py-2 text-center">Acciones</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {teacherAssignments.map(assignment => (
+                                                                    <tr key={assignment.id} className="border-b dark:border-slate-700">
+                                                                        {editingAssignmentId === assignment.id ? (
+                                                                            <>
+                                                                                <td className="px-4 py-2">
+                                                                                    <input type="text" value={editAssignmentData.subject || ''} onChange={e => setEditAssignmentData({...editAssignmentData, subject: e.target.value})} className="w-full p-1 border rounded dark:bg-slate-700 dark:border-slate-600" />
+                                                                                </td>
+                                                                                <td className="px-4 py-2">
+                                                                                    <input type="text" value={editAssignmentData.class || ''} onChange={e => setEditAssignmentData({...editAssignmentData, class: e.target.value})} className="w-full p-1 border rounded dark:bg-slate-700 dark:border-slate-600" />
+                                                                                </td>
+                                                                                <td className="px-4 py-2">
+                                                                                    <input type="text" value={editAssignmentData.section || ''} onChange={e => setEditAssignmentData({...editAssignmentData, section: e.target.value})} className="w-full p-1 border rounded dark:bg-slate-700 dark:border-slate-600" />
+                                                                                </td>
+                                                                                <td className="px-4 py-2">
+                                                                                    <select value={editAssignmentData.jornada || ''} onChange={e => setEditAssignmentData({...editAssignmentData, jornada: e.target.value as any})} className="w-full p-1 border rounded dark:bg-slate-700 dark:border-slate-600">
+                                                                                        <option value="Diurno">Diurno</option>
+                                                                                        <option value="Tarde">Tarde</option>
+                                                                                        <option value="Nocturno">Nocturno</option>
+                                                                                        <option value="Fin de semana">Fin de semana</option>
+                                                                                    </select>
+                                                                                </td>
+                                                                                <td className="px-4 py-2">
+                                                                                    <input type="number" value={editAssignmentData.intensidadHoraria || 0} onChange={e => setEditAssignmentData({...editAssignmentData, intensidadHoraria: Number(e.target.value)})} className="w-full p-1 border rounded dark:bg-slate-700 dark:border-slate-600 text-center" />
+                                                                                </td>
+                                                                                <td className="px-4 py-2 text-center">
+                                                                                    <div className="flex justify-center gap-2">
+                                                                                        <button onClick={handleSaveEditAssignment} className="p-1.5 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400" title="Guardar">
+                                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                                                        </button>
+                                                                                        <button onClick={() => setEditingAssignmentId(null)} className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-400" title="Cancelar">
+                                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </td>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <td className="px-4 py-2">{assignment.subject}</td>
+                                                                                <td className="px-4 py-2">{assignment.class}</td>
+                                                                                <td className="px-4 py-2">{assignment.section}</td>
+                                                                                <td className="px-4 py-2">{assignment.jornada || 'Diurno'}</td>
+                                                                                <td className="px-4 py-2 text-center">{assignment.intensidadHoraria || 4}</td>
+                                                                                <td className="px-4 py-2 text-center">
+                                                                                    <div className="flex justify-center gap-2">
+                                                                                        <button onClick={() => handleEditAssignment(assignment)} className="p-1.5 text-slate-500 hover:text-amber-600 transition-colors" title="Editar">
+                                                                                            <EditIcon className="w-4 h-4" />
+                                                                                        </button>
+                                                                                        <button onClick={() => handleDeleteAssignment(assignment.id)} className="p-1.5 text-slate-500 hover:text-rose-600 transition-colors" title="Eliminar">
+                                                                                            <TrashIcon className="w-4 h-4" />
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </td>
+                                                                            </>
+                                                                        )}
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm text-slate-500 dark:text-slate-400">Este profesor no tiene carga académica asignada.</p>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                                </React.Fragment>
                             )})}
                             {teachersForView.length === 0 && (
                                 <tr>
