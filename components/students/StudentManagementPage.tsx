@@ -386,6 +386,8 @@ const StudentManagementPage: React.FC = () => {
     const [assigningPassStudent, setAssigningPassStudent] = useState<Student | null>(null);
     
     const [searchQuery, setSearchQuery] = useState('');
+    const [filterClass, setFilterClass] = useState('');
+    const [filterSection, setFilterSection] = useState('');
     const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
 
     const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
@@ -396,8 +398,13 @@ const StudentManagementPage: React.FC = () => {
     const filteredStudents = students
         .filter(s => {
             const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.documentNumber.includes(searchQuery);
-            if (user?.role === UserRole.SUPER_ADMIN) return matchesSearch;
-            return matchesSearch && s.campusId === user?.campusId;
+            const matchesClass = filterClass ? s.class === filterClass : true;
+            const matchesSection = filterSection ? s.section === filterSection : true;
+            
+            const matchesFilters = matchesSearch && matchesClass && matchesSection;
+            
+            if (user?.role === UserRole.SUPER_ADMIN) return matchesFilters;
+            return matchesFilters && s.campusId === user?.campusId;
         });
 
     const handleSaveStudent = async (studentData: any) => {
@@ -479,6 +486,12 @@ const StudentManagementPage: React.FC = () => {
 
     const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
 
+    const gradeOptions = [
+        { category: 'Preescolar', grades: ['Pre jardín', 'Jardín', 'Transición'] },
+        { category: 'Primaria', grades: ['1ro', '2do', '3ro', '4to', '5to'] },
+        { category: 'Secundaria', grades: ['6', '7', '8', '9', '10', '11'] }
+    ];
+
     return (
         <>
             {notification && (
@@ -505,8 +518,8 @@ const StudentManagementPage: React.FC = () => {
                             <p className="text-sm text-slate-500 mt-1 dark:text-slate-400 ml-11">Administración de matrículas y perfiles académicos.</p>
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                            <div className="relative group">
+                        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto flex-wrap">
+                            <div className="relative group flex-grow">
                                 <input 
                                     type="text" 
                                     placeholder="Buscar estudiante..." 
@@ -520,6 +533,26 @@ const StudentManagementPage: React.FC = () => {
                                     </svg>
                                 </div>
                             </div>
+                            <select 
+                                value={filterClass} 
+                                onChange={e => setFilterClass(e.target.value)}
+                                className="py-2.5 px-3 rounded-lg border border-slate-200 text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                            >
+                                <option value="">Todos los grados</option>
+                                {gradeOptions.map(cat => (
+                                    <optgroup key={cat.category} label={cat.category}>
+                                        {cat.grades.map(g => <option key={g} value={g}>{g}</option>)}
+                                    </optgroup>
+                                ))}
+                            </select>
+                            <select 
+                                value={filterSection} 
+                                onChange={e => setFilterSection(e.target.value)}
+                                className="py-2.5 px-3 rounded-lg border border-slate-200 text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                            >
+                                <option value="">Todas las secciones</option>
+                                {['A', 'B', 'C', '1', '2', '3'].map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
                             <button onClick={() => setIsBulkOpen(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-sm flex items-center justify-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
                                 <UploadIcon className="w-4 h-4"/> Masiva
                             </button>
