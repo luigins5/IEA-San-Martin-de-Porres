@@ -659,8 +659,7 @@ const ReportsPage: React.FC = () => {
         doc.save(`Libro_Final_${filterClass}_${filterSection}.pdf`);
     };
 
-    const generatePDF = (student: Student) => {
-        const doc = new jsPDF();
+    const generateBoletinContent = (student: Student, doc: any) => {
         getSchoolHeader(doc);
 
         const studentInfoBody = [[
@@ -768,7 +767,6 @@ const ReportsPage: React.FC = () => {
         doc.text('Escala de Desempeño Bajo: 1 a 2.99; Básico: 3 a 3.99; Alto: 4 a 4.59; Superior: 4.6 a 5;', 105, finalY + 25, { align: 'center' });
 
         addSignatures(doc, finalY + 25);
-        doc.save(`Boletin_${student.name}.pdf`);
     };
 
     const handleGenerate = () => {
@@ -781,11 +779,30 @@ const ReportsPage: React.FC = () => {
         } else if (reportType === 'libro_final') {
             generateLibroFinalPDF();
         } else {
-            const student = studentsForContext.find(s => s.id === selectedStudentId);
-            if (student) {
-                generatePDF(student);
+            if (selectedStudentId === 'all') {
+                if (!filterClass || !filterSection) {
+                    alert("Por favor seleccione un grado y un grupo para generar boletines para todos.");
+                    return;
+                }
+                if (studentsForContext.length === 0) {
+                    alert("No hay estudiantes en este curso.");
+                    return;
+                }
+                const doc = new jsPDF();
+                studentsForContext.forEach((student, index) => {
+                    if (index > 0) doc.addPage();
+                    generateBoletinContent(student, doc);
+                });
+                doc.save(`Boletines_${filterClass}_${filterSection}.pdf`);
             } else {
-                alert("Por favor seleccione un estudiante.");
+                const student = studentsForContext.find(s => s.id === selectedStudentId);
+                if (student) {
+                    const doc = new jsPDF();
+                    generateBoletinContent(student, doc);
+                    doc.save(`Boletin_${student.name}.pdf`);
+                } else {
+                    alert("Por favor seleccione un estudiante.");
+                }
             }
         }
     };
@@ -884,6 +901,7 @@ const ReportsPage: React.FC = () => {
                                 disabled={!filterClass}
                             >
                                 <option value="">{filterClass ? 'Seleccione Estudiante...' : 'Seleccione Grado Primero'}</option>
+                                {filterClass && filterSection && <option value="all">Todos los estudiantes</option>}
                                 {studentsForContext.map(s => (
                                     <option key={s.id} value={s.id}>{s.name}</option>
                                 ))}
