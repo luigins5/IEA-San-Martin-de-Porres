@@ -39,7 +39,9 @@ export const UpcomingEventsCard: React.FC<{ className?: string }> = ({ className
 
         return allEvents
             .filter(evt => {
-                const evtDate = new Date(evt.date);
+                // Parse date string manually to avoid timezone shift
+                const [year, month, day] = evt.date.split('-').map(Number);
+                const evtDate = new Date(year, month - 1, day);
                 evtDate.setHours(0, 0, 0, 0);
                 const isFuture = evtDate >= today;
                 const campusMatch = user.role === UserRole.SUPER_ADMIN || !evt.campusId || evt.campusId === campusId;
@@ -60,7 +62,8 @@ export const UpcomingEventsCard: React.FC<{ className?: string }> = ({ className
             <div className="p-4 space-y-4 flex-grow">
                 {upcomingEvents.length > 0 ? (
                     upcomingEvents.map((evt) => {
-                        const dateObj = new Date(evt.date);
+                        const [year, month, day] = evt.date.split('-').map(Number);
+                        const dateObj = new Date(year, month - 1, day);
                         return (
                             <div key={evt.id} className="flex items-center gap-4 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group">
                                 <div className="flex-shrink-0 w-12 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-100 dark:border-indigo-800 flex flex-col items-center justify-center overflow-hidden">

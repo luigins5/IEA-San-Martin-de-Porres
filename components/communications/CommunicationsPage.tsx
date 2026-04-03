@@ -29,7 +29,8 @@ const CommunicationFormModal: React.FC<{
     onClose: () => void;
     onSave: (comm: Omit<Communication, 'id' | 'date'>) => void;
     communicationToEdit: Communication | null;
-}> = ({ onClose, onSave, communicationToEdit }) => {
+    userCampusId?: string;
+}> = ({ onClose, onSave, communicationToEdit, userCampusId }) => {
     const { user } = useAuth();
     const { campuses } = useData();
     const isEditing = !!communicationToEdit;
@@ -38,7 +39,7 @@ const CommunicationFormModal: React.FC<{
     const [description, setDescription] = useState(communicationToEdit?.description || '');
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [campusId, setCampusId] = useState<string>(communicationToEdit?.campusId || (user?.role === UserRole.SUPER_ADMIN ? 'all' : user?.campusId || 'all'));
+    const [campusId, setCampusId] = useState<string>(communicationToEdit?.campusId || (user?.role === UserRole.SUPER_ADMIN ? 'all' : userCampusId || 'all'));
     const [targetRoles, setTargetRoles] = useState<UserRole[]>(communicationToEdit?.targetRoles || [UserRole.TEACHER, UserRole.STUDENT, UserRole.PARENT]);
     const [error, setError] = useState('');
 
@@ -201,7 +202,8 @@ const EventFormModal: React.FC<{
     onClose: () => void;
     onSave: (event: Omit<SchoolEvent, 'id'>) => void;
     eventToEdit: SchoolEvent | null;
-}> = ({ onClose, onSave, eventToEdit }) => {
+    userCampusId?: string;
+}> = ({ onClose, onSave, eventToEdit, userCampusId }) => {
     const { user } = useAuth();
     const { campuses } = useData();
     const isEditing = !!eventToEdit;
@@ -209,7 +211,7 @@ const EventFormModal: React.FC<{
     const [title, setTitle] = useState(eventToEdit?.title || '');
     const [date, setDate] = useState(eventToEdit?.date || '');
     const [description, setDescription] = useState(eventToEdit?.description || '');
-    const [campusId, setCampusId] = useState<string>(eventToEdit?.campusId || (user?.role === UserRole.SUPER_ADMIN ? 'all' : user?.campusId || ''));
+    const [campusId, setCampusId] = useState<string>(eventToEdit?.campusId || (user?.role === UserRole.SUPER_ADMIN ? 'all' : userCampusId || ''));
     
     // File states
     const [file, setFile] = useState<File | null>(null);
@@ -332,8 +334,23 @@ const EventFormModal: React.FC<{
 
 const CommunicationsPage: React.FC = () => {
     const { user } = useAuth();
-    const { communications, events, addCommunication, updateCommunication, deleteCommunication, addEvent, updateEvent, deleteEvent } = useData();
+    const { communications, events, admins, teachers, students, campuses, addCommunication, updateCommunication, deleteCommunication, addEvent, updateEvent, deleteEvent } = useData();
     const [activeTab, setActiveTab] = useState<'communications' | 'events'>('communications');
+    
+    // Get the correct campusId for the current user
+    const userCampusId = React.useMemo(() => {
+        if (!user) return undefined;
+        if (user.campusId) return user.campusId;
+        
+        if (user.role === UserRole.CAMPUS_ADMIN || user.role === UserRole.SUPER_ADMIN) {
+            return admins.find(a => a.email === user.email)?.campusId;
+        } else if (user.role === UserRole.TEACHER) {
+            return teachers.find(t => t.email === user.email)?.campusId;
+        } else if (user.role === UserRole.STUDENT || user.role === UserRole.PARENT) {
+            return students.find(s => s.email === user.email)?.campusId;
+        }
+        return undefined;
+    }, [user, admins, teachers, students]);
     
     // Modal states
     const [isCommModalOpen, setIsCommModalOpen] = useState(false);
@@ -398,18 +415,22 @@ const CommunicationsPage: React.FC = () => {
     // Filter Data
     const communicationsForView = communications.filter(comm => {
         if (!user) return false;
-        const campusMatch = user.role === UserRole.SUPER_ADMIN || comm.campusId === user.campusId || !comm.campusId;
+        const campusMatch = user.role === UserRole.SUPER_ADMIN || comm.campusId === userCampusId || !comm.campusId;
         if (!campusMatch) return false;
         return true; 
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const eventsForView = events.filter(evt => {
         if (!user) return false;
-        return user.role === UserRole.SUPER_ADMIN || evt.campusId === user.campusId || !evt.campusId;
+        return user.role === UserRole.SUPER_ADMIN || evt.campusId === userCampusId || !evt.campusId;
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const getDaysRemaining = (dateString: string) => {
-        const diff = new Date(dateString).getTime() - new Date().setHours(0,0,0,0);
+        const [year, month, day] = dateString.split('-').map(Number);
+        const eventDate = new Date(year, month - 1, day);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const diff = eventDate.getTime() - today.getTime();
         const days = Math.ceil(diff / (1000 * 3600 * 24));
         if (days < 0) return 'Finalizado';
         if (days === 0) return 'Hoy';
@@ -521,7 +542,8 @@ const CommunicationsPage: React.FC = () => {
                             eventsForView.map(event => {
                                 const daysText = getDaysRemaining(event.date);
                                 const isPast = daysText === 'Finalizado';
-                                const eventDate = new Date(event.date);
+                                const [year, month, day] = event.date.split('-').map(Number);
+                                const eventDate = new Date(year, month - 1, day);
                                 
                                 return (
                                     <div key={event.id} className={`group bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-card border border-slate-100 dark:border-slate-800 hover:shadow-xl transition-all duration-300 relative overflow-hidden flex flex-col h-full ${isPast ? 'opacity-60 grayscale' : ''}`}>
@@ -599,8 +621,8 @@ const CommunicationsPage: React.FC = () => {
                 )}
             </div>
 
-            {isCommModalOpen && <CommunicationFormModal onClose={() => setIsCommModalOpen(false)} onSave={handleSaveComm} communicationToEdit={editingComm} />}
-            {isEventModalOpen && <EventFormModal onClose={() => setIsEventModalOpen(false)} onSave={handleSaveEvent} eventToEdit={editingEvent} />}
+            {isCommModalOpen && <CommunicationFormModal onClose={() => setIsCommModalOpen(false)} onSave={handleSaveComm} communicationToEdit={editingComm} userCampusId={userCampusId} />}
+            {isEventModalOpen && <EventFormModal onClose={() => setIsEventModalOpen(false)} onSave={handleSaveEvent} eventToEdit={editingEvent} userCampusId={userCampusId} />}
         </div>
     );
 };

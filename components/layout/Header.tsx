@@ -218,7 +218,7 @@ type NotificationItem = {
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
-  const { communications: allComms, events: allEvents, globalSettings, campusSettings } = useData();
+  const { communications: allComms, events: allEvents, admins, teachers, students, globalSettings, campusSettings } = useData();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -232,6 +232,21 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const [schoolName, setSchoolName] = useState('Gestión Escolar');
   const [schoolLogo, setSchoolLogo] = useState<string>('');
 
+  // Get the correct campusId for the current user
+  const userCampusId = React.useMemo(() => {
+      if (!user) return undefined;
+      if (user.campusId) return user.campusId;
+      
+      if (user.role === UserRole.CAMPUS_ADMIN || user.role === UserRole.SUPER_ADMIN) {
+          return admins.find(a => a.email === user.email)?.campusId;
+      } else if (user.role === UserRole.TEACHER) {
+          return teachers.find(t => t.email === user.email)?.campusId;
+      } else if (user.role === UserRole.STUDENT || user.role === UserRole.PARENT) {
+          return students.find(s => s.email === user.email)?.campusId;
+      }
+      return undefined;
+  }, [user, admins, teachers, students]);
+
   useEffect(() => {
         const loadBranding = () => {
             let settings: any = {};
@@ -240,7 +255,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                 settings = { ...globalSettings };
             }
 
-            if (user?.campusId && campusSettings) {
+            if (userCampusId && campusSettings) {
                 if (campusSettings.schoolName) settings.schoolName = campusSettings.schoolName;
                 if (campusSettings.schoolLogo) settings.schoolLogo = campusSettings.schoolLogo;
             }
@@ -249,14 +264,14 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             if (settings.schoolLogo) setSchoolLogo(settings.schoolLogo);
         };
         loadBranding();
-  }, [user, globalSettings, campusSettings]);
+  }, [userCampusId, globalSettings, campusSettings]);
 
   useEffect(() => {
     if (!user) return;
     
     // Filter Communications
     const filteredComms = allComms.filter(comm => {
-        const campusMatch = user.role === UserRole.SUPER_ADMIN || !comm.campusId || comm.campusId === user.campusId;
+        const campusMatch = user.role === UserRole.SUPER_ADMIN || !comm.campusId || comm.campusId === userCampusId;
         if (!campusMatch) return false;
 
         if (user.role === UserRole.SUPER_ADMIN || user.role === UserRole.CAMPUS_ADMIN) {
@@ -279,8 +294,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
     today.setHours(0,0,0,0);
     
     const filteredEvents = allEvents.filter(evt => {
-        const evtDate = new Date(evt.date);
-        return evtDate >= today && (user.role === UserRole.SUPER_ADMIN || !evt.campusId || evt.campusId === user.campusId);
+        const [year, month, day] = evt.date.split('-').map(Number);
+        const evtDate = new Date(year, month - 1, day);
+        evtDate.setHours(0,0,0,0);
+        return evtDate >= today && (user.role === UserRole.SUPER_ADMIN || !evt.campusId || evt.campusId === userCampusId);
     }).map(e => ({
         id: e.id,
         title: `Evento: ${e.title}`,
@@ -413,7 +430,15 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                                            <div className="flex-grow min-w-0">
                                                <div className="flex justify-between items-start">
                                                    <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate pr-2 group-hover:text-primary dark:group-hover:text-sky-400 transition-colors">{item.title}</p>
-                                                   <span className="text-[10px] text-slate-400 whitespace-nowrap">{new Date(item.date).toLocaleDateString()}</span>
+                                                   <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                                                       {item.type === 'event' 
+                                                           ? (() => {
+                                                               const [year, month, day] = item.date.split('-').map(Number);
+                                                               return new Date(year, month - 1, day).toLocaleDateString();
+                                                           })()
+                                                           : new Date(item.date).toLocaleDateString()
+                                                       }
+                                                   </span>
                                                </div>
                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
                                                {item.type === 'communication' && (

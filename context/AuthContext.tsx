@@ -11,7 +11,7 @@ import {
   onAuthStateChanged, 
   sendPasswordResetEmail 
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +24,32 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const syncUserCampusId = async (userData: User, userDocRef: any) => {
+    if (!userData.campusId && userData.role !== UserRole.SUPER_ADMIN) {
+        let collectionName = '';
+        if (userData.role === UserRole.CAMPUS_ADMIN) collectionName = 'admins';
+        else if (userData.role === UserRole.TEACHER) collectionName = 'teachers';
+        else if (userData.role === UserRole.STUDENT || userData.role === UserRole.PARENT) collectionName = 'students';
+        
+        if (collectionName) {
+            try {
+                const q = query(collection(db, collectionName), where('email', '==', userData.email));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const record = querySnapshot.docs[0].data();
+                    if (record.campusId) {
+                        userData.campusId = record.campusId;
+                        await setDoc(userDocRef, { campusId: record.campusId }, { merge: true });
+                    }
+                }
+            } catch (error) {
+                console.error("Error syncing campusId:", error);
+            }
+        }
+    }
+    return userData;
+};
 
 export const AuthProvider = ({ children }: { children?: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -49,7 +75,8 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            setUser(userDoc.data() as User);
+            const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
+            setUser(userData);
           } else {
             // Handle case where user is in Auth but not in Firestore
             // This might happen if the user was just created
@@ -80,16 +107,17 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
-        const userData = userDoc.data() as User;
+        const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
         setUser(userData);
       } else {
-        const defaultUser: User = {
+        let defaultUser: User = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
           email: firebaseUser.email || '',
           role: role,
           avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`
         };
+        defaultUser = await syncUserCampusId(defaultUser, userDocRef);
         await setDoc(userDocRef, defaultUser);
         setUser(defaultUser);
       }
@@ -126,7 +154,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
-        const userData = userDoc.data() as User;
+        const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
         
         // Check if role matches (optional, but requested in original code)
         if (userData.role !== role && userData.role !== UserRole.SUPER_ADMIN) {
@@ -137,13 +165,14 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       } else {
         // If user doesn't exist in Firestore, create a default profile (for testing/initial setup)
         // In a real app, users would be created by an admin
-        const defaultUser: User = {
+        let defaultUser: User = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || email.split('@')[0],
           email: email,
           role: role,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`
         };
+        defaultUser = await syncUserCampusId(defaultUser, userDocRef);
         await setDoc(userDocRef, defaultUser);
         setUser(defaultUser);
       }
