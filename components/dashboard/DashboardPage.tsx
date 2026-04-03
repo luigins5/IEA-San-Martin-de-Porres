@@ -161,15 +161,15 @@ const RecentCommunications: React.FC<{ className?: string }> = ({ className = ''
     );
 };
 
-const SuperAdminDashboard: React.FC = () => {
+const SuperAdminDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { campuses, admins, students, teachers } = useData();
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={<BuildingOfficeIcon />} title="Total Sedes" value={String(campuses.length)} color="#3B82F6" />
-                <StatCard icon={<ShieldCheckIcon />} title="Administradores" value={String(admins.length)} color="#10B981" />
-                <StatCard icon={<AcademicCapIcon />} title="Estudiantes" value={students.length.toLocaleString('es-ES')} color="#F97316" />
-                <StatCard icon={<IdentificationIcon />} title="Profesores" value={String(teachers.length)} color="#8B5CF6" />
+                <StatCard icon={<BuildingOfficeIcon />} title="Total Sedes" value={String(campuses.length)} color="#3B82F6" onClick={() => setCurrentPage('campuses')} />
+                <StatCard icon={<ShieldCheckIcon />} title="Administradores" value={String(admins.length)} color="#10B981" onClick={() => setCurrentPage('admins')} />
+                <StatCard icon={<AcademicCapIcon />} title="Estudiantes" value={students.length.toLocaleString('es-ES')} color="#F97316" onClick={() => setCurrentPage('students')} />
+                <StatCard icon={<IdentificationIcon />} title="Profesores" value={String(teachers.length)} color="#8B5CF6" onClick={() => setCurrentPage('teachers')} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
@@ -183,7 +183,7 @@ const SuperAdminDashboard: React.FC = () => {
     );
 };
 
-const CampusAdminDashboard: React.FC = () => {
+const CampusAdminDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { user } = useAuth();
     const { students, teachers, exams, admins } = useData();
     const [stats, setStats] = useState({ students: 0, staff: 0, upcomingExams: 0 });
@@ -205,9 +205,9 @@ const CampusAdminDashboard: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <StatCard icon={<AcademicCapIcon />} title={`Estudiantes`} value={stats.students.toLocaleString('es-ES')} color="#3B82F6" />
-                <StatCard icon={<StaffIcon />} title={`Profesores`} value={String(stats.staff)} color="#10B981" />
-                <StatCard icon={<ExamsIcon />} title="Exámenes" value={String(stats.upcomingExams)} color="#F97316" />
+                <StatCard icon={<AcademicCapIcon />} title={`Estudiantes`} value={stats.students.toLocaleString('es-ES')} color="#3B82F6" onClick={() => setCurrentPage('students')} />
+                <StatCard icon={<StaffIcon />} title={`Profesores`} value={String(stats.staff)} color="#10B981" onClick={() => setCurrentPage('teachers')} />
+                <StatCard icon={<ExamsIcon />} title="Exámenes" value={String(stats.upcomingExams)} color="#F97316" onClick={() => setCurrentPage('exams')} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
@@ -221,7 +221,7 @@ const CampusAdminDashboard: React.FC = () => {
     );
 };
 
-const TeacherDashboard: React.FC = () => {
+const TeacherDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { user } = useAuth();
     const { schedules, communications, exams, teachers } = useData();
     
@@ -295,9 +295,9 @@ const TeacherDashboard: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard icon={<IdentificationIcon />} title="Mis Asignaturas" value={String(mySchedules.length)} color="#3B82F6" />
-                <StatCard icon={<ExamsIcon />} title="Actividades Pendientes" value={String(myExams.length)} color="#F97316" />
-                <StatCard icon={<CalendarIcon />} title="Próxima Clase" value={nextClass ? `${nextClass.classInfo.subject} (${nextClass.day})` : 'Sin clases'} color="#10B981" />
+                <StatCard icon={<IdentificationIcon />} title="Mis Asignaturas" value={String(mySchedules.length)} color="#3B82F6" onClick={() => setCurrentPage('schedule')} />
+                <StatCard icon={<ExamsIcon />} title="Actividades Pendientes" value={String(myExams.length)} color="#F97316" onClick={() => setCurrentPage('teacher-exams')} />
+                <StatCard icon={<CalendarIcon />} title="Próxima Clase" value={nextClass ? `${nextClass.classInfo.subject} (${nextClass.day})` : 'Sin clases'} color="#10B981" onClick={() => setCurrentPage('schedule')} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -379,16 +379,20 @@ const TeacherDashboard: React.FC = () => {
     );
 };
 
-const DashboardPage: React.FC = () => {
+interface DashboardPageProps {
+    setCurrentPage?: (page: string) => void;
+}
+
+const DashboardPage: React.FC<DashboardPageProps> = ({ setCurrentPage }) => {
     const { user } = useAuth();
 
     const renderDashboard = () => {
         switch (user?.role) {
-            case UserRole.SUPER_ADMIN: return <SuperAdminDashboard />;
-            case UserRole.CAMPUS_ADMIN: return <CampusAdminDashboard />;
-            case UserRole.TEACHER: return <TeacherDashboard />;
-            case UserRole.STUDENT: return <StudentDashboard />;
-            case UserRole.PARENT: return <ParentDashboard />;
+            case UserRole.SUPER_ADMIN: return <SuperAdminDashboard setCurrentPage={setCurrentPage || (() => {})} />;
+            case UserRole.CAMPUS_ADMIN: return <CampusAdminDashboard setCurrentPage={setCurrentPage || (() => {})} />;
+            case UserRole.TEACHER: return <TeacherDashboard setCurrentPage={setCurrentPage || (() => {})} />;
+            case UserRole.STUDENT: return <StudentDashboard setCurrentPage={setCurrentPage || (() => {})} />;
+            case UserRole.PARENT: return <ParentDashboard setCurrentPage={setCurrentPage || (() => {})} />;
             default: return null;
         }
     };

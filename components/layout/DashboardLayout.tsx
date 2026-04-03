@@ -87,7 +87,7 @@ const DashboardLayout: React.FC = () => {
 
     switch (currentPage) {
       case 'dashboard':
-        return <DashboardPage />;
+        return <DashboardPage setCurrentPage={setCurrentPage} />;
       case 'students':
         return <StudentManagementPage />;
       case 'teachers':

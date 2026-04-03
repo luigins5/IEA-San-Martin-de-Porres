@@ -8,7 +8,7 @@ import Card from '../ui/Card';
 import { useData } from '../../context/DataContext';
 import { UpcomingEventsCard } from '../dashboard/DashboardPage';
 
-const StudentDashboard: React.FC = () => {
+const StudentDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { user } = useAuth();
     const student = user as Student;
 
@@ -50,9 +50,9 @@ const StudentDashboard: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <StatCard icon={<AcademicCapIcon />} title="Promedio General" value={calculateOverallAverage()} color="#3B82F6" />
-                <StatCard icon={<ExamsIcon />} title="Próximo Examen" value={findNextExam()} color="#10B981" />
-                <StatCard icon={<ClipboardDocumentListIcon />} title="Clases Hoy" value={String(todaySchedules.length)} color="#F97316" />
+                <StatCard icon={<AcademicCapIcon />} title="Promedio General" value={calculateOverallAverage()} color="#3B82F6" onClick={() => setCurrentPage('student-grades')} />
+                <StatCard icon={<ExamsIcon />} title="Próximo Examen" value={findNextExam()} color="#10B981" onClick={() => setCurrentPage('student-schedule')} />
+                <StatCard icon={<ClipboardDocumentListIcon />} title="Clases Hoy" value={String(todaySchedules.length)} color="#F97316" onClick={() => setCurrentPage('student-schedule')} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

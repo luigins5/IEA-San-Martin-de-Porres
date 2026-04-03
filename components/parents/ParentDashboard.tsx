@@ -8,7 +8,7 @@ import Card from '../ui/Card';
 import { useData } from '../../context/DataContext';
 import { UpcomingEventsCard } from '../dashboard/DashboardPage';
 
-const ParentDashboard: React.FC = () => {
+const ParentDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { user } = useAuth();
     const { students, grades: allGrades, exams: allExams, schedules: allSchedules, teachers } = useData();
 
@@ -72,9 +72,9 @@ const ParentDashboard: React.FC = () => {
         <div className="space-y-6">
             <h1 className="text-xl font-bold text-text-primary dark:text-white">Panel de Padre - {student?.name}</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <StatCard icon={<AcademicCapIcon />} title="Promedio General del Estudiante" value={calculateOverallAverage()} color="#3B82F6" />
-                <StatCard icon={<ExamsIcon />} title="Próximo Examen" value={findNextExam()} color="#10B981" />
-                <StatCard icon={<ClipboardDocumentListIcon />} title="Clases Hoy (Hijo/a)" value={String(todaySchedules.length)} color="#F97316" />
+                <StatCard icon={<AcademicCapIcon />} title="Promedio General del Estudiante" value={calculateOverallAverage()} color="#3B82F6" onClick={() => setCurrentPage('parent-grades')} />
+                <StatCard icon={<ExamsIcon />} title="Próximo Examen" value={findNextExam()} color="#10B981" onClick={() => setCurrentPage('parent-schedule')} />
+                <StatCard icon={<ClipboardDocumentListIcon />} title="Clases Hoy (Hijo/a)" value={String(todaySchedules.length)} color="#F97316" onClick={() => setCurrentPage('parent-schedule')} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
