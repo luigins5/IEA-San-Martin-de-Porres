@@ -9,7 +9,8 @@ const CampusFormModal: React.FC<{
     onClose: () => void;
     onSave: (campus: Omit<Campus, 'id' | 'teachers' | 'students'>) => void;
     campusToEdit: Campus | null;
-}> = ({ onClose, onSave, campusToEdit }) => {
+    admins: User[];
+}> = ({ onClose, onSave, campusToEdit, admins }) => {
     const isEditing = !!campusToEdit;
     const [formData, setFormData] = useState({
         name: campusToEdit?.name || '',
@@ -17,7 +18,7 @@ const CampusFormModal: React.FC<{
         admin: campusToEdit?.admin || '',
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
@@ -44,7 +45,12 @@ const CampusFormModal: React.FC<{
                     </div>
                     <div>
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Nombre del Administrador (Opcional)</label>
-                        <input type="text" name="admin" value={formData.admin} onChange={handleChange} className="w-full p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white" placeholder="Se asignará desde la sección Admin" />
+                        <select name="admin" value={formData.admin} onChange={handleChange} className="w-full p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white">
+                            <option value="">Seleccione un administrador</option>
+                            {admins.map(admin => (
+                                <option key={admin.id} value={admin.name}>{admin.name}</option>
+                            ))}
+                        </select>
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700 mt-6">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
@@ -72,7 +78,7 @@ const DeleteConfirmationModal: React.FC<{ campus: Campus; onClose: () => void; o
 );
 
 const CampusManagementPage: React.FC = () => {
-    const { campuses, addCampus, updateCampus, deleteCampus } = useData();
+    const { campuses, addCampus, updateCampus, deleteCampus, admins } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCampus, setEditingCampus] = useState<Campus | null>(null);
     const [deletingCampus, setDeletingCampus] = useState<Campus | null>(null);
@@ -184,7 +190,7 @@ const CampusManagementPage: React.FC = () => {
                 </div>
             </Card>
 
-            {isModalOpen && <CampusFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} campusToEdit={editingCampus} />}
+            {isModalOpen && <CampusFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} campusToEdit={editingCampus} admins={admins} />}
             {deletingCampus && <DeleteConfirmationModal campus={deletingCampus} onClose={() => setDeletingCampus(null)} onConfirm={handleDelete} />}
         </>
     );

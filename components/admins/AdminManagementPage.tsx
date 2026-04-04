@@ -8,16 +8,14 @@ import { useAuth } from '../../context/AuthContext';
 
 const AdminFormModal: React.FC<{
     onClose: () => void;
-    onSave: (admin: Omit<AdminUser, 'id' | 'role' | 'avatar' | 'campusId' | 'campusName'> & { campusId?: string }) => void;
+    onSave: (admin: Omit<AdminUser, 'id' | 'role' | 'avatar' | 'campusId' | 'campusName'>) => void;
     adminToEdit: AdminUser | null;
-    campuses: Campus[];
-}> = ({ onClose, onSave, adminToEdit, campuses }) => {
+}> = ({ onClose, onSave, adminToEdit }) => {
     const isEditing = !!adminToEdit;
     const [formData, setFormData] = useState({
         name: adminToEdit?.name || '',
         email: adminToEdit?.email || '',
         status: adminToEdit?.status || 'active',
-        campusId: adminToEdit?.campusId || '',
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -45,13 +43,6 @@ const AdminFormModal: React.FC<{
                     <div>
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Correo Electrónico</label>
                         <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">Sede Asignada</label>
-                        <select name="campusId" value={formData.campusId} onChange={handleChange} className="w-full p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white" required>
-                            <option value="">Seleccionar Sede</option>
-                            {campuses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
                     </div>
                     <div>
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Estado</label>
@@ -159,6 +150,7 @@ const AdminManagementPage: React.FC = () => {
     const [assigningPassAdmin, setAssigningPassAdmin] = useState<AdminUser | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
+    const [expandedAdminId, setExpandedAdminId] = useState<string | null>(null);
 
     const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
         setNotification({ message, type });
@@ -167,8 +159,7 @@ const AdminManagementPage: React.FC = () => {
 
     const handleSave = async (data: any) => {
         try {
-            const campus = campuses.find(c => c.id === data.campusId);
-            const adminData = { ...data, campusName: campus?.name || '' };
+            const adminData = { ...data };
 
             if (editingAdmin) {
                 await updateAdmin(editingAdmin.id, adminData);
@@ -221,6 +212,7 @@ const AdminManagementPage: React.FC = () => {
 
     const openCreateModal = () => { setEditingAdmin(null); setIsModalOpen(true); };
     const openEditModal = (admin: AdminUser) => { setEditingAdmin(admin); setIsModalOpen(true); };
+    const toggleExpand = (adminId: string) => { setExpandedAdminId(prev => prev === adminId ? null : adminId); };
 
     const adminsForView = admins.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -275,54 +267,81 @@ const AdminManagementPage: React.FC = () => {
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 font-semibold tracking-wider dark:bg-slate-800 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
                                 <tr>
+                                    <th scope="col" className="px-6 py-4 w-10"></th>
                                     <th scope="col" className="px-6 py-4">Nombre</th>
                                     <th scope="col" className="px-6 py-4">Email</th>
-                                    <th scope="col" className="px-6 py-4">Sede Asignada</th>
                                     <th scope="col" className="px-6 py-4">Estado</th>
-                                    <th scope="col" className="px-6 py-4 text-right">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {adminsForView.map(admin => (
-                                    <tr key={admin.id} className="bg-white hover:bg-slate-50/80 transition-colors dark:bg-slate-900 dark:hover:bg-slate-800/50">
-                                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                                    {admin.name.charAt(0)}
+                                    <React.Fragment key={admin.id}>
+                                        <tr className="bg-white hover:bg-slate-50/80 transition-colors dark:bg-slate-900 dark:hover:bg-slate-800/50">
+                                            <td className="px-6 py-4">
+                                                <button onClick={() => toggleExpand(admin.id)} className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-500">
+                                                    <svg className={`w-4 h-4 transition-transform ${expandedAdminId === admin.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                                        {admin.name.charAt(0)}
+                                                    </div>
+                                                    {admin.name}
                                                 </div>
-                                                {admin.name}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-mono text-xs">{admin.email}</td>
-                                        <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{admin.campusName}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${admin.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' : 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800'}`}>
-                                                {admin.status === 'active' ? 'Activo' : 'Inactivo'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end items-center gap-2">
-                                                {isSuperAdmin && (
-                                                    <button onClick={() => setAssigningPassAdmin(admin)} className="p-2 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 transition-all focus:outline-none shadow-sm dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40" title="Asignar Clave Provisional">
-                                                        <KeyIcon className="w-4 h-4"/>
-                                                    </button>
-                                                )}
-                                                <button onClick={() => setResettingPasswordAdmin(admin)} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-emerald-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-emerald-400" title="Restablecer Contraseña (Email)">
-                                                    <PaperAirplaneIcon className="w-4 h-4"/>
-                                                </button>
-                                                <button onClick={() => openEditModal(admin)} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-amber-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-amber-400" title="Editar">
-                                                    <EditIcon className="w-4 h-4"/>
-                                                </button>
-                                                <button onClick={() => setDeletingAdmin(admin)} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-rose-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-rose-400" title="Eliminar">
-                                                    <TrashIcon className="w-4 h-4"/>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-mono text-xs">{admin.email}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${admin.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' : 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800'}`}>
+                                                    {admin.status === 'active' ? 'Activo' : 'Inactivo'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {expandedAdminId === admin.id && (
+                                            <tr className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
+                                                <td colSpan={4} className="px-6 py-4">
+                                                    <div className="flex flex-col md:flex-row justify-between gap-4">
+                                                        <div className="flex-1">
+                                                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 dark:text-slate-400">Sedes Asignadas</h4>
+                                                            {campuses.filter(c => c.admin === admin.name).length > 0 ? (
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {campuses.filter(c => c.admin === admin.name).map(c => (
+                                                                        <span key={c.id} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+                                                                            {c.name}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-sm text-slate-500 dark:text-slate-400 italic">No tiene sedes asignadas.</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-700 pt-4 md:pt-0 md:pl-4">
+                                                            {isSuperAdmin && (
+                                                                <button onClick={() => setAssigningPassAdmin(admin)} className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 transition-all focus:outline-none shadow-sm dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40 flex items-center gap-2 text-xs font-medium" title="Asignar Clave Provisional">
+                                                                    <KeyIcon className="w-4 h-4"/> Clave
+                                                                </button>
+                                                            )}
+                                                            <button onClick={() => setResettingPasswordAdmin(admin)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-emerald-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-emerald-400 flex items-center gap-2 text-xs font-medium" title="Restablecer Contraseña (Email)">
+                                                                <PaperAirplaneIcon className="w-4 h-4"/> Reset
+                                                            </button>
+                                                            <button onClick={() => openEditModal(admin)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-amber-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-amber-400 flex items-center gap-2 text-xs font-medium" title="Editar">
+                                                                <EditIcon className="w-4 h-4"/> Editar
+                                                            </button>
+                                                            <button onClick={() => setDeletingAdmin(admin)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-rose-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-rose-400 flex items-center gap-2 text-xs font-medium" title="Eliminar">
+                                                                <TrashIcon className="w-4 h-4"/> Eliminar
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
                                 ))}
                                  {adminsForView.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="text-center py-12 text-slate-400 dark:text-slate-500">No se encontró personal.</td>
+                                        <td colSpan={4} className="text-center py-12 text-slate-400 dark:text-slate-500">No se encontró personal.</td>
                                     </tr>
                                 )}
                             </tbody>
