@@ -8,8 +8,8 @@ import { EyeIcon, EyeSlashIcon } from '../icons';
 import Footer from '../layout/Footer';
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('luissalberto26@gmail.com');
-  const [password, setPassword] = useState('Luigi260884.');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>(UserRole.SUPER_ADMIN);
   const { login, loginWithGoogle, sendPasswordReset } = useAuth();
   const { globalSettings } = useData();
@@ -66,7 +66,7 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col relative">
       <main className="flex-grow flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md animate-fade-in-up">
           <div className="text-center mb-8">

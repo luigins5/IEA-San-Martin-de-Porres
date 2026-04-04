@@ -2,17 +2,20 @@ import React from 'react';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-surface px-4 py-3 text-xs text-text-secondary border-t border-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
-      <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-        <div className="text-center sm:text-left">
-          <p>&copy; {new Date().getFullYear()} Sistema de Gestión Escolar. Todos los derechos reservados.</p>
-          <p className="mt-1">
-            Desarrollado por <span className="font-semibold text-primary">Somos NS-5</span>
-          </p>
-        </div>
-        <div className="flex space-x-4 font-medium">
-          <a href="#" className="hover:text-primary transition-colors">Términos de Servicio</a>
-          <a href="#" className="hover:text-primary transition-colors">Política de Privacidad</a>
+    <footer className="w-full py-5 px-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-center z-10">
+      <div className="max-w-4xl mx-auto flex flex-col items-center justify-center gap-2">
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+          &copy; {new Date().getFullYear()} Sistema de Gestión Escolar. Todos los derechos reservados.
+        </p>
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          Desarrollado y mantenido por <span className="font-bold text-blue-600 dark:text-blue-500">Somos NS-5</span>
+        </p>
+        <div className="flex items-center gap-4 mt-2 text-xs text-slate-400 dark:text-slate-500">
+          <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Términos de Servicio</a>
+          <span>&bull;</span>
+          <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Política de Privacidad</a>
+          <span>&bull;</span>
+          <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Soporte Técnico</a>
         </div>
       </div>
     </footer>
