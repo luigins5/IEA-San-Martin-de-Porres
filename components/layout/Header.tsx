@@ -8,37 +8,13 @@ import { useData } from '../../context/DataContext';
 
 // Modal for user profile
 const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ user, onClose }) => {
-    const { updateUserAvatar } = useData();
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [passwordMessage, setPasswordMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+    const { logout } = useAuth();
+    const { updateUserAvatar, students, teachers, campuses } = useData();
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [imageError, setImageError] = useState<string | null>(null);
     const [imageSuccess, setImageSuccess] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'profile' | 'preferences'>('profile');
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleChangePassword = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setPasswordMessage(null);
-
-        if (newPassword !== confirmPassword) {
-            setPasswordMessage({ text: 'Las nuevas contraseñas no coinciden.', type: 'error' });
-            return;
-        }
-        if (newPassword.length < 6) {
-             setPasswordMessage({ text: 'La nueva contraseña debe tener al menos 6 caracteres.', type: 'error' });
-            return;
-        }
-
-        // Mock password change for local mode
-        setPasswordMessage({ text: '¡Contraseña actualizada exitosamente!', type: 'success' });
-        setNewPassword('');
-        setConfirmPassword('');
-        setTimeout(() => {
-            setPasswordMessage(null);
-            onClose();
-        }, 2000);
-    };
 
     const handleImageClick = () => {
         const modifiableRoles = [UserRole.CAMPUS_ADMIN, UserRole.TEACHER, UserRole.STUDENT, UserRole.PARENT];
@@ -87,73 +63,207 @@ const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ us
         reader.readAsDataURL(file);
     };
 
-
     const canChangeDetails = user && user.role !== UserRole.SUPER_ADMIN;
 
-    return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md dark:bg-slate-900 dark:border dark:border-slate-800 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-blue-500"></div>
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Mi Perfil</h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none dark:hover:text-white transition-colors">&times;</button>
-                </div>
-                
-                <div className="flex items-center space-x-5 mb-6">
-                    <div className="relative group">
-                        <img className="h-20 w-20 rounded-full object-cover border-4 border-slate-50 dark:border-slate-800 shadow-sm" src={avatarPreview || user?.avatar} alt="User avatar" />
-                        {canChangeDetails && (
-                            <div 
-                                onClick={handleImageClick}
-                                className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-all duration-300"
-                            >
-                                <EditIcon className="w-5 h-5 text-white" />
-                            </div>
-                        )}
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleImageChange}
-                            accept="image/png, image/jpeg"
-                            hidden
-                        />
-                    </div>
-                    <div>
-                        <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{user?.name}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{user?.email}</p>
-                        <span className="text-xs font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full inline-block mt-2 dark:bg-primary/20 dark:text-sky-300">{user?.role}</span>
-                    </div>
-                </div>
-                
-                {(imageError || imageSuccess) && (
-                    <div className="text-center mb-4 p-2 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        {imageError && <p className="text-sm text-red-500 font-medium">{imageError}</p>}
-                        {imageSuccess && <p className="text-sm text-emerald-500 font-medium">{imageSuccess}</p>}
-                    </div>
-                )}
+    // Role specific data gathering
+    const getRoleSpecificInfo = () => {
+        if (!user) return null;
 
-                <div className="border-t border-slate-100 pt-5 dark:border-slate-800">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Seguridad</h3>
-                    <form onSubmit={handleChangePassword} className="space-y-4">
-                        {passwordMessage && (
-                            <p className={`text-sm font-semibold text-center rounded-lg p-2 ${
-                                passwordMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700' :
-                                passwordMessage.type === 'error' ? 'bg-rose-50 text-rose-700' :
-                                'bg-blue-50 text-blue-700'
-                            }`}>{passwordMessage.text}</p>
-                        )}
-                        <div>
-                            <label className="block text-xs font-bold text-slate-600 mb-1 dark:text-slate-400">Nueva Contraseña</label>
-                            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none" required />
+        switch (user.role) {
+            case UserRole.SUPER_ADMIN:
+                return (
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Nivel de Acceso</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Total (Sistema)</p>
                         </div>
-                         <div>
-                            <label className="block text-xs font-bold text-slate-600 mb-1 dark:text-slate-400">Confirmar Contraseña</label>
-                            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all dark:bg-slate-800 dark:text-white dark:border-slate-700 outline-none" required />
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Sedes Activas</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{campuses.length}</p>
                         </div>
-                        <div className="pt-2">
-                             <button type="submit" className="w-full bg-primary text-white font-bold py-2.5 px-4 rounded-lg hover:shadow-lg hover:bg-blue-700 transition-all duration-300 text-sm">Actualizar Contraseña</button>
+                    </div>
+                );
+            case UserRole.CAMPUS_ADMIN:
+                return (
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Sede Asignada</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{user.campusName || 'No asignada'}</p>
                         </div>
-                    </form>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Último Acceso</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Hoy, 08:30 AM</p>
+                        </div>
+                    </div>
+                );
+            case UserRole.TEACHER:
+                const teacherData = teachers.find(t => t.id === user.id);
+                return (
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Especialidad</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{teacherData?.specialty || 'General'}</p>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Asignaciones</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{teacherData?.assignments?.length || 0} cursos</p>
+                        </div>
+                    </div>
+                );
+            case UserRole.STUDENT:
+                const studentData = students.find(s => s.id === user.id);
+                return (
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Grado y Sección</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{studentData?.class || '-'} {studentData?.section || '-'}</p>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Estado Académico</p>
+                            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Regular</p>
+                        </div>
+                    </div>
+                );
+            case UserRole.PARENT:
+                return (
+                    <div className="grid grid-cols-1 gap-3 mt-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Hijos Vinculados</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">2 Estudiantes</p>
+                        </div>
+                    </div>
+                );
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/40 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md dark:bg-slate-900 dark:border dark:border-slate-800 relative overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+                
+                <div className="flex justify-between items-center p-5 border-b border-slate-100 dark:border-slate-800">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white">Perfil de Usuario</h2>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full w-8 h-8 flex items-center justify-center text-xl leading-none dark:bg-slate-800 dark:hover:bg-slate-700 dark:hover:text-white transition-colors">
+                        &times;
+                    </button>
+                </div>
+                
+                <div className="flex border-b border-slate-100 dark:border-slate-800 px-5 pt-2">
+                    <button 
+                        onClick={() => setActiveTab('profile')}
+                        className={`pb-3 px-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'profile' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
+                    >
+                        Información
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('preferences')}
+                        className={`pb-3 px-2 ml-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'preferences' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
+                    >
+                        Preferencias
+                    </button>
+                </div>
+
+                <div className="p-5 overflow-y-auto">
+                    {activeTab === 'profile' && (
+                        <div className="animate-fade-in">
+                            <div className="flex flex-col items-center text-center mb-6">
+                                <div className="relative group mb-4">
+                                    <img className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md dark:border-slate-800" src={avatarPreview || user?.avatar} alt="User avatar" />
+                                    {canChangeDetails && (
+                                        <div 
+                                            onClick={handleImageClick}
+                                            className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm"
+                                        >
+                                            <EditIcon className="w-6 h-6 text-white" />
+                                        </div>
+                                    )}
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleImageChange}
+                                        accept="image/png, image/jpeg"
+                                        hidden
+                                    />
+                                </div>
+                                <div>
+                                    <p className="text-xl font-bold text-slate-900 dark:text-white">{user?.name}</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{user?.email}</p>
+                                    <span className="text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1 rounded-full inline-block mt-3 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100 dark:border-blue-800/50">
+                                        {user?.role}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {(imageError || imageSuccess) && (
+                                <div className={`text-center mb-4 p-3 rounded-xl text-sm font-medium ${imageError ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'}`}>
+                                    {imageError || imageSuccess}
+                                </div>
+                            )}
+
+                            <div className="mt-2">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 ml-1">Resumen de Actividad</h3>
+                                {getRoleSpecificInfo()}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'preferences' && (
+                        <div className="animate-fade-in space-y-5">
+                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700/50">
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Notificaciones</h3>
+                                
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Resumen Semanal</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Recibir reporte por correo</p>
+                                        </div>
+                                        <label className="inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                                            <div className="relative w-11 h-6 bg-slate-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                    
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Alertas del Sistema</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Avisos importantes y eventos</p>
+                                        </div>
+                                        <label className="inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                                            <div className="relative w-11 h-6 bg-slate-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700/50">
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Personalización</h3>
+                                
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Apariencia</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Modo claro / oscuro</p>
+                                        </div>
+                                        <ThemeSwitcher />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                    <button
+                        onClick={logout}
+                        className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl text-sm font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 dark:hover:bg-rose-900/40 dark:text-rose-400 transition-colors"
+                    >
+                        <LogoutIcon className="w-5 h-5 mr-2" />
+                        Cerrar Sesión
+                    </button>
                 </div>
             </div>
         </div>
@@ -219,10 +329,8 @@ type NotificationItem = {
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
   const { communications: allComms, events: allEvents, admins, teachers, students, globalSettings, campusSettings } = useData();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isNotificationPanelOpen, setNotificationPanelOpen] = useState(false);
@@ -346,9 +454,6 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
       if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
         setNotificationPanelOpen(false);
       }
@@ -473,32 +578,14 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                 )}
             </div>
             
-            <div className="relative" ref={dropdownRef}>
-                <button onClick={() => setDropdownOpen(!dropdownOpen)} className="flex items-center space-x-2 pl-2 focus:outline-none group">
+            <div className="relative">
+                <button onClick={() => setProfileModalOpen(true)} className="flex items-center space-x-2 pl-2 focus:outline-none group">
                     <img className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 group-hover:ring-primary/20 transition-all shadow-sm" src={user?.avatar} alt="User avatar" />
                     <div className="hidden md:block text-left">
                         <div className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate max-w-[120px] group-hover:text-primary transition-colors">{user?.name}</div>
                         <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">{user?.role}</div>
                     </div>
                 </button>
-                {dropdownOpen && (
-                <div className="absolute right-0 mt-4 w-56 bg-white rounded-xl shadow-2xl py-2 z-20 dark:bg-slate-900 dark:border dark:border-slate-800 ring-1 ring-black/5 transform origin-top-right transition-all">
-                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 mb-1">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
-                    </div>
-                    <a href="#" onClick={(e) => { e.preventDefault(); setProfileModalOpen(true); setDropdownOpen(false); }} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800 transition-colors font-medium">Mi Perfil</a>
-                    <a href="#" onClick={(e) => { e.preventDefault(); setSettingsModalOpen(true); setDropdownOpen(false); }} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary dark:text-slate-300 dark:hover:bg-slate-800 transition-colors font-medium">Configuración</a>
-                    <div className="border-t border-slate-100 my-1 dark:border-slate-800"></div>
-                    <button
-                    onClick={logout}
-                    className="w-full text-left flex items-center px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors font-bold"
-                    >
-                    <LogoutIcon className="w-4 h-4 mr-2" />
-                    Cerrar Sesión
-                    </button>
-                </div>
-                )}
             </div>
             </div>
         </div>
