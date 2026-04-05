@@ -49,19 +49,35 @@ const LoginPage: React.FC = () => {
   };
 
   const [resetMessage, setResetMessage] = useState('');
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
-  const handleResetPassword = async () => {
-    if (!email) {
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
       setError('Por favor, ingrese su correo electrónico para restablecer la contraseña.');
       return;
     }
     setError('');
     setResetMessage('');
+    setIsResetting(true);
     try {
-      await sendPasswordReset(email);
-      setResetMessage('Se ha enviado un enlace de restablecimiento a su correo electrónico.');
+      await sendPasswordReset(resetEmail.trim());
+      setResetMessage('Se ha enviado un enlace de restablecimiento a su correo electrónico. Por favor, revise su bandeja de entrada o carpeta de spam.');
+      setTimeout(() => {
+          setIsResetModalOpen(false);
+          setResetMessage('');
+          setResetEmail('');
+      }, 5000);
     } catch (err: any) {
-      setError(err.message || 'Error al solicitar el restablecimiento de contraseña.');
+      if (err.message.includes('network-request-failed') || err.message.includes('Error de conexión')) {
+          setError('Error de red. Si está usando la vista previa, intente abrir la aplicación en una nueva pestaña, o verifique su conexión a internet.');
+      } else {
+          setError(err.message || 'Error al solicitar el restablecimiento de contraseña.');
+      }
+    } finally {
+        setIsResetting(false);
     }
   };
 
@@ -180,7 +196,7 @@ const LoginPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={handleResetPassword}
+                  onClick={(e) => { e.preventDefault(); setIsResetModalOpen(true); setResetEmail(email); setError(''); setResetMessage(''); }}
                   className="w-full text-primary font-medium py-2 px-4 rounded-xl hover:bg-primary/5 transition-all duration-200 text-sm"
                 >
                   ¿Olvidaste tu contraseña?
@@ -190,6 +206,74 @@ const LoginPage: React.FC = () => {
           </Card>
         </div>
       </main>
+
+      {/* Forgot Password Modal */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 z-50 flex justify-center items-center p-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md dark:bg-slate-900 dark:border dark:border-slate-800 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+            
+            <div className="flex justify-between items-center p-5 border-b border-slate-100 dark:border-slate-800">
+                <h2 className="text-lg font-bold text-slate-800 dark:text-white">Restablecer Contraseña</h2>
+                <button onClick={() => setIsResetModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full w-8 h-8 flex items-center justify-center text-xl leading-none dark:bg-slate-800 dark:hover:bg-slate-700 dark:hover:text-white transition-colors">
+                    &times;
+                </button>
+            </div>
+            
+            <form onSubmit={handleResetPassword} className="p-5">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                    Ingrese su correo electrónico y le enviaremos un enlace para restablecer su contraseña.
+                </p>
+
+                {error && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-4 text-sm font-medium border border-red-100 flex items-start gap-2">
+                        <span className="block w-2 h-2 bg-red-500 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>{error}</span>
+                    </div>
+                )}
+                {resetMessage && (
+                    <div className="bg-green-50 text-green-600 p-3 rounded-xl mb-4 text-sm font-medium border border-green-100 flex items-start gap-2">
+                        <span className="block w-2 h-2 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>{resetMessage}</span>
+                    </div>
+                )}
+
+                <div className="mb-5">
+                    <label className="block text-slate-700 text-xs font-bold mb-2 uppercase tracking-wider dark:text-slate-300" htmlFor="resetEmail">
+                        Correo Electrónico
+                    </label>
+                    <input
+                        id="resetEmail"
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => { setResetEmail(e.target.value); setError(''); }}
+                        className="appearance-none border border-slate-200 rounded-xl w-full py-3 px-4 text-sm text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white placeholder-slate-400"
+                        placeholder="ejemplo@correo.com"
+                        required
+                    />
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                    <button
+                        type="button"
+                        onClick={() => setIsResetModalOpen(false)}
+                        className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isResetting || !resetEmail}
+                        className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                    >
+                        {isResetting ? 'Enviando...' : 'Enviar Enlace'}
+                    </button>
+                </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

@@ -196,6 +196,15 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       console.log(`Solicitud de restablecimiento de contraseña enviada para: ${email}`);
     } catch (error: any) {
       console.error("Error al solicitar restablecimiento de contraseña:", error);
+      if (error.code === 'auth/network-request-failed') {
+        throw new Error('Error de conexión. Por favor, verifique su internet o intente abrir la aplicación en una nueva pestaña.');
+      }
+      if (error.code === 'auth/user-not-found') {
+        throw new Error('No hay ningún usuario registrado con este correo electrónico.');
+      }
+      if (error.code === 'auth/invalid-email') {
+        throw new Error('El formato del correo electrónico no es válido.');
+      }
       throw new Error(error.message || 'Error al solicitar el restablecimiento de contraseña.');
     }
   };
