@@ -306,7 +306,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addCampus = async (data: any) => {
         try {
-            await addDoc(collection(db, 'campuses'), sanitizeData(data));
+            const docRef = await addDoc(collection(db, 'campuses'), sanitizeData(data));
+            return docRef.id;
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'campuses');
         }

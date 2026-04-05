@@ -141,17 +141,19 @@ const BulkUploadTeachersModal: React.FC<{
 const AssignmentModal: React.FC<{
     teacher: Teacher;
     onClose: () => void;
-    onSave: (data: { subjects: string[], grade: string, section: string, isHomeroom: boolean }) => void;
+    onSave: (data: { subjects: string[], grade: string, section: string, isHomeroom: boolean, schedule: { day: string; hours: number }[] }) => void;
 }> = ({ teacher, onClose, onSave }) => {
     const [subjects, setSubjects] = useState<string[]>([teacher.subject || SUBJECTS_LIST[0]]);
     const [grade, setGrade] = useState(GRADES_LIST[0]);
     const [section, setSection] = useState(SECTIONS_LIST[0]);
     const [isHomeroom, setIsHomeroom] = useState(false);
+    const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const [schedule, setSchedule] = useState<{ day: string; hours: number }[]>([]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (subjects.length === 0) return;
-        onSave({ subjects, grade, section, isHomeroom });
+        onSave({ subjects, grade, section, isHomeroom, schedule });
     };
 
     const toggleSubject = (subject: string) => {
@@ -160,9 +162,21 @@ const AssignmentModal: React.FC<{
         );
     };
 
+    const handleScheduleChange = (day: string, checked: boolean) => {
+        if (checked) {
+            setSchedule(prev => [...prev, { day, hours: 1 }]);
+        } else {
+            setSchedule(prev => prev.filter(s => s.day !== day));
+        }
+    };
+
+    const handleHoursChange = (day: string, hours: number) => {
+        setSchedule(prev => prev.map(s => s.day === day ? { ...s, hours } : s));
+    };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
-            <Card className="w-full max-w-md">
+            <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-6 pb-3 border-b dark:border-gray-700">
                     <div>
                         <h2 className="text-lg font-bold text-gray-800 dark:text-white">Asignar Carga Académica</h2>
@@ -173,7 +187,7 @@ const AssignmentModal: React.FC<{
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
                         <label className="block text-sm font-bold mb-1.5 dark:text-gray-300">Asignaturas (Seleccione una o más)</label>
-                        <div className="max-h-40 overflow-y-auto border rounded-lg bg-gray-50 p-2 dark:bg-slate-800 dark:border-slate-700 space-y-1">
+                        <div className="max-h-32 overflow-y-auto border rounded-lg bg-gray-50 p-2 dark:bg-slate-800 dark:border-slate-700 space-y-1">
                             {SUBJECTS_LIST.map(s => (
                                 <label key={s} className="flex items-center gap-2 p-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 rounded cursor-pointer">
                                     <input 
@@ -208,6 +222,42 @@ const AssignmentModal: React.FC<{
                             >
                                 {SECTIONS_LIST.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold mb-1.5 dark:text-gray-300">Horario (Días y Horas por día)</label>
+                        <div className="border rounded-lg bg-gray-50 p-3 dark:bg-slate-800 dark:border-slate-700 space-y-2">
+                            {DAYS_OF_WEEK.map(day => {
+                                const isSelected = schedule.some(s => s.day === day);
+                                const daySchedule = schedule.find(s => s.day === day);
+                                return (
+                                    <div key={day} className="flex items-center justify-between gap-2">
+                                        <label className="flex items-center gap-2 cursor-pointer flex-1">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isSelected}
+                                                onChange={(e) => handleScheduleChange(day, e.target.checked)}
+                                                className="rounded text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-sm dark:text-gray-200">{day}</span>
+                                        </label>
+                                        {isSelected && (
+                                            <div className="flex items-center gap-2">
+                                                <input 
+                                                    type="number" 
+                                                    min="1" 
+                                                    max="10"
+                                                    value={daySchedule?.hours || 1}
+                                                    onChange={(e) => handleHoursChange(day, parseInt(e.target.value) || 1)}
+                                                    className="w-16 p-1 text-sm border rounded bg-white dark:bg-slate-900 dark:border-slate-600 dark:text-white text-center"
+                                                />
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">hrs</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -533,9 +583,11 @@ const TeacherManagementPage: React.FC = () => {
         }
     };
 
-    const handleSaveAssignment = async (data: { subjects: string[], grade: string, section: string, isHomeroom: boolean }) => {
+    const handleSaveAssignment = async (data: { subjects: string[], grade: string, section: string, isHomeroom: boolean, schedule: { day: string; hours: number }[] }) => {
         if (!assigningTeacher) return;
         try {
+            const totalHours = data.schedule.reduce((acc, curr) => acc + curr.hours, 0);
+            
             for (const subject of data.subjects) {
                 await addAssignment({
                     teacherId: assigningTeacher.id,
@@ -543,7 +595,8 @@ const TeacherManagementPage: React.FC = () => {
                     class: data.grade,
                     section: data.section,
                     jornada: 'Diurno',
-                    intensidadHoraria: 4 
+                    intensidadHoraria: totalHours > 0 ? totalHours : 4,
+                    schedule: data.schedule
                 });
             }
 
@@ -685,14 +738,6 @@ const TeacherManagementPage: React.FC = () => {
                                                 <button onClick={() => setAssigningTeacher(teacher)} className="p-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-all focus:outline-none shadow-sm dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40" title="Asignar Carga Académica">
                                                     <BookOpenIcon className="w-4 h-4"/>
                                                 </button>
-                                                {isSuperAdmin && (
-                                                    <button onClick={() => setAssigningPassTeacher(teacher)} className="p-2 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 transition-all focus:outline-none shadow-sm dark:bg-amber-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40" title="Asignar Clave Provisional">
-                                                        <KeyIcon className="w-4 h-4"/>
-                                                    </button>
-                                                )}
-                                                <button onClick={() => setResettingPasswordTeacher(teacher)} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-emerald-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-emerald-400" title="Restablecer Contraseña (Email)">
-                                                    <PaperAirplaneIcon className="w-4 h-4"/>
-                                                </button>
                                                 <button onClick={() => { setEditingTeacher(teacher); setIsModalOpen(true); }} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-amber-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-amber-400" title="Editar">
                                                     <EditIcon className="w-4 h-4"/>
                                                 </button>
@@ -811,8 +856,6 @@ const TeacherManagementPage: React.FC = () => {
         {isModalOpen && <TeacherFormModal onClose={() => setIsModalOpen(false)} onSave={handleSaveTeacher} teacherToEdit={editingTeacher} user={user} campuses={campuses} />}
         {deletingTeacher && <DeleteConfirmationModal teacher={deletingTeacher} onClose={() => setDeletingTeacher(null)} onConfirm={handleDeleteTeacher} />}
         {deletingAssignment && <DeleteAssignmentConfirmationModal assignment={deletingAssignment} onClose={() => setDeletingAssignment(null)} onConfirm={handleDeleteAssignment} />}
-        {resettingPasswordTeacher && <ResetPasswordConfirmationModal user={resettingPasswordTeacher} onClose={() => setResettingPasswordTeacher(null)} onConfirm={handleSendResetLink} />}
-        {assigningPassTeacher && <TempPasswordModal user={assigningPassTeacher} onClose={() => setAssigningPassTeacher(null)} onSave={handleAssignTempPass} />}
         {assigningTeacher && <AssignmentModal teacher={assigningTeacher} onClose={() => setAssigningTeacher(null)} onSave={handleSaveAssignment} />}
         {isBulkOpen && <BulkUploadTeachersModal onClose={() => setIsBulkOpen(false)} onSave={handleBulkSave} user={user} campuses={campuses} />}
         </>

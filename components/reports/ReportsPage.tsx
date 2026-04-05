@@ -236,14 +236,28 @@ const ReportsPage: React.FC = () => {
         if (settings.schoolLogo) {
             try {
                 doc.addImage(settings.schoolLogo, 'PNG', 15, 10, 20, 20);
-                doc.addImage(settings.schoolLogo, 'PNG', pageWidth - 35, 10, 20, 20);
             } catch (e) { console.error("Error adding logo:", e); }
         }
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
-        doc.text(settings.schoolName.toUpperCase(), pageWidth / 2, 18, { align: 'center' });
+        doc.text(settings.schoolName.toUpperCase(), pageWidth / 2, 16, { align: 'center' });
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        const infoText = [];
+        if (settings.address) infoText.push(`Dirección: ${settings.address}`);
+        if (settings.city) infoText.push(`Ciudad: ${settings.city}`);
+        if (settings.contactPhone) infoText.push(`Teléfono: ${settings.contactPhone}`);
+        if (settings.contactEmail) infoText.push(`Email: ${settings.contactEmail}`);
+        
+        if (infoText.length > 0) {
+            doc.text(infoText.join(' | '), pageWidth / 2, 22, { align: 'center' });
+        }
+        
         doc.setFontSize(10);
-        doc.text(`AÑO LECTIVO ${settings.schoolYear}`, pageWidth / 2, 25, { align: 'center' });
+        doc.setFont('helvetica', 'bold');
+        doc.text(`AÑO LECTIVO ${settings.schoolYear}`, pageWidth / 2, 28, { align: 'center' });
     };
 
     const addSignatures = (doc: any, startY: number) => {

@@ -60,6 +60,7 @@ export interface TeacherCourseAssignment {
   section: string;
   jornada?: 'Diurno' | 'Tarde' | 'Nocturno' | 'Fin de semana';
   intensidadHoraria?: number;
+  schedule?: { day: string; hours: number }[];
 }
 
 export interface Campus {

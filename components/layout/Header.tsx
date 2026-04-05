@@ -13,7 +13,6 @@ const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ us
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [imageError, setImageError] = useState<string | null>(null);
     const [imageSuccess, setImageSuccess] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'profile' | 'preferences'>('profile');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleImageClick = () => {
@@ -149,26 +148,10 @@ const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ us
                         &times;
                     </button>
                 </div>
-                
-                <div className="flex border-b border-slate-100 dark:border-slate-800 px-5 pt-2">
-                    <button 
-                        onClick={() => setActiveTab('profile')}
-                        className={`pb-3 px-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'profile' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
-                    >
-                        Información
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('preferences')}
-                        className={`pb-3 px-2 ml-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'preferences' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
-                    >
-                        Preferencias
-                    </button>
-                </div>
 
                 <div className="p-5 overflow-y-auto">
-                    {activeTab === 'profile' && (
-                        <div className="animate-fade-in">
-                            <div className="flex flex-col items-center text-center mb-6">
+                    <div className="animate-fade-in">
+                        <div className="flex flex-col items-center text-center mb-6">
                                 <div className="relative group mb-4">
                                     <img className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-md dark:border-slate-800" src={avatarPreview || user?.avatar} alt="User avatar" />
                                     {canChangeDetails && (
@@ -207,53 +190,6 @@ const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ us
                                 {getRoleSpecificInfo()}
                             </div>
                         </div>
-                    )}
-
-                    {activeTab === 'preferences' && (
-                        <div className="animate-fade-in space-y-5">
-                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700/50">
-                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Notificaciones</h3>
-                                
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Resumen Semanal</p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">Recibir reporte por correo</p>
-                                        </div>
-                                        <label className="inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" className="sr-only peer" defaultChecked />
-                                            <div className="relative w-11 h-6 bg-slate-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                                        </label>
-                                    </div>
-                                    
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Alertas del Sistema</p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">Avisos importantes y eventos</p>
-                                        </div>
-                                        <label className="inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" className="sr-only peer" defaultChecked />
-                                            <div className="relative w-11 h-6 bg-slate-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700/50">
-                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Personalización</h3>
-                                
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Apariencia</p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">Modo claro / oscuro</p>
-                                        </div>
-                                        <ThemeSwitcher />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
                 
                 <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">

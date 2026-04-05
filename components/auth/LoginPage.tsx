@@ -48,38 +48,41 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const [resetMessage, setResetMessage] = useState('');
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [isResetting, setIsResetting] = useState(false);
+    const [resetMessage, setResetMessage] = useState('');
+    const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [isResetting, setIsResetting] = useState(false);
+    const [showNewTabButton, setShowNewTabButton] = useState(false);
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resetEmail) {
-      setError('Por favor, ingrese su correo electrónico para restablecer la contraseña.');
-      return;
-    }
-    setError('');
-    setResetMessage('');
-    setIsResetting(true);
-    try {
-      await sendPasswordReset(resetEmail.trim());
-      setResetMessage('Se ha enviado un enlace de restablecimiento a su correo electrónico. Por favor, revise su bandeja de entrada o carpeta de spam.');
-      setTimeout(() => {
-          setIsResetModalOpen(false);
-          setResetMessage('');
-          setResetEmail('');
-      }, 5000);
-    } catch (err: any) {
-      if (err.message.includes('network-request-failed') || err.message.includes('Error de conexión')) {
-          setError('Error de red. Si está usando la vista previa, intente abrir la aplicación en una nueva pestaña, o verifique su conexión a internet.');
-      } else {
-          setError(err.message || 'Error al solicitar el restablecimiento de contraseña.');
-      }
-    } finally {
-        setIsResetting(false);
-    }
-  };
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!resetEmail) {
+            setError('Por favor, ingrese su correo electrónico para restablecer la contraseña.');
+            return;
+        }
+        setError('');
+        setResetMessage('');
+        setIsResetting(true);
+        setShowNewTabButton(false);
+        try {
+            await sendPasswordReset(resetEmail.trim());
+            setResetMessage('Se ha enviado un enlace de restablecimiento a su correo electrónico. Por favor, revise su bandeja de entrada o carpeta de spam.');
+            setTimeout(() => {
+                setIsResetModalOpen(false);
+                setResetMessage('');
+                setResetEmail('');
+            }, 5000);
+        } catch (err: any) {
+            if (err.message.includes('network-request-failed') || err.message.includes('Error de conexión')) {
+                setError('Error de red. Debido a restricciones de seguridad del navegador en esta vista previa, no se puede enviar el correo. Por favor, abra la aplicación en una nueva pestaña.');
+                setShowNewTabButton(true);
+            } else {
+                setError(err.message || 'Error al solicitar el restablecimiento de contraseña.');
+            }
+        } finally {
+            setIsResetting(false);
+        }
+    };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col relative">
@@ -226,9 +229,20 @@ const LoginPage: React.FC = () => {
                 </p>
 
                 {error && (
-                    <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-4 text-sm font-medium border border-red-100 flex items-start gap-2">
-                        <span className="block w-2 h-2 bg-red-500 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>{error}</span>
+                    <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-4 text-sm font-medium border border-red-100 flex flex-col gap-2">
+                        <div className="flex items-start gap-2">
+                            <span className="block w-2 h-2 bg-red-500 rounded-full mt-1.5 flex-shrink-0"></span>
+                            <span>{error}</span>
+                        </div>
+                        {showNewTabButton && (
+                            <button
+                                type="button"
+                                onClick={() => window.open(window.location.href, '_blank')}
+                                className="mt-2 text-xs font-bold bg-red-100 hover:bg-red-200 text-red-700 py-2 px-3 rounded-lg transition-colors self-start"
+                            >
+                                Abrir en nueva pestaña
+                            </button>
+                        )}
                     </div>
                 )}
                 {resetMessage && (

@@ -78,7 +78,7 @@ const DeleteConfirmationModal: React.FC<{ campus: Campus; onClose: () => void; o
 );
 
 const CampusManagementPage: React.FC = () => {
-    const { campuses, addCampus, updateCampus, deleteCampus, admins } = useData();
+    const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCampus, setEditingCampus] = useState<Campus | null>(null);
     const [deletingCampus, setDeletingCampus] = useState<Campus | null>(null);
@@ -91,13 +91,31 @@ const CampusManagementPage: React.FC = () => {
 
     const handleSave = async (data: any) => {
         try {
+            let campusId = editingCampus?.id;
             if (editingCampus) {
                 await updateCampus(editingCampus.id, data);
                 showNotification('Sede actualizada', 'success');
+                
+                // If admin changed, update the old admin and new admin
+                if (editingCampus.admin !== data.admin) {
+                    const oldAdmin = admins.find(a => a.name === editingCampus.admin);
+                    if (oldAdmin) {
+                        await updateAdmin(oldAdmin.id, { campusId: '', campusName: '' });
+                    }
+                }
             } else {
-                await addCampus(data);
+                campusId = await addCampus(data);
                 showNotification('Sede creada', 'success');
             }
+            
+            // Update the new admin
+            if (data.admin && campusId) {
+                const newAdmin = admins.find(a => a.name === data.admin);
+                if (newAdmin) {
+                    await updateAdmin(newAdmin.id, { campusId: campusId, campusName: data.name });
+                }
+            }
+            
             setIsModalOpen(false);
         } catch (e: any) {
             showNotification(e.message || 'Error al guardar', 'error');
