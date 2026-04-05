@@ -284,18 +284,13 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             if (teacher.campusId) acc[teacher.campusId] = (acc[teacher.campusId] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
-        const campusAdmins = admins.reduce((acc, admin) => {
-            if (admin.campusId) acc[admin.campusId] = admin.name;
-            return acc;
-        }, {} as Record<string, string>);
         
         setCampuses(prev => prev.map(campus => ({ 
             ...campus, 
             students: studentCounts[campus.id] || 0, 
-            teachers: teacherCounts[campus.id] || 0,
-            admin: campusAdmins[campus.id] || 'Sin asignar'
+            teachers: teacherCounts[campus.id] || 0
         })));
-    }, [students, teachers, admins]);
+    }, [students, teachers]);
 
 
     // Generic CRUD Mappings using Firestore

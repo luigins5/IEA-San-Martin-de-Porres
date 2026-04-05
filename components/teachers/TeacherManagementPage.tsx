@@ -141,16 +141,23 @@ const BulkUploadTeachersModal: React.FC<{
 const AssignmentModal: React.FC<{
     teacher: Teacher;
     onClose: () => void;
-    onSave: (data: { subject: string, grade: string, section: string, isHomeroom: boolean }) => void;
+    onSave: (data: { subjects: string[], grade: string, section: string, isHomeroom: boolean }) => void;
 }> = ({ teacher, onClose, onSave }) => {
-    const [subject, setSubject] = useState(teacher.subject || SUBJECTS_LIST[0]);
+    const [subjects, setSubjects] = useState<string[]>([teacher.subject || SUBJECTS_LIST[0]]);
     const [grade, setGrade] = useState(GRADES_LIST[0]);
     const [section, setSection] = useState(SECTIONS_LIST[0]);
     const [isHomeroom, setIsHomeroom] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ subject, grade, section, isHomeroom });
+        if (subjects.length === 0) return;
+        onSave({ subjects, grade, section, isHomeroom });
+    };
+
+    const toggleSubject = (subject: string) => {
+        setSubjects(prev => 
+            prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
+        );
     };
 
     return (
@@ -165,14 +172,20 @@ const AssignmentModal: React.FC<{
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                        <label className="block text-sm font-bold mb-1.5 dark:text-gray-300">Asignatura</label>
-                        <select 
-                            value={subject} 
-                            onChange={(e) => setSubject(e.target.value)} 
-                            className="w-full p-2.5 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                        >
-                            {SUBJECTS_LIST.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
+                        <label className="block text-sm font-bold mb-1.5 dark:text-gray-300">Asignaturas (Seleccione una o más)</label>
+                        <div className="max-h-40 overflow-y-auto border rounded-lg bg-gray-50 p-2 dark:bg-slate-800 dark:border-slate-700 space-y-1">
+                            {SUBJECTS_LIST.map(s => (
+                                <label key={s} className="flex items-center gap-2 p-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 rounded cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={subjects.includes(s)}
+                                        onChange={() => toggleSubject(s)}
+                                        className="rounded text-primary focus:ring-primary"
+                                    />
+                                    <span className="text-sm dark:text-gray-200">{s}</span>
+                                </label>
+                            ))}
+                        </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -520,17 +533,19 @@ const TeacherManagementPage: React.FC = () => {
         }
     };
 
-    const handleSaveAssignment = async (data: { subject: string, grade: string, section: string, isHomeroom: boolean }) => {
+    const handleSaveAssignment = async (data: { subjects: string[], grade: string, section: string, isHomeroom: boolean }) => {
         if (!assigningTeacher) return;
         try {
-            await addAssignment({
-                teacherId: assigningTeacher.id,
-                subject: data.subject,
-                class: data.grade,
-                section: data.section,
-                jornada: 'Diurno',
-                intensidadHoraria: 4 
-            });
+            for (const subject of data.subjects) {
+                await addAssignment({
+                    teacherId: assigningTeacher.id,
+                    subject: subject,
+                    class: data.grade,
+                    section: data.section,
+                    jornada: 'Diurno',
+                    intensidadHoraria: 4 
+                });
+            }
 
             if (data.isHomeroom) {
                 // Assuming key format Grade-Section
