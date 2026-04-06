@@ -22,9 +22,6 @@ const ReportsPage: React.FC = () => {
     const [filterPeriod, setFilterPeriod] = useState(1);
     const [selectedStudentId, setSelectedStudentId] = useState('');
 
-    // State for Header Image
-    const [headerImgData, setHeaderImgData] = useState<string | null>(null);
-
     // Helper to get settings based on context
     const getSettings = () => {
         let settings: any = {
@@ -65,22 +62,6 @@ const ReportsPage: React.FC = () => {
         if (settings && settings.numberOfPeriods) {
             setNumberOfPeriods(settings.numberOfPeriods);
         }
-
-        // Load Header Image
-        const imgUrl = 'https://i.ibb.co/3ym3z0g/Captura-de-pantalla-2025-03-09-174823.png';
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.src = imgUrl;
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(img, 0, 0);
-                setHeaderImgData(canvas.toDataURL('image/png'));
-            }
-        };
     }, [user, globalSettings, campusSettings]);
 
     // Filtered students for dropdown and table
@@ -198,37 +179,7 @@ const ReportsPage: React.FC = () => {
 
     const getSchoolHeader = (doc: any) => {
         const pageWidth = doc.internal.pageSize.getWidth();
-        const headerHeight = 35; // Maximum height for the header image
-        const margin = 10;
-        const maxImgWidth = pageWidth - (margin * 2);
-        
-        if (headerImgData) {
-            try {
-                // Get original image properties
-                const props = doc.getImageProperties(headerImgData);
-                const imgAspectRatio = props.width / props.height;
-                
-                // Calculate dimensions to fit within bounds while maintaining aspect ratio
-                let renderWidth = maxImgWidth;
-                let renderHeight = renderWidth / imgAspectRatio;
-                
-                // If calculated height is too tall, constrain by height
-                if (renderHeight > headerHeight) {
-                    renderHeight = headerHeight;
-                    renderWidth = renderHeight * imgAspectRatio;
-                }
-                
-                // Center the image horizontally
-                const xPos = (pageWidth - renderWidth) / 2;
-                
-                doc.addImage(headerImgData, 'PNG', xPos, 5, renderWidth, renderHeight);
-            } catch (error) {
-                console.error("Error adding header image to PDF", error);
-                renderTextHeader(doc, pageWidth);
-            }
-        } else {
-            renderTextHeader(doc, pageWidth);
-        }
+        renderTextHeader(doc, pageWidth);
     };
 
     const renderTextHeader = (doc: any, pageWidth: number) => {

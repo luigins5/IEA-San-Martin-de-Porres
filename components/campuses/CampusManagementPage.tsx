@@ -137,6 +137,39 @@ const CampusManagementPage: React.FC = () => {
     const openCreateModal = () => { setEditingCampus(null); setIsModalOpen(true); };
     const openEditModal = (campus: Campus) => { setEditingCampus(campus); setIsModalOpen(true); };
 
+    const downloadTemplate = () => {
+        const headers = [
+            "Tipo_Perfil (Sede/Admin/Profesor/Estudiante)",
+            "Nombre_Sede",
+            "Direccion_Sede",
+            "Nombre_Usuario",
+            "Email_Usuario",
+            "Grado_Estudiante",
+            "Seccion_Estudiante",
+            "Asignatura_Profesor"
+        ];
+        const exampleData = [
+            ["Sede", "Sede Principal", "Calle 123", "", "", "", "", ""],
+            ["Admin", "Sede Principal", "", "Admin Principal", "admin@colegio.com", "", "", ""],
+            ["Profesor", "Sede Principal", "", "Juan Perez", "juan@colegio.com", "", "", "Matemáticas"],
+            ["Estudiante", "Sede Principal", "", "Maria Gomez", "maria@colegio.com", "6", "A", ""]
+        ];
+        
+        const csvContent = [
+            headers.join(";"),
+            ...exampleData.map(row => row.join(";"))
+        ].join("\n");
+        
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "plantilla_cargue_colegio.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <>
             {notification && (
@@ -157,9 +190,17 @@ const CampusManagementPage: React.FC = () => {
                         </h2>
                         <p className="text-sm text-slate-500 mt-1 ml-10">Administra los campus y su personal.</p>
                     </div>
-                    <button onClick={openCreateModal} className="bg-primary text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all flex items-center gap-2 text-sm">
-                        <BuildingOfficeIcon className="w-5 h-5"/> Añadir Sede
-                    </button>
+                    <div className="flex gap-3">
+                        <button onClick={downloadTemplate} className="bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-lg transition-all flex items-center gap-2 text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                            Descargar Plantilla
+                        </button>
+                        <button onClick={openCreateModal} className="bg-primary text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all flex items-center gap-2 text-sm">
+                            <BuildingOfficeIcon className="w-5 h-5"/> Añadir Sede
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

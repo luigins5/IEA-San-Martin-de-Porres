@@ -40,7 +40,7 @@ const CommunicationFormModal: React.FC<{
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [campusId, setCampusId] = useState<string>(communicationToEdit?.campusId || (user?.role === UserRole.SUPER_ADMIN ? 'all' : userCampusId || 'all'));
-    const [targetRoles, setTargetRoles] = useState<UserRole[]>(communicationToEdit?.targetRoles || [UserRole.TEACHER, UserRole.STUDENT, UserRole.PARENT]);
+    const [targetRoles, setTargetRoles] = useState<UserRole[]>(communicationToEdit?.targetRoles || (user?.role === UserRole.TEACHER ? [UserRole.STUDENT, UserRole.PARENT] : [UserRole.TEACHER, UserRole.STUDENT, UserRole.PARENT]));
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -172,7 +172,9 @@ const CommunicationFormModal: React.FC<{
                     <div>
                         <label className="block text-sm font-bold mb-2 dark:text-slate-300">Visible para:</label>
                         <div className="flex flex-wrap gap-3">
-                            {[UserRole.TEACHER, UserRole.STUDENT, UserRole.PARENT].map(role => (
+                            {[UserRole.TEACHER, UserRole.STUDENT, UserRole.PARENT]
+                                .filter(role => user?.role !== UserRole.TEACHER || role !== UserRole.TEACHER)
+                                .map(role => (
                                 <label key={role} className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg border transition-all ${targetRoles.includes(role) ? 'bg-primary/10 border-primary text-primary font-semibold' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700'}`}>
                                     <input 
                                         type="checkbox" 
@@ -439,7 +441,7 @@ const CommunicationsPage: React.FC = () => {
     };
 
     // Permissions to edit/delete
-    const canManage = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN;
+    const canManage = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER;
 
     return (
         <div className="space-y-8 pb-10">
