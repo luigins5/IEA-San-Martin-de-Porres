@@ -419,6 +419,18 @@ const CommunicationsPage: React.FC = () => {
         if (!user) return false;
         const campusMatch = user.role === UserRole.SUPER_ADMIN || comm.campusId === userCampusId || !comm.campusId;
         if (!campusMatch) return false;
+        
+        // If user is not super admin or campus admin, check if their role is in targetRoles
+        if (user.role !== UserRole.SUPER_ADMIN && user.role !== UserRole.CAMPUS_ADMIN) {
+            // If the communication was created by this teacher, they can see it
+            if (user.role === UserRole.TEACHER && comm.authorId === user.id) return true;
+            
+            // Otherwise, check if their role is in the target roles
+            if (comm.targetRoles && !comm.targetRoles.includes(user.role)) {
+                return false;
+            }
+        }
+        
         return true; 
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

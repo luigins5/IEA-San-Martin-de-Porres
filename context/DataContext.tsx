@@ -417,7 +417,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addCommunication = async (data: any) => {
         try {
-            await addDoc(collection(db, 'communications'), sanitizeData({ ...data, date: new Date().toISOString() }));
+            await addDoc(collection(db, 'communications'), sanitizeData({ ...data, date: new Date().toISOString(), authorId: auth.currentUser?.uid }));
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'communications');
         }

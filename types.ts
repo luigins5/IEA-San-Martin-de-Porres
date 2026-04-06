@@ -121,6 +121,7 @@ export interface Communication {
   campusName?: string;
   date: string;
   targetRoles?: UserRole[];
+  authorId?: string;
 }
 
 export interface ClassSchedule {
