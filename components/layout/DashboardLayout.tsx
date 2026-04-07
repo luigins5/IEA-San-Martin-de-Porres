@@ -7,7 +7,6 @@ import StudentManagementPage from '../students/StudentManagementPage';
 import CampusManagementPage from '../campuses/CampusManagementPage';
 import AdminManagementPage from '../admins/AdminManagementPage';
 import TeacherManagementPage from '../teachers/TeacherManagementPage';
-import GradesPage from '../teachers/GradesPage';
 import CommunicationsPage from '../communications/CommunicationsPage';
 import SchedulePage from '../teachers/SchedulePage';
 import { useAuth } from '../../context/AuthContext';
@@ -55,7 +54,6 @@ const pagePermissions: { [key: string]: Action } = {
   communications: Action.MANAGE_COMMUNICATIONS,
   // Teacher
   'teacher-exams': Action.VIEW_TEACHER_EXAMS,
-  grades: Action.MANAGE_GRADES,
   schedule: Action.VIEW_SCHEDULE,
   'class-annotations': Action.MANAGE_CLASS_LOG,
   ranking: Action.VIEW_RANKING,
@@ -102,8 +100,6 @@ const DashboardLayout: React.FC = () => {
         return <AdminManagementPage />;
       case 'settings':
         return <GlobalSettingsPage />;
-      case 'grades':
-        return <GradesPage />;
       case 'communications':
         return <CommunicationsPage />;
       case 'schedule':

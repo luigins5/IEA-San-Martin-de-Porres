@@ -163,7 +163,7 @@ const ClassFormModal: React.FC<{
 
 const SchedulePage: React.FC = () => {
     const { user } = useAuth();
-    const { schedules, addSchedule, updateSchedule, deleteSchedule, exams, getUserSetting, setUserSetting } = useData();
+    const { schedules, addSchedule, updateSchedule, deleteSchedule, exams, getUserSetting, setUserSetting, assignments } = useData();
     
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingSchedule, setEditingSchedule] = useState<ClassSchedule | null>(null);
@@ -234,6 +234,7 @@ const SchedulePage: React.FC = () => {
     });
 
     const teacherSchedules = schedules.filter(s => s.teacherId === user?.id).sort((a,b) => a.startTime.localeCompare(b.startTime));
+    const teacherAssignments = assignments.filter(a => a.teacherId === user?.id);
     const teacherExams = exams.filter(e => e.teacherId === user?.id);
     
     return (
@@ -252,7 +253,9 @@ const SchedulePage: React.FC = () => {
                     {weekDates.map(date => {
                         const dayOfWeek = date.getDay();
                         const dateString = date.toISOString().split('T')[0];
+                        const dayName = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][dayOfWeek];
                         const daySchedules = teacherSchedules.filter(s => s.dayOfWeek === dayOfWeek);
+                        const dayAssignments = teacherAssignments.filter(a => a.schedule && a.schedule.some(s => s.day === dayName));
                         const dayExams = teacherExams.filter(e => e.startDate === dateString);
 
                         return (
@@ -267,13 +270,23 @@ const SchedulePage: React.FC = () => {
                                             <p className="text-xs">{s.subject} - {s.class}</p>
                                         </div>
                                     )})}
+                                    {dayAssignments.map(a => {
+                                        const hours = a.schedule?.find(s => s.day === dayName)?.hours || 0;
+                                        return (
+                                            <div key={`assign-${a.id}`} className="p-2 rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+                                                <p className="font-semibold text-xs">{a.subject}</p>
+                                                <p className="text-xs">{a.class} - {a.section}</p>
+                                                <p className="text-xs mt-1">{hours} hora(s) asignada(s)</p>
+                                            </div>
+                                        );
+                                    })}
                                     {dayExams.map(e => (
                                         <div key={e.id} className="p-2 rounded-md bg-purple-100 text-purple-800">
                                             <p className="font-semibold text-xs">{e.time || 'Todo el día'}</p>
                                             <p className="text-xs font-bold">{e.title}</p>
                                         </div>
                                     ))}
-                                    {daySchedules.length === 0 && dayExams.length === 0 && <p className="text-xs text-center text-gray-400 pt-4">Libre</p>}
+                                    {daySchedules.length === 0 && dayAssignments.length === 0 && dayExams.length === 0 && <p className="text-xs text-center text-gray-400 pt-4">Libre</p>}
                                 </div>
                             </div>
                         );

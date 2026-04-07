@@ -205,6 +205,17 @@ const GlobalSettingsPage: React.FC = () => {
             reader.readAsDataURL(file);
         }
     };
+
+    const handleImageUpload = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setSettings(prev => ({ ...prev, [field]: reader.result as string }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
     
     // For campus admin, pre-select their config
     useEffect(() => {
@@ -282,6 +293,42 @@ const GlobalSettingsPage: React.FC = () => {
                             <div>
                                 <label className={labelClasses}>Teléfono de Contacto</label>
                                 <input type="tel" name="contactPhone" value={settings.contactPhone} onChange={handleChange} className={inputClasses} placeholder="10 dígitos" />
+                            </div>
+
+                            {/* Additional Images */}
+                            <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 mt-4 border-t border-slate-200 dark:border-slate-700 pt-6">
+                                <div>
+                                    <label className={labelClasses}>Encabezado para Reportes</label>
+                                    <div className="flex flex-col items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+                                        {settings.headerImage ? (
+                                            <img src={settings.headerImage} alt="Encabezado" className="max-h-24 object-contain" />
+                                        ) : (
+                                            <div className="h-24 flex items-center justify-center text-slate-400 text-sm">Sin imagen</div>
+                                        )}
+                                        <div className="relative overflow-hidden inline-block">
+                                            <button className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-indigo-100 transition-colors border border-indigo-200 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:hover:bg-slate-600">
+                                                Subir Encabezado
+                                            </button>
+                                            <input type="file" accept="image/*" onChange={handleImageUpload('headerImage')} className="absolute inset-0 opacity-0 cursor-pointer"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className={labelClasses}>Firma del Rector(a)</label>
+                                    <div className="flex flex-col items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+                                        {settings.rectorSignature ? (
+                                            <img src={settings.rectorSignature} alt="Firma Rector" className="max-h-24 object-contain" />
+                                        ) : (
+                                            <div className="h-24 flex items-center justify-center text-slate-400 text-sm">Sin imagen</div>
+                                        )}
+                                        <div className="relative overflow-hidden inline-block">
+                                            <button className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-indigo-100 transition-colors border border-indigo-200 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:hover:bg-slate-600">
+                                                Subir Firma
+                                            </button>
+                                            <input type="file" accept="image/*" onChange={handleImageUpload('rectorSignature')} className="absolute inset-0 opacity-0 cursor-pointer"/>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -496,10 +496,27 @@ const TeacherManagementPage: React.FC = () => {
         setEditAssignmentData(assignment);
     };
 
+    const toggleEditDay = (day: string) => {
+        setEditAssignmentData(prev => {
+            const schedule = prev.schedule || [];
+            const exists = schedule.find(s => s.day === day);
+            if (exists) {
+                return { ...prev, schedule: schedule.filter(s => s.day !== day) };
+            } else {
+                return { ...prev, schedule: [...schedule, { day, hours: 1 }] };
+            }
+        });
+    };
+
     const handleSaveEditAssignment = async () => {
         if (editingAssignmentId && editAssignmentData) {
             try {
-                await updateAssignment(editingAssignmentId, editAssignmentData);
+                const totalHours = (editAssignmentData.schedule || []).reduce((acc, curr) => acc + curr.hours, 0);
+                const dataToSave = {
+                    ...editAssignmentData,
+                    intensidadHoraria: totalHours > 0 ? totalHours : editAssignmentData.intensidadHoraria
+                };
+                await updateAssignment(editingAssignmentId, dataToSave);
                 showNotification('Carga académica actualizada', 'success');
                 setEditingAssignmentId(null);
             } catch (e) {
@@ -529,7 +546,7 @@ const TeacherManagementPage: React.FC = () => {
         try {
             // Ensure campusName is set if campusId is present (for Super Admin flow)
             let teacherData = { ...data };
-            if (teacherData.campusId && !teacherData.campusName) {
+            if (teacherData.campusId) {
                 const campus = campuses.find(c => c.id === teacherData.campusId);
                 if (campus) teacherData.campusName = campus.name;
             }
@@ -617,7 +634,12 @@ const TeacherManagementPage: React.FC = () => {
         let added = 0;
         for (const t of teachersList) {
             try {
-                await addTeacher(t);
+                let teacherData = { ...t };
+                if (teacherData.campusId) {
+                    const campus = campuses.find(c => c.id === teacherData.campusId);
+                    if (campus) teacherData.campusName = campus.name;
+                }
+                await addTeacher(teacherData);
                 added++;
             } catch (e) {
                 console.error(e);
@@ -721,7 +743,7 @@ const TeacherManagementPage: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{teacher.subject}</td>
-                                    {isSuperAdmin && <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{teacher.campusName}</td>}
+                                    {isSuperAdmin && <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{teacher.campusName || campuses.find(c => c.id === teacher.campusId)?.name || 'Sin sede'}</td>}
                                     <td className="px-6 py-4 text-center">
                                         <span className="bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-full text-xs dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">{assignedCoursesCount}</span>
                                     </td>
@@ -762,7 +784,7 @@ const TeacherManagementPage: React.FC = () => {
                                                                     <th className="px-4 py-2">Grado</th>
                                                                     <th className="px-4 py-2">Grupo</th>
                                                                     <th className="px-4 py-2">Jornada</th>
-                                                                    <th className="px-4 py-2 text-center">Intensidad (Hrs)</th>
+                                                                    <th className="px-4 py-2 text-center">Horario (Días y Horas)</th>
                                                                     <th className="px-4 py-2 text-center">Acciones</th>
                                                                 </tr>
                                                             </thead>
@@ -788,8 +810,37 @@ const TeacherManagementPage: React.FC = () => {
                                                                                         <option value="Fin de semana">Fin de semana</option>
                                                                                     </select>
                                                                                 </td>
-                                                                                <td className="px-4 py-2">
-                                                                                    <input type="number" value={editAssignmentData.intensidadHoraria || 0} onChange={e => setEditAssignmentData({...editAssignmentData, intensidadHoraria: Number(e.target.value)})} className="w-full p-1 border rounded dark:bg-slate-700 dark:border-slate-600 text-center" />
+                                                                                <td className="px-4 py-2 text-center">
+                                                                                    <div className="flex flex-col gap-1">
+                                                                                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map(day => {
+                                                                                            const scheduleItem = editAssignmentData.schedule?.find(s => s.day === day);
+                                                                                            const isSelected = !!scheduleItem;
+                                                                                            return (
+                                                                                                <div key={day} className="flex items-center gap-1 justify-center">
+                                                                                                    <label className="flex items-center gap-1 cursor-pointer text-xs">
+                                                                                                        <input type="checkbox" checked={isSelected} onChange={() => toggleEditDay(day)} className="rounded text-primary" />
+                                                                                                        {day.substring(0, 2)}
+                                                                                                    </label>
+                                                                                                    {isSelected && (
+                                                                                                        <input 
+                                                                                                            type="number" 
+                                                                                                            min="1" 
+                                                                                                            max="10" 
+                                                                                                            value={scheduleItem.hours} 
+                                                                                                            onChange={(e) => {
+                                                                                                                const hours = parseInt(e.target.value) || 1;
+                                                                                                                setEditAssignmentData(prev => {
+                                                                                                                    const schedule = prev.schedule || [];
+                                                                                                                    return { ...prev, schedule: schedule.map(s => s.day === day ? { ...s, hours } : s) };
+                                                                                                                });
+                                                                                                            }} 
+                                                                                                            className="w-10 p-0.5 text-xs border rounded text-center dark:bg-slate-700 dark:border-slate-600" 
+                                                                                                        />
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            );
+                                                                                        })}
+                                                                                    </div>
                                                                                 </td>
                                                                                 <td className="px-4 py-2 text-center">
                                                                                     <div className="flex justify-center gap-2">
@@ -808,7 +859,11 @@ const TeacherManagementPage: React.FC = () => {
                                                                                 <td className="px-4 py-2">{assignment.class}</td>
                                                                                 <td className="px-4 py-2">{assignment.section}</td>
                                                                                 <td className="px-4 py-2">{assignment.jornada || 'Diurno'}</td>
-                                                                                <td className="px-4 py-2 text-center">{assignment.intensidadHoraria || 4}</td>
+                                                                                <td className="px-4 py-2 text-center text-xs text-slate-500 dark:text-slate-400">
+                                                                                    {assignment.schedule && assignment.schedule.length > 0 
+                                                                                        ? assignment.schedule.map(s => `${s.day.substring(0, 2)} (${s.hours}h)`).join(', ') 
+                                                                                        : `${assignment.intensidadHoraria || 4}h (Sin días)`}
+                                                                                </td>
                                                                                 <td className="px-4 py-2 text-center">
                                                                                     <div className="flex justify-center gap-2">
                                                                                         <button onClick={() => handleEditAssignment(assignment)} className="p-1.5 text-slate-500 hover:text-amber-600 transition-colors" title="Editar">

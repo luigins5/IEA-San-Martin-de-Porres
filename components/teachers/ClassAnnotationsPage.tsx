@@ -654,7 +654,10 @@ const ClassAnnotationsPage: React.FC = () => {
                                 onChange={(e) => setSelectedClassId(e.target.value)}
                                 className="appearance-none pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 focus:outline-none focus:bg-slate-50 min-w-[180px] cursor-pointer transition-colors"
                             >
-                                {myClasses.map(c => <option key={c.id} value={c.id}>{c.subject} ({c.class}-{c.section})</option>)}
+                                {myClasses.map(c => {
+                                    const totalHours = c.schedule?.reduce((acc, curr) => acc + curr.hours, 0) || c.intensidadHoraria || 4;
+                                    return <option key={c.id} value={c.id}>{c.subject} ({c.class}-{c.section}) - {totalHours} hrs/sem</option>
+                                })}
                             </select>
                             <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-none"/>
                         </div>

@@ -179,48 +179,26 @@ const ReportsPage: React.FC = () => {
 
     const getSchoolHeader = (doc: any) => {
         const pageWidth = doc.internal.pageSize.getWidth();
-        renderTextHeader(doc, pageWidth);
-    };
-
-    const renderTextHeader = (doc: any, pageWidth: number) => {
         const settings = getSettings();
-        if (settings.schoolLogo) {
+
+        if (settings.headerImage) {
             try {
-                doc.addImage(settings.schoolLogo, 'PNG', 15, 10, 20, 20);
-            } catch (e) { console.error("Error adding logo:", e); }
+                doc.addImage(settings.headerImage, 'PNG', 15, 5, pageWidth - 30, 30);
+            } catch (e) {
+                console.error("Error adding header image:", e);
+            }
         }
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.text(settings.schoolName.toUpperCase(), pageWidth / 2, 16, { align: 'center' });
-        
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        
-        const infoText = [];
-        if (settings.address) infoText.push(`Dirección: ${settings.address}`);
-        if (settings.city) infoText.push(`Ciudad: ${settings.city}`);
-        if (settings.contactPhone) infoText.push(`Teléfono: ${settings.contactPhone}`);
-        if (settings.contactEmail) infoText.push(`Email: ${settings.contactEmail}`);
-        
-        if (infoText.length > 0) {
-            doc.text(infoText.join(' | '), pageWidth / 2, 22, { align: 'center' });
-        }
-        
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`AÑO LECTIVO ${settings.schoolYear}`, pageWidth / 2, 28, { align: 'center' });
     };
 
     const addSignatures = (doc: any, startY: number) => {
         const settings = getSettings();
-        const rectorName = settings.rector ? settings.rector.toUpperCase() : 'RECTOR';
 
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         
         let sigY = startY + 30;
         // Ensure space for signature
-        if (sigY + 25 > pageHeight - 15) {
+        if (sigY + 35 > pageHeight - 15) {
             doc.addPage();
             sigY = 40; 
         }
@@ -230,8 +208,15 @@ const ReportsPage: React.FC = () => {
         doc.setFontSize(10);
 
         // Rector Signature (Left)
+        if (settings.rectorSignature) {
+            try {
+                // Add signature image above the line
+                doc.addImage(settings.rectorSignature, 'PNG', 25, sigY - 20, 50, 20);
+            } catch (e) {
+                console.error("Error adding rector signature image:", e);
+            }
+        }
         doc.line(20, sigY, 90, sigY);
-        doc.text(rectorName, 20, sigY + 5);
         doc.text('RECTOR', 20, sigY + 10);
 
         // Director Signature (Right)

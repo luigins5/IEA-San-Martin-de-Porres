@@ -63,7 +63,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isOpen }
       
       // Teacher specific
       { page: 'teacher-exams', permission: Action.VIEW_TEACHER_EXAMS, icon: <ExamsIcon />, label: 'Exámenes' },
-      { page: 'grades', permission: Action.MANAGE_GRADES, icon: <ExamsIcon />, label: 'Calificaciones' },
       { page: 'schedule', permission: Action.VIEW_SCHEDULE, icon: <CalendarIcon />, label: 'Mi Horario' },
 
       // Student

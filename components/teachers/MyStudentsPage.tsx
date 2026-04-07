@@ -204,13 +204,22 @@ const MyStudentsPage: React.FC = () => {
                     </div>
                     <div className="p-2 bg-white dark:bg-slate-800">
                         {myClasses.map(c => (
-                             <button 
+                            <button 
                                 key={c.id} 
                                 onClick={() => setSelectedClass(c)}
-                                className={`w-full text-left p-3 rounded-lg transition-all text-sm font-semibold mb-1 border-l-4 ${selectedClass?.id === c.id ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-sm' : 'bg-white border-transparent hover:bg-gray-50 text-gray-600'}`}
+                                className={`w-full text-left p-3 rounded-lg transition-all text-sm font-semibold mb-1 border-l-4 ${selectedClass?.id === c.id ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-sm dark:bg-blue-900/30 dark:text-blue-300' : 'bg-white border-transparent hover:bg-gray-50 text-gray-600 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700'}`}
                             >
                                 <div className="font-bold">{c.subject}</div>
-                                <div className="text-xs font-normal text-gray-500 mt-0.5">{c.class} - Grupo '{c.section}'</div>
+                                <div className="text-xs font-normal text-gray-500 dark:text-gray-400 mt-0.5">{c.class} - Grupo '{c.section}'</div>
+                                {c.schedule && c.schedule.length > 0 && (
+                                    <div className="text-[10px] mt-1.5 flex flex-wrap gap-1">
+                                        {c.schedule.map(s => (
+                                            <span key={s.day} className="bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">
+                                                {s.day.substring(0, 2)} ({s.hours}h)
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </button>
                         ))}
                         {myClasses.length === 0 && <p className="text-sm text-gray-500 p-4 text-center">No tienes clases asignadas.</p>}
