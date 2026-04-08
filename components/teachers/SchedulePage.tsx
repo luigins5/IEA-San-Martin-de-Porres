@@ -163,7 +163,7 @@ const ClassFormModal: React.FC<{
 
 const SchedulePage: React.FC = () => {
     const { user } = useAuth();
-    const { schedules, addSchedule, updateSchedule, deleteSchedule, exams, getUserSetting, setUserSetting, assignments } = useData();
+    const { schedules, addSchedule, updateSchedule, deleteSchedule, exams, getUserSetting, setUserSetting, assignments, teachers } = useData();
     
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingSchedule, setEditingSchedule] = useState<ClassSchedule | null>(null);
@@ -233,9 +233,11 @@ const SchedulePage: React.FC = () => {
         return date;
     });
 
-    const teacherSchedules = schedules.filter(s => s.teacherId === user?.id).sort((a,b) => a.startTime.localeCompare(b.startTime));
-    const teacherAssignments = assignments.filter(a => a.teacherId === user?.id);
-    const teacherExams = exams.filter(e => e.teacherId === user?.id);
+    const currentTeacher = teachers.find(t => t.email === user?.email);
+    const teacherId = currentTeacher?.id || user?.id;
+    const teacherSchedules = schedules.filter(s => s.teacherId === teacherId).sort((a,b) => a.startTime.localeCompare(b.startTime));
+    const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
+    const teacherExams = exams.filter(e => e.teacherId === teacherId);
     
     return (
         <>
@@ -293,7 +295,7 @@ const SchedulePage: React.FC = () => {
                     })}
                 </div>
             </Card>
-            {isFormOpen && user && <ClassFormModal teacherId={user.id} onClose={() => setIsFormOpen(false)} onSave={handleSaveSchedule} scheduleToEdit={editingSchedule} />}
+            {isFormOpen && user && <ClassFormModal teacherId={teacherId || user.id} onClose={() => setIsFormOpen(false)} onSave={handleSaveSchedule} scheduleToEdit={editingSchedule} />}
             {selectedInstance && (
                 <ScheduleInstanceModal 
                     instance={selectedInstance}

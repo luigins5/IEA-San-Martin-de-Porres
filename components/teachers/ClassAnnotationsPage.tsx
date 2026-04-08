@@ -360,8 +360,8 @@ const ClassAnnotationsPage: React.FC = () => {
             .split('\n').slice(1).filter(row => row.trim())
             .map(row => {
                 const parts = row.split(';');
-                const code = parts.pop()?.trim() || '';
-                const text = parts.join(';').trim().replace(/^\uFEFF/, '');
+                const code = parts[0]?.trim() || '';
+                const text = parts.slice(1).join(';').trim().replace(/^\uFEFF/, '');
                 return { code, text };
             }).filter(c => c.code && c.text);
 
@@ -386,11 +386,15 @@ const ClassAnnotationsPage: React.FC = () => {
         setSelectedPeriod(currentPeriod);
 
         if (user) {
-            const teacherAssignments = assignments.filter(a => a.teacherId === user.id);
+            const currentTeacher = teachers.find(t => t.email === user.email);
+            const teacherId = currentTeacher?.id || user.id;
+            const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
             setMyClasses(teacherAssignments);
-            if (teacherAssignments.length > 0) {
-                setSelectedClassId(teacherAssignments[0].id);
-            }
+            setSelectedClassId(prev => {
+                if (!prev && teacherAssignments.length > 0) return teacherAssignments[0].id;
+                if (prev && !teacherAssignments.find(a => a.id === prev) && teacherAssignments.length > 0) return teacherAssignments[0].id;
+                return prev;
+            });
         }
 
         refreshConcepts();
@@ -650,10 +654,11 @@ const ClassAnnotationsPage: React.FC = () => {
                      <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-lg border border-white/20">
                         <div className="relative group">
                             <select 
-                                value={selectedClassId} 
+                                value={selectedClassId || ''} 
                                 onChange={(e) => setSelectedClassId(e.target.value)}
                                 className="appearance-none pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 focus:outline-none focus:bg-slate-50 min-w-[180px] cursor-pointer transition-colors"
                             >
+                                {myClasses.length === 0 && <option value="">Sin asignaturas asignadas</option>}
                                 {myClasses.map(c => {
                                     const totalHours = c.schedule?.reduce((acc, curr) => acc + curr.hours, 0) || c.intensidadHoraria || 4;
                                     return <option key={c.id} value={c.id}>{c.subject} ({c.class}-{c.section}) - {totalHours} hrs/sem</option>

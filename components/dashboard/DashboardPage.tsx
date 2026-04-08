@@ -223,9 +223,10 @@ const CampusAdminDashboard: React.FC<{ setCurrentPage: (page: string) => void }>
 
 const TeacherDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { user } = useAuth();
-    const { schedules, communications, exams, teachers } = useData();
+    const { schedules, communications, exams, teachers, assignments } = useData();
     
     const [mySchedules, setMySchedules] = useState<any[]>([]);
+    const [myAssignments, setMyAssignments] = useState<any[]>([]);
     const [currentClassId, setCurrentClassId] = useState<string | null>(null);
     const [latestAnnouncement, setLatestAnnouncement] = useState<Communication | null>(null);
     const [myExams, setMyExams] = useState<Exam[]>([]);
@@ -238,6 +239,8 @@ const TeacherDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = (
             setTeacher(currentTeacher || null);
             const teacherSchedules = schedules.filter(s => s.teacherId === teacherId);
             setMySchedules(teacherSchedules);
+            const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
+            setMyAssignments(teacherAssignments);
             const latest = communications.filter(c => !c.campusId || c.campusId === user.campusId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
             setLatestAnnouncement(latest || null);
             if (currentTeacher) {
@@ -245,7 +248,7 @@ const TeacherDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = (
                 setMyExams(teacherExams);
             }
         }
-    }, [user, teachers, schedules, communications, exams]);
+    }, [user, teachers, schedules, communications, exams, assignments]);
 
     useEffect(() => {
         const checkCurrentClass = () => {
@@ -264,15 +267,26 @@ const TeacherDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = (
         const now = new Date();
         const dayOfWeek = now.getDay();
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
         const upcomingToday = mySchedules.filter(s => s.dayOfWeek === dayOfWeek && s.startTime > currentTime).sort((a, b) => a.startTime.localeCompare(b.startTime));
         if (upcomingToday.length > 0) return { classInfo: upcomingToday[0], day: 'Hoy' };
+        
         for (let i = 1; i <= 7; i++) {
             const nextDayIndex = (dayOfWeek + i) % 7;
+            const dayName = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][nextDayIndex];
+            
             const upcomingNextDay = mySchedules.filter(s => s.dayOfWeek === nextDayIndex).sort((a, b) => a.startTime.localeCompare(b.startTime));
             if (upcomingNextDay.length > 0) {
                 const nextDate = new Date();
                 nextDate.setDate(now.getDate() + i);
                 return { classInfo: upcomingNextDay[0], day: nextDate.toLocaleDateString('es-ES', { weekday: 'long' }) };
+            }
+            
+            const upcomingNextDayAssignments = myAssignments.filter(a => a.schedule && a.schedule.some((s: any) => s.day === dayName));
+            if (upcomingNextDayAssignments.length > 0) {
+                const nextDate = new Date();
+                nextDate.setDate(now.getDate() + i);
+                return { classInfo: upcomingNextDayAssignments[0], day: nextDate.toLocaleDateString('es-ES', { weekday: 'long' }) };
             }
         }
         return null;
@@ -295,7 +309,7 @@ const TeacherDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = (
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard icon={<IdentificationIcon />} title="Mis Asignaturas" value={String(mySchedules.length)} color="#3B82F6" onClick={() => setCurrentPage('schedule')} />
+                <StatCard icon={<IdentificationIcon />} title="Mis Asignaturas" value={String(myAssignments.length)} color="#3B82F6" onClick={() => setCurrentPage('schedule')} />
                 <StatCard icon={<ExamsIcon />} title="Actividades Pendientes" value={String(myExams.length)} color="#F97316" onClick={() => setCurrentPage('teacher-exams')} />
                 <StatCard icon={<CalendarIcon />} title="Próxima Clase" value={nextClass ? `${nextClass.classInfo.subject} (${nextClass.day})` : 'Sin clases'} color="#10B981" onClick={() => setCurrentPage('schedule')} />
             </div>
@@ -310,9 +324,12 @@ const TeacherDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = (
                     <div className="flex overflow-x-auto gap-4 pb-4 snap-x custom-scrollbar">
                         {weekDates.map(date => {
                             const isToday = date.toDateString() === today.toDateString();
+                            const dayOfWeek = date.getDay();
+                            const dayName = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][dayOfWeek];
                             const daySchedules = mySchedules
-                                .filter(s => s.dayOfWeek === date.getDay())
+                                .filter(s => s.dayOfWeek === dayOfWeek)
                                 .sort((a, b) => a.startTime.localeCompare(b.startTime));
+                            const dayAssignments = myAssignments.filter(a => a.schedule && a.schedule.some((s: any) => s.day === dayName));
 
                             return (
                                 <div 
@@ -338,20 +355,38 @@ const TeacherDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = (
                                     </div>
 
                                     <div className="space-y-2">
-                                        {daySchedules.length > 0 ? (
-                                            daySchedules.map(s => (
-                                                <div key={s.id} className={`p-2.5 rounded-xl border border-white/50 dark:border-slate-700/50 shadow-sm ${currentClassId === s.id ? 'bg-primary text-white' : 'bg-white dark:bg-slate-800'}`}>
-                                                    <p className={`text-[10px] font-bold ${currentClassId === s.id ? 'text-blue-100' : 'text-primary dark:text-sky-400'}`}>
-                                                        {s.startTime} - {s.endTime}
-                                                    </p>
-                                                    <p className={`text-xs font-black truncate mt-0.5 ${currentClassId === s.id ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
-                                                        {s.subject}
-                                                    </p>
-                                                    <p className={`text-[9px] font-bold mt-0.5 opacity-70 ${currentClassId === s.id ? 'text-blue-50' : 'text-slate-500'}`}>
-                                                        Grupo {s.class}-{s.section}
-                                                    </p>
-                                                </div>
-                                            ))
+                                        {daySchedules.length > 0 || dayAssignments.length > 0 ? (
+                                            <>
+                                                {daySchedules.map(s => (
+                                                    <div key={s.id} className={`p-2.5 rounded-xl border border-white/50 dark:border-slate-700/50 shadow-sm ${currentClassId === s.id ? 'bg-primary text-white' : 'bg-white dark:bg-slate-800'}`}>
+                                                        <p className={`text-[10px] font-bold ${currentClassId === s.id ? 'text-blue-100' : 'text-primary dark:text-sky-400'}`}>
+                                                            {s.startTime} - {s.endTime}
+                                                        </p>
+                                                        <p className={`text-xs font-black truncate mt-0.5 ${currentClassId === s.id ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
+                                                            {s.subject}
+                                                        </p>
+                                                        <p className={`text-[9px] font-bold mt-0.5 opacity-70 ${currentClassId === s.id ? 'text-blue-50' : 'text-slate-500'}`}>
+                                                            Grupo {s.class}-{s.section}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                                {dayAssignments.map(a => {
+                                                    const hours = a.schedule?.find((s: any) => s.day === dayName)?.hours || 0;
+                                                    return (
+                                                        <div key={`assign-${a.id}`} className="p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-800 shadow-sm bg-indigo-50 dark:bg-indigo-900/30">
+                                                            <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400">
+                                                                Carga Asignada: {hours} hr(s)
+                                                            </p>
+                                                            <p className="text-xs font-black truncate mt-0.5 text-slate-800 dark:text-slate-200">
+                                                                {a.subject}
+                                                            </p>
+                                                            <p className="text-[9px] font-bold mt-0.5 opacity-70 text-slate-500">
+                                                                Grupo {a.class}-{a.section}
+                                                            </p>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </>
                                         ) : (
                                             <div className="py-8 flex flex-col items-center justify-center opacity-30">
                                                 <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center mb-1">

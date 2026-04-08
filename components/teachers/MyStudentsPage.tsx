@@ -70,7 +70,7 @@ const AttendanceModal: React.FC<{
 
 const MyStudentsPage: React.FC = () => {
     const { user } = useAuth();
-    const { students: allStudents, grades, addGrade, updateGrade, deleteGrade, assignments, attendanceRecords, saveAttendance, deleteAttendance, globalSettings, campusSettings } = useData();
+    const { students: allStudents, grades, addGrade, updateGrade, deleteGrade, assignments, teachers, attendanceRecords, saveAttendance, deleteAttendance, globalSettings, campusSettings } = useData();
     
     const [myClasses, setMyClasses] = useState<TeacherCourseAssignment[]>([]);
     const [selectedClass, setSelectedClass] = useState<TeacherCourseAssignment | null>(null);
@@ -88,11 +88,15 @@ const MyStudentsPage: React.FC = () => {
 
     useEffect(() => {
         if (user) {
-            const teacherAssignments = assignments.filter(a => a.teacherId === user.id);
+            const currentTeacher = teachers.find(t => t.email === user.email);
+            const teacherId = currentTeacher?.id || user.id;
+            const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
             setMyClasses(teacherAssignments);
-            if (teacherAssignments.length > 0 && !selectedClass) {
-                setSelectedClass(teacherAssignments[0]);
-            }
+            setSelectedClass(prev => {
+                if (!prev && teacherAssignments.length > 0) return teacherAssignments[0];
+                if (prev && !teacherAssignments.find(a => a.id === prev.id) && teacherAssignments.length > 0) return teacherAssignments[0];
+                return prev;
+            });
         }
         
         let settings: any = null;
@@ -111,8 +115,8 @@ const MyStudentsPage: React.FC = () => {
             .split('\n').slice(1).filter(row => row.trim())
             .map(row => {
                 const parts = row.split(';');
-                const code = parts.pop()?.trim() || '';
-                const text = parts.join(';').trim().replace(/^\uFEFF/, '');
+                const code = parts[0]?.trim() || '';
+                const text = parts.slice(1).join(';').trim().replace(/^\uFEFF/, '');
                 return { code, text };
             }).filter(c => c.code && c.text);
         setConcepts(parsed);

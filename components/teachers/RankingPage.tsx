@@ -9,17 +9,21 @@ import { ChevronDownIcon, CalendarIcon } from '../icons';
 
 const RankingPage: React.FC = () => {
     const { user } = useAuth();
-    const { assignments, students, grades, globalSettings } = useData();
+    const { assignments, students, grades, globalSettings, teachers } = useData();
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [selectedSubject, setSelectedSubject] = useState<string>('');
     const [selectedPeriod, setSelectedPeriod] = useState<number>(1);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const [selectedClassFilter, setSelectedClassFilter] = useState<string>('');
     const [selectedSectionFilter, setSelectedSectionFilter] = useState<string>('');
 
     const isStudentOrParent = user?.role === UserRole.STUDENT || user?.role === UserRole.PARENT;
     const isAdmin = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN;
+
+    const currentTeacher = useMemo(() => teachers.find(t => t.email === user?.email), [teachers, user]);
+    const teacherId = currentTeacher?.id || user?.id;
 
     // Get unique classes and sections for admin filters
     const availableClasses = useMemo(() => {
@@ -44,7 +48,7 @@ const RankingPage: React.FC = () => {
 
         if (user) {
             if (user.role === UserRole.TEACHER) {
-                const teacherAssignments = assignments.filter(a => a.teacherId === user.id);
+                const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
                 if (teacherAssignments.length > 0) {
                     setSelectedClassId(teacherAssignments[0].id);
                 }
@@ -61,9 +65,9 @@ const RankingPage: React.FC = () => {
                 }
             }
         }
-    }, [user, assignments, numberOfPeriods, students, grades, isStudentOrParent]);
+    }, [user, assignments, numberOfPeriods, students, grades, isStudentOrParent, teacherId]);
 
-    const myClasses = useMemo(() => assignments.filter(a => a.teacherId === user?.id), [assignments, user]);
+    const myClasses = useMemo(() => assignments.filter(a => a.teacherId === teacherId), [assignments, teacherId]);
     
     const selectedClass = useMemo(() => {
         if (user?.role === UserRole.TEACHER) {
@@ -143,8 +147,8 @@ const RankingPage: React.FC = () => {
                 average: average,
                 count: studentGrades.length
             };
-        }).filter(d => d.average > 0).sort((a, b) => b.average - a.average);
-    }, [selectedClass, students, grades, selectedPeriod, numberOfPeriods, user, selectedSubject, isAdmin, selectedClassFilter, selectedSectionFilter]);
+        }).filter(d => d.average > 0 && d.name.toLowerCase().includes(searchQuery.toLowerCase())).sort((a, b) => b.average - a.average);
+    }, [selectedClass, students, grades, selectedPeriod, numberOfPeriods, user, selectedSubject, isAdmin, selectedClassFilter, selectedSectionFilter, searchQuery]);
 
     // Función para generar mensajes únicos por estudiante
     const generateUniqueFeedback = (name: string, score: number) => {
@@ -299,6 +303,15 @@ const RankingPage: React.FC = () => {
                             </div>
                         </div>
                     )}
+                </div>
+                <div className="w-full lg:w-64">
+                    <input 
+                        type="text" 
+                        placeholder="Buscar estudiante..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
                 </div>
             </div>
 

@@ -76,8 +76,8 @@ const ClassLogWidget: React.FC = () => {
             .split('\n').slice(1).filter(row => row.trim())
             .map(row => {
                 const parts = row.split(';');
-                const code = parts.pop()?.trim() || '';
-                const text = parts.join(';').trim().replace(/^\uFEFF/, '');
+                const code = parts[0]?.trim() || '';
+                const text = parts.slice(1).join(';').trim().replace(/^\uFEFF/, '');
                 return { code, text };
             }).filter(c => c.code && c.text);
         setConcepts(parsedConcepts);
