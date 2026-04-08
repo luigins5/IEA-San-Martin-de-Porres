@@ -147,6 +147,7 @@ interface DataContextType {
     deleteAttendance: (id: string) => Promise<void>;
 
     updateUserAvatar: (userId: string, role: UserRole, avatar: string) => Promise<void>;
+    updateUserName: (userId: string, role: UserRole, name: string) => Promise<void>;
     assignTemporaryPassword: (userId: string, role: UserRole, tempPass: string) => Promise<void>;
     
     getUserSetting: (userId: string, key: string) => Promise<any>;
@@ -610,6 +611,47 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
     };
 
+    const updateUserName = async (userId: string, role: UserRole, name: string) => {
+        let col = '';
+        let docId = userId;
+        const email = auth.currentUser?.email;
+        
+        switch(role) {
+            case UserRole.CAMPUS_ADMIN: 
+                col = 'admins'; 
+                const admin = admins.find(a => a.email === email);
+                if (admin) docId = admin.id;
+                break;
+            case UserRole.TEACHER: 
+                col = 'teachers'; 
+                const teacher = teachers.find(t => t.email === email);
+                if (teacher) docId = teacher.id;
+                break;
+            case UserRole.STUDENT:
+                col = 'students'; 
+                const student = students.find(s => s.email === email);
+                if (student) docId = student.id;
+                break;
+            case UserRole.PARENT:
+            case UserRole.SUPER_ADMIN:
+            default:
+                col = '';
+                break;
+        }
+        try {
+            if (col) {
+                const docRef = doc(db, col, docId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    await updateDoc(docRef, sanitizeData({ name }));
+                }
+            }
+            await updateDoc(doc(db, 'users', userId), sanitizeData({ name }));
+        } catch (error) {
+            handleFirestoreError(error, OperationType.UPDATE, col ? `${col}/${docId}` : `users/${userId}`);
+        }
+    };
+
     const assignTemporaryPassword = async (userId: string, role: UserRole, tempPass: string) => {
         // In Firebase, we don't store passwords in Firestore. 
         // We can store a flag or a temporary password field if needed for legacy compatibility,
@@ -661,7 +703,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         addMessage, updateMessage, deleteMessage,
         addExam, updateExam, deleteExam, addSchedule, updateSchedule, deleteSchedule, addAssignment, updateAssignment, deleteAssignment,
         addEvent, updateEvent, deleteEvent,
-        updateUserAvatar, saveAttendance, deleteAttendance,
+        updateUserAvatar, updateUserName, saveAttendance, deleteAttendance,
         assignTemporaryPassword,
         getUserSetting, setUserSetting
     };

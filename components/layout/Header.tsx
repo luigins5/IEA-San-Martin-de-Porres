@@ -9,16 +9,38 @@ import { useData } from '../../context/DataContext';
 // Modal for user profile
 const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ user, onClose }) => {
     const { logout } = useAuth();
-    const { updateUserAvatar, students, teachers, campuses } = useData();
+    const { updateUserAvatar, updateUserName, students, teachers, campuses } = useData();
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [imageError, setImageError] = useState<string | null>(null);
     const [imageSuccess, setImageSuccess] = useState<string | null>(null);
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [newName, setNewName] = useState(user?.name || '');
+    const [isSavingName, setIsSavingName] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleImageClick = () => {
         const modifiableRoles = [UserRole.CAMPUS_ADMIN, UserRole.TEACHER, UserRole.STUDENT, UserRole.PARENT];
         if (user && modifiableRoles.includes(user.role)) {
             fileInputRef.current?.click();
+        }
+    };
+
+    const handleSaveName = async () => {
+        if (!user || !newName.trim() || newName.trim() === user.name) {
+            setIsEditingName(false);
+            return;
+        }
+        setIsSavingName(true);
+        try {
+            await updateUserName(user.id, user.role, newName.trim());
+            setImageSuccess('Nombre actualizado exitosamente.');
+            setTimeout(() => setImageSuccess(null), 3000);
+            setIsEditingName(false);
+        } catch (error: any) {
+            setImageError(`Error al actualizar nombre: ${error.message}`);
+            setTimeout(() => setImageError(null), 3000);
+        } finally {
+            setIsSavingName(false);
         }
     };
 
@@ -171,7 +193,39 @@ const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ us
                                     />
                                 </div>
                                 <div>
-                                    <p className="text-xl font-bold text-slate-900 dark:text-white">{user?.name}</p>
+                                    {isEditingName ? (
+                                        <div className="flex items-center justify-center gap-2 mb-1">
+                                            <input 
+                                                type="text" 
+                                                value={newName} 
+                                                onChange={(e) => setNewName(e.target.value)}
+                                                className="text-center text-lg font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                autoFocus
+                                            />
+                                            <button 
+                                                onClick={handleSaveName}
+                                                disabled={isSavingName}
+                                                className="bg-blue-500 text-white p-1.5 rounded hover:bg-blue-600 disabled:opacity-50"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                            </button>
+                                            <button 
+                                                onClick={() => { setIsEditingName(false); setNewName(user?.name || ''); }}
+                                                className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 p-1.5 rounded hover:bg-slate-300 dark:hover:bg-slate-600"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-center gap-2">
+                                            <p className="text-xl font-bold text-slate-900 dark:text-white">{user?.name}</p>
+                                            {canChangeDetails && (
+                                                <button onClick={() => setIsEditingName(true)} className="text-slate-400 hover:text-blue-500 transition-colors">
+                                                    <EditIcon className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{user?.email}</p>
                                     <span className="text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1 rounded-full inline-block mt-3 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100 dark:border-blue-800/50">
                                         {user?.role}
@@ -188,6 +242,13 @@ const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ us
                             <div className="mt-2">
                                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 ml-1">Resumen de Actividad</h3>
                                 {getRoleSpecificInfo()}
+                            </div>
+
+                            <div className="mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
+                                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                                    <span className="font-medium text-sm text-slate-700 dark:text-slate-200">Tema de la interfaz</span>
+                                    <ThemeSwitcher />
+                                </div>
                             </div>
                         </div>
                 </div>
