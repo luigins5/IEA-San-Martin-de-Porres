@@ -6,6 +6,7 @@ export enum Action {
   MANAGE_CAMPUSES = 'manage:campuses',
   MANAGE_ADMINS = 'manage:admins',
   VIEW_GLOBAL_SETTINGS = 'view:global_settings',
+  VIEW_AUDIT_LOGS = 'view:audit_logs',
 
   // Campus Admin Actions
   MANAGE_STUDENTS = 'manage:students',
@@ -50,6 +51,7 @@ const rolePermissions: { [key in UserRole]: Action[] } = {
     Action.MANAGE_STUDENTS,
     Action.VIEW_REPORTS,
     Action.VIEW_RANKING,
+    Action.VIEW_AUDIT_LOGS,
   ],
   [UserRole.CAMPUS_ADMIN]: [
     Action.VIEW_DASHBOARD,

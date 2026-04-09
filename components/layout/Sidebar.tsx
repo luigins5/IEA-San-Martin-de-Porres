@@ -81,6 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isOpen }
       
       // Super Admin - moved to end
       { page: 'settings', permission: Action.VIEW_GLOBAL_SETTINGS, icon: <SettingsIcon />, label: 'Configuración Global' },
+      { page: 'audit', permission: Action.VIEW_AUDIT_LOGS, icon: <DocumentTextIcon />, label: 'Auditoría' },
     ];
     
     return allPossibleItems.filter(item => hasPermission(user.role, item.permission));

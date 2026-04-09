@@ -12,6 +12,7 @@ import {
   sendPasswordResetEmail 
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { logAuditAction, AuditAction } from '../utils/audit';
 
 interface AuthContextType {
   user: User | null;
@@ -108,18 +109,23 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       
       if (userDoc.exists()) {
         const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
+        userData.lastLogin = new Date().toISOString();
+        await setDoc(userDocRef, { lastLogin: userData.lastLogin }, { merge: true });
         setUser(userData);
+        logAuditAction(userData, AuditAction.LOGIN, 'Inicio de sesión con Google');
       } else {
         let defaultUser: User = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
           email: firebaseUser.email || '',
           role: role,
-          avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`
+          avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
+          lastLogin: new Date().toISOString()
         };
         defaultUser = await syncUserCampusId(defaultUser, userDocRef);
         await setDoc(userDocRef, defaultUser);
         setUser(defaultUser);
+        logAuditAction(defaultUser, AuditAction.LOGIN, 'Inicio de sesión con Google (Nuevo usuario)');
       }
     } catch (error: any) {
       console.error("Error en login con Google:", error);
@@ -161,7 +167,10 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
            // throw new Error('El rol seleccionado no coincide con su cuenta.');
         }
 
+        userData.lastLogin = new Date().toISOString();
+        await setDoc(userDocRef, { lastLogin: userData.lastLogin }, { merge: true });
         setUser(userData);
+        logAuditAction(userData, AuditAction.LOGIN, 'Inicio de sesión con Email');
       } else {
         // If user doesn't exist in Firestore, create a default profile (for testing/initial setup)
         // In a real app, users would be created by an admin
@@ -170,11 +179,13 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           name: firebaseUser.displayName || email.split('@')[0],
           email: email,
           role: role,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
+          lastLogin: new Date().toISOString()
         };
         defaultUser = await syncUserCampusId(defaultUser, userDocRef);
         await setDoc(userDocRef, defaultUser);
         setUser(defaultUser);
+        logAuditAction(defaultUser, AuditAction.LOGIN, 'Inicio de sesión con Email (Nuevo usuario)');
       }
     } catch (error: any) {
       console.error("Error en login:", error);

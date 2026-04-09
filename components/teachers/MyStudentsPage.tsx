@@ -234,7 +234,7 @@ const MyStudentsPage: React.FC = () => {
             <div className="flex-1 w-full min-w-0">
                 <Card className="flex flex-col h-full border-none shadow-none bg-transparent p-0">
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-100 dark:border-slate-700 overflow-hidden flex flex-col">
-                        <div className="p-6 bg-gradient-to-r from-blue-700 to-cyan-600 text-white flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="p-6 bg-gradient-to-r from-blue-700 to-blue-600 text-white flex flex-col md:flex-row justify-between items-center gap-4">
                             <div>
                                 <h2 className="font-bold text-2xl">
                                     {selectedClass ? `${selectedClass.class} - ${selectedClass.section}` : 'Seleccione una clase'}

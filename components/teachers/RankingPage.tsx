@@ -16,27 +16,22 @@ const RankingPage: React.FC = () => {
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const [selectedClassFilter, setSelectedClassFilter] = useState<string>('');
-    const [selectedSectionFilter, setSelectedSectionFilter] = useState<string>('');
-
     const isStudentOrParent = user?.role === UserRole.STUDENT || user?.role === UserRole.PARENT;
     const isAdmin = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN;
 
     const currentTeacher = useMemo(() => teachers.find(t => t.email === user?.email), [teachers, user]);
     const teacherId = currentTeacher?.id || user?.id;
 
-    // Get unique classes and sections for admin filters
-    const availableClasses = useMemo(() => {
-        if (!isAdmin) return [];
-        const classes = new Set(students.map(s => s.class).filter(Boolean));
-        return Array.from(classes).sort();
-    }, [students, isAdmin]);
-
-    const availableSections = useMemo(() => {
-        if (!isAdmin || !selectedClassFilter) return [];
-        const sections = new Set(students.filter(s => s.class === selectedClassFilter).map(s => s.section).filter(Boolean));
-        return Array.from(sections).sort();
-    }, [students, isAdmin, selectedClassFilter]);
+    const displayClasses = useMemo(() => {
+        if (isAdmin) {
+            return [...assignments].sort((a, b) => {
+                if (a.class !== b.class) return a.class.localeCompare(b.class);
+                if (a.section !== b.section) return a.section.localeCompare(b.section);
+                return a.subject.localeCompare(b.subject);
+            });
+        }
+        return assignments.filter(a => a.teacherId === teacherId);
+    }, [assignments, isAdmin, teacherId]);
 
     useEffect(() => {
         if (globalSettings && globalSettings.numberOfPeriods) {
@@ -47,10 +42,10 @@ const RankingPage: React.FC = () => {
         setSelectedPeriod(getPeriodFromDate(today, numberOfPeriods));
 
         if (user) {
-            if (user.role === UserRole.TEACHER) {
-                const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
-                if (teacherAssignments.length > 0) {
-                    setSelectedClassId(teacherAssignments[0].id);
+            if (user.role === UserRole.TEACHER || isAdmin) {
+                const available = isAdmin ? assignments : assignments.filter(a => a.teacherId === teacherId);
+                if (available.length > 0 && !selectedClassId) {
+                    setSelectedClassId(available[0].id);
                 }
             } else if (isStudentOrParent) {
                 const targetStudent = user.role === UserRole.STUDENT 
@@ -65,13 +60,11 @@ const RankingPage: React.FC = () => {
                 }
             }
         }
-    }, [user, assignments, numberOfPeriods, students, grades, isStudentOrParent, teacherId]);
+    }, [user, assignments, numberOfPeriods, students, grades, isStudentOrParent, teacherId, isAdmin, selectedClassId]);
 
-    const myClasses = useMemo(() => assignments.filter(a => a.teacherId === teacherId), [assignments, teacherId]);
-    
     const selectedClass = useMemo(() => {
-        if (user?.role === UserRole.TEACHER) {
-            return myClasses.find(c => c.id === selectedClassId);
+        if (user?.role === UserRole.TEACHER || isAdmin) {
+            return displayClasses.find(c => c.id === selectedClassId);
         } else if (isStudentOrParent) {
             const targetStudent = user?.role === UserRole.STUDENT 
                 ? students.find(s => s.id === user.id)
@@ -79,21 +72,14 @@ const RankingPage: React.FC = () => {
             
             return targetStudent ? { class: targetStudent.class, section: targetStudent.section } : null;
         }
-        return null; // For admin, selectedClass is null
-    }, [user, myClasses, selectedClassId, students, isStudentOrParent]);
+        return null;
+    }, [user, displayClasses, selectedClassId, students, isStudentOrParent, isAdmin]);
 
     const availableSubjects = useMemo(() => {
-        if (isAdmin) {
-            if (selectedClassFilter && selectedSectionFilter) {
-                const classAssignments = assignments.filter(a => a.class === selectedClassFilter && a.section === selectedSectionFilter);
-                return Array.from(new Set(classAssignments.map(a => a.subject))).sort();
-            }
-            return Array.from(new Set(assignments.map(a => a.subject))).sort();
-        }
         if (!selectedClass) return [];
         const classGrades = grades.filter(g => g.class === selectedClass.class);
         return Array.from(new Set(classGrades.map(g => g.subject))).sort();
-    }, [selectedClass, grades, isAdmin, assignments, selectedClassFilter, selectedSectionFilter]);
+    }, [selectedClass, grades]);
 
     useEffect(() => {
         if (!selectedSubject && availableSubjects.length > 0) {
@@ -102,25 +88,18 @@ const RankingPage: React.FC = () => {
     }, [availableSubjects, selectedSubject]);
 
     const rankingData = useMemo(() => {
-        if (!isAdmin && !selectedClass) return [];
+        if (!selectedClass) return [];
 
         let groupStudents = students.filter(s => s.status === 'active');
 
-        if (isAdmin) {
-            if (selectedClassFilter) {
-                groupStudents = groupStudents.filter(s => s.class === selectedClassFilter);
-            }
-            if (selectedSectionFilter) {
-                groupStudents = groupStudents.filter(s => s.section === selectedSectionFilter);
-            }
-        } else if (selectedClass) {
+        if (selectedClass) {
             groupStudents = groupStudents.filter(s => 
                 s.class === selectedClass.class && 
                 s.section === selectedClass.section
             );
         }
 
-        const currentSubject = user?.role === UserRole.TEACHER 
+        const currentSubject = (user?.role === UserRole.TEACHER || isAdmin)
             ? (selectedClass as any).subject 
             : selectedSubject;
 
@@ -148,7 +127,7 @@ const RankingPage: React.FC = () => {
                 count: studentGrades.length
             };
         }).filter(d => d.average > 0 && d.name.toLowerCase().includes(searchQuery.toLowerCase())).sort((a, b) => b.average - a.average);
-    }, [selectedClass, students, grades, selectedPeriod, numberOfPeriods, user, selectedSubject, isAdmin, selectedClassFilter, selectedSectionFilter, searchQuery]);
+    }, [selectedClass, students, grades, selectedPeriod, numberOfPeriods, user, selectedSubject, isAdmin, searchQuery]);
 
     // Función para generar mensajes únicos por estudiante
     const generateUniqueFeedback = (name: string, score: number) => {
@@ -208,22 +187,22 @@ const RankingPage: React.FC = () => {
     return (
         <div className="space-y-6 animate-fade-in pb-10">
             {/* Header con Periodo al costado derecho */}
-            <header className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6">
+            <header className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="relative z-10">
                     <h1 className="text-3xl font-extrabold tracking-tight">Ranking de Estudiantes</h1>
-                    <p className="text-indigo-100 mt-2 font-medium opacity-90">
+                    <p className="text-blue-100 mt-2 font-medium opacity-90">
                         {isStudentOrParent ? 'Cuadro de honor de tu grupo.' : 'Cuadro de honor basado en el rendimiento actual.'}
                     </p>
                 </div>
                 
                 {/* Selector de Periodo integrado en el Header */}
                 <div className="relative z-10 flex items-center gap-2 bg-white/10 p-1.5 rounded-2xl border border-white/20 backdrop-blur-md">
-                    <span className="text-xs font-bold text-indigo-100 uppercase px-3">Periodo</span>
+                    <span className="text-xs font-bold text-blue-100 uppercase px-3">Periodo</span>
                     {Array.from({ length: numberOfPeriods }, (_, i) => i + 1).map(p => (
                         <button
                             key={p}
                             onClick={() => setSelectedPeriod(p)}
-                            className={`w-10 h-10 rounded-xl font-bold text-sm transition-all ${selectedPeriod === p ? 'bg-white text-indigo-600 shadow-lg' : 'text-white hover:bg-white/10'}`}
+                            className={`w-10 h-10 rounded-xl font-bold text-sm transition-all ${selectedPeriod === p ? 'bg-white text-blue-600 shadow-lg' : 'text-white hover:bg-white/10'}`}
                         >
                             {p}
                         </button>
@@ -235,13 +214,13 @@ const RankingPage: React.FC = () => {
 
             <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                    {user?.role === UserRole.TEACHER ? (
+                    {(user?.role === UserRole.TEACHER || isAdmin) ? (
                         <div className="flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 w-full md:w-auto overflow-x-auto">
-                            {myClasses.map(c => (
+                            {displayClasses.map(c => (
                                 <button
                                     key={c.id}
                                     onClick={() => setSelectedClassId(c.id)}
-                                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${selectedClassId === c.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}
+                                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${selectedClassId === c.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}
                                 >
                                     {c.class}-{c.section} <span className="opacity-60 font-normal ml-1">({c.subject})</span>
                                 </button>
@@ -249,44 +228,6 @@ const RankingPage: React.FC = () => {
                         </div>
                     ) : (
                         <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 w-full sm:w-auto">
-                            {isAdmin && (
-                                <>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Grado</span>
-                                        <div className="relative group min-w-[100px]">
-                                            <select 
-                                                value={selectedClassFilter}
-                                                onChange={(e) => {
-                                                    setSelectedClassFilter(e.target.value);
-                                                    setSelectedSectionFilter('');
-                                                }}
-                                                className="appearance-none w-full bg-transparent font-bold text-sm text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer pr-8"
-                                            >
-                                                <option value="">Todos</option>
-                                                {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
-                                            </select>
-                                            <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-                                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Grupo</span>
-                                        <div className="relative group min-w-[80px]">
-                                            <select 
-                                                value={selectedSectionFilter}
-                                                onChange={(e) => setSelectedSectionFilter(e.target.value)}
-                                                disabled={!selectedClassFilter}
-                                                className="appearance-none w-full bg-transparent font-bold text-sm text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer pr-8 disabled:opacity-50"
-                                            >
-                                                <option value="">Todos</option>
-                                                {availableSections.map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
-                                            <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-                                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
-                                </>
-                            )}
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Materia</span>
                                 <div className="relative group min-w-[160px]">
@@ -310,7 +251,7 @@ const RankingPage: React.FC = () => {
                         placeholder="Buscar estudiante..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     />
                 </div>
             </div>
@@ -353,14 +294,14 @@ const RankingPage: React.FC = () => {
                                         <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-black px-4 py-1.5 rounded-full shadow-xl ring-2 ring-white">1°</div>
                                         <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-4xl animate-bounce">👑</div>
                                     </div>
-                                    <div className="bg-white dark:bg-slate-900 p-8 rounded-t-3xl shadow-2xl border-x border-t border-indigo-100 dark:border-indigo-900/30 w-full text-center min-h-[200px] flex flex-col justify-center ring-1 ring-indigo-50 dark:ring-indigo-900/20">
+                                    <div className="bg-white dark:bg-slate-900 p-8 rounded-t-3xl shadow-2xl border-x border-t border-blue-100 dark:border-blue-900/30 w-full text-center min-h-[200px] flex flex-col justify-center ring-1 ring-blue-50 dark:ring-blue-900/20">
                                         <p className="font-black text-xl text-slate-800 dark:text-white line-clamp-1">
                                             {top3[0].name}
                                             {isAdmin && <span className="block text-sm font-normal text-slate-400 mt-1">{top3[0].className}</span>}
                                         </p>
                                         {/* Nota y luego el mensaje único debajo */}
                                         <p className="text-4xl font-black text-amber-500 mt-2 drop-shadow-sm">{top3[0].average.toFixed(2)}</p>
-                                        <p className="text-xs italic font-medium text-indigo-400 mt-3 px-4 leading-snug">"{generateUniqueFeedback(top3[0].name, top3[0].average)}"</p>
+                                        <p className="text-xs italic font-medium text-blue-400 mt-3 px-4 leading-snug">"{generateUniqueFeedback(top3[0].name, top3[0].average)}"</p>
                                         <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-4">Puntaje Superior</span>
                                     </div>
                                 </div>
@@ -413,7 +354,7 @@ const RankingPage: React.FC = () => {
                                                     {isAdmin && <span className="ml-2 text-xs font-normal text-slate-400">({student.className})</span>}
                                                 </p>
                                                 {/* Mensaje único debajo del nombre en la lista */}
-                                                <p className="text-[10px] text-indigo-500 font-medium italic mt-0.5">"{uniqueMessage}"</p>
+                                                <p className="text-[10px] text-blue-500 font-medium italic mt-0.5">"{uniqueMessage}"</p>
                                             </div>
                                         </div>
                                         <div className="flex flex-col items-end gap-1">

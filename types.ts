@@ -15,6 +15,7 @@ export interface User {
   campusId?: string; 
   campusName?: string;
   avatar: string;
+  lastLogin?: string;
 }
 
 export interface AdminUser extends User {

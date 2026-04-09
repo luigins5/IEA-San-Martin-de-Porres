@@ -441,11 +441,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setCurrentPage }) => {
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Resumen de actividad y acceso rápido.</p>
                 </div>
-                <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">
-                        {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </span>
+                <div className="flex flex-col gap-2">
+                    <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">
+                            {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </span>
+                    </div>
+                    {user?.role !== UserRole.SUPER_ADMIN && user?.lastLogin && (
+                        <div className="text-xs text-slate-500 dark:text-slate-400 text-right">
+                            Último ingreso: {new Date(user.lastLogin).toLocaleString('es-ES')}
+                        </div>
+                    )}
                 </div>
             </header>
 

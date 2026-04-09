@@ -24,6 +24,7 @@ import ParentProfilePage from '../parents/ParentProfilePage';
 import ReportsPage from '../reports/ReportsPage';
 import ClassAnnotationsPage from '../teachers/ClassAnnotationsPage';
 import RankingPage from '../teachers/RankingPage';
+import AuditLogsPage from '../admins/AuditLogsPage';
 import Footer from './Footer';
 
 const PlaceholderPage: React.FC<{title: string}> = ({title}) => (
@@ -67,6 +68,7 @@ const pagePermissions: { [key: string]: Action } = {
   'parent-profile': Action.VIEW_CHILD_PROFILE,
   // Reports
   'reports': Action.VIEW_REPORTS,
+  'audit': Action.VIEW_AUDIT_LOGS,
 };
 
 
@@ -124,6 +126,8 @@ const DashboardLayout: React.FC = () => {
         return <ParentProfilePage />;
       case 'reports':
         return <ReportsPage />;
+      case 'audit':
+        return <AuditLogsPage />;
       default:
         return <PlaceholderPage title={currentPage.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} />;
     }

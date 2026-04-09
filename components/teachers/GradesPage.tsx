@@ -34,6 +34,7 @@ export const GradesManagementModal: React.FC<any> = ({ student, grades, onClose,
     const [score, setScore] = useState<number | ''>('');
     const [assignmentTitle, setAssignmentTitle] = useState('');
     const [comments, setComments] = useState('');
+    const [conceptCode, setConceptCode] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
 
     const handleGenerateComment = async () => {
@@ -66,11 +67,12 @@ export const GradesManagementModal: React.FC<any> = ({ student, grades, onClose,
             percentage: 100,
             date: new Date().toISOString().split('T')[0],
             comments,
-            conceptCode: ''
+            conceptCode
         });
         setScore('');
         setAssignmentTitle('');
         setComments('');
+        setConceptCode('');
     };
 
     return (
@@ -91,6 +93,15 @@ export const GradesManagementModal: React.FC<any> = ({ student, grades, onClose,
                         <input type="number" min="0" max="5" step="0.1" value={score} onChange={e => setScore(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
                     </div>
                     <div>
+                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">Concepto</label>
+                        <select value={conceptCode} onChange={e => setConceptCode(e.target.value)} className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                            <option value="">Seleccione un concepto...</option>
+                            {concepts.map((c: any) => (
+                                <option key={c.code} value={c.code}>{c.code} - {c.text}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Comentario</label>
                         <div className="flex gap-2">
                             <textarea value={comments} onChange={e => setComments(e.target.value)} className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
@@ -107,7 +118,10 @@ export const GradesManagementModal: React.FC<any> = ({ student, grades, onClose,
                     <ul className="space-y-2">
                         {grades.map((g: Grade) => (
                             <li key={g.id} className="flex justify-between items-center bg-gray-50 p-2 rounded dark:bg-slate-700 dark:text-white">
-                                <span>{g.assignmentTitle} - {g.score}</span>
+                                <div>
+                                    <span className="font-bold">{g.assignmentTitle}</span> - {g.score}
+                                    {g.conceptCode && <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{concepts.find((c: any) => c.code === g.conceptCode)?.text || g.conceptCode}</div>}
+                                </div>
                                 <button onClick={() => onDeleteGrade(g.id)} className="text-red-500 text-sm">Eliminar</button>
                             </li>
                         ))}
