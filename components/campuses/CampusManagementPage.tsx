@@ -1,9 +1,96 @@
 
 import React, { useState } from 'react';
-import { Campus, User } from '../../types';
+import { Campus, User, UserRole } from '../../types';
 import Card from '../ui/Card';
-import { BuildingOfficeIcon, EditIcon, TrashIcon, CloseIcon, ClipboardDocumentListIcon } from '../icons';
+import { BuildingOfficeIcon, EditIcon, TrashIcon, CloseIcon, ClipboardDocumentListIcon, UploadIcon, DownloadIcon } from '../icons';
 import { useData } from '../../context/DataContext';
+
+const BulkUploadModal: React.FC<{
+    onClose: () => void;
+    onSave: (parsedData: any[]) => void;
+}> = ({ onClose, onSave }) => {
+    const [file, setFile] = useState<File | null>(null);
+    const [parsedData, setParsedData] = useState<any[]>([]);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            setFile(selectedFile);
+            const reader = new FileReader();
+            setIsProcessing(true);
+            reader.onload = (event) => {
+                const text = event.target?.result as string;
+                const rows = text.split('\n').filter(row => row.trim());
+                const data = rows.slice(1).map(row => {
+                    const columns = row.split(';').map(col => col.trim());
+                    return {
+                        tipoPerfil: columns[0],
+                        nombreSede: columns[1],
+                        direccionSede: columns[2],
+                        nombreUsuario: columns[3],
+                        emailUsuario: columns[4],
+                        documentoUsuario: columns[5],
+                        telefonoUsuario: columns[6],
+                        gradoEstudiante: columns[7],
+                        seccionEstudiante: columns[8],
+                        asignaturaProfesor: columns[9]
+                    };
+                });
+                setParsedData(data);
+                setIsProcessing(false);
+            };
+            reader.readAsText(selectedFile);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
+            <Card className="w-full max-w-2xl flex flex-col">
+                <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-gray-700">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Carga Masiva General</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><CloseIcon className="w-6 h-6"/></button>
+                </div>
+                
+                <div className="space-y-4 mb-6">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex justify-between items-center">
+                        <div>
+                            <p className="text-sm font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2 mb-1">
+                                <DownloadIcon className="w-4 h-4"/> Formato requerido (CSV separado por punto y coma):
+                            </p>
+                            <code className="text-[10px] block bg-white dark:bg-slate-800 p-2 rounded border dark:border-slate-700 dark:text-slate-300">
+                                Tipo_Perfil;Nombre_Sede;Direccion_Sede;Nombre_Usuario;Email_Usuario;Documento_Usuario;Telefono_Usuario;Grado_Estudiante;Seccion_Estudiante;Asignatura_Profesor
+                            </code>
+                        </div>
+                    </div>
+
+                    <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative">
+                        <input type="file" accept=".csv" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                        <UploadIcon className="w-10 h-10 mx-auto text-slate-300 mb-2"/>
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{file ? file.name : 'Haz clic o arrastra tu archivo CSV aquí'}</p>
+                    </div>
+
+                    {parsedData.length > 0 && (
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                            <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">✓ Se detectaron {parsedData.length} registros listos para importar.</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700">
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200">Cancelar</button>
+                    <button 
+                        onClick={() => onSave(parsedData)} 
+                        disabled={parsedData.length === 0 || isProcessing}
+                        className="px-6 py-2 bg-primary text-white font-bold rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/20 transition-all"
+                    >
+                        Procesar Importación
+                    </button>
+                </div>
+            </Card>
+        </div>
+    );
+};
 
 const CampusFormModal: React.FC<{
     onClose: () => void;
@@ -78,8 +165,9 @@ const DeleteConfirmationModal: React.FC<{ campus: Campus; onClose: () => void; o
 );
 
 const CampusManagementPage: React.FC = () => {
-    const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin } = useData();
+    const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin, addAdmin, addTeacher, addStudent } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     const [editingCampus, setEditingCampus] = useState<Campus | null>(null);
     const [deletingCampus, setDeletingCampus] = useState<Campus | null>(null);
     const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
@@ -87,6 +175,88 @@ const CampusManagementPage: React.FC = () => {
     const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
         setNotification({ message, type });
         setTimeout(() => setNotification(null), 5000);
+    };
+
+    const handleBulkSave = async (parsedData: any[]) => {
+        setIsBulkModalOpen(false);
+        showNotification('Procesando carga masiva...', 'info');
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // First pass: Create campuses
+        const campusMap = new Map<string, string>(); // name -> id
+        for (const campus of campuses) {
+            campusMap.set(campus.name.toLowerCase(), campus.id);
+        }
+
+        for (const row of parsedData) {
+            try {
+                const tipo = row.tipoPerfil?.toLowerCase();
+                if (tipo === 'sede') {
+                    if (!campusMap.has(row.nombreSede.toLowerCase())) {
+                        const id = await addCampus({
+                            name: row.nombreSede,
+                            address: row.direccionSede,
+                            admin: row.nombreUsuario || ''
+                        });
+                        if (id) campusMap.set(row.nombreSede.toLowerCase(), id);
+                        successCount++;
+                    }
+                }
+            } catch (e) {
+                errorCount++;
+            }
+        }
+
+        // Second pass: Create users
+        for (const row of parsedData) {
+            try {
+                const tipo = row.tipoPerfil?.toLowerCase();
+                const campusId = campusMap.get(row.nombreSede?.toLowerCase());
+                
+                if (!campusId && tipo !== 'sede') {
+                    errorCount++;
+                    continue;
+                }
+
+                if (tipo === 'admin') {
+                    await addAdmin({
+                        name: row.nombreUsuario,
+                        email: row.emailUsuario,
+                        campusId: campusId,
+                        campusName: row.nombreSede
+                    });
+                    successCount++;
+                } else if (tipo === 'profesor') {
+                    await addTeacher({
+                        name: row.nombreUsuario,
+                        email: row.emailUsuario,
+                        documentNumber: row.documentoUsuario || '',
+                        phone: row.telefonoUsuario || '',
+                        campusId: campusId,
+                        subject: row.asignaturaProfesor || ''
+                    });
+                    successCount++;
+                } else if (tipo === 'estudiante') {
+                    await addStudent({
+                        name: row.nombreUsuario,
+                        email: row.emailUsuario,
+                        documentNumber: row.documentoUsuario || '',
+                        phone: row.telefonoUsuario || '',
+                        campusId: campusId,
+                        class: row.gradoEstudiante || '',
+                        section: row.seccionEstudiante || '',
+                        status: 'active'
+                    });
+                    successCount++;
+                }
+            } catch (e) {
+                errorCount++;
+            }
+        }
+
+        showNotification(`Carga masiva completada. Éxitos: ${successCount}, Errores: ${errorCount}`, errorCount > 0 ? 'info' : 'success');
     };
 
     const handleSave = async (data: any) => {
@@ -144,15 +314,17 @@ const CampusManagementPage: React.FC = () => {
             "Direccion_Sede",
             "Nombre_Usuario",
             "Email_Usuario",
+            "Documento_Usuario",
+            "Telefono_Usuario",
             "Grado_Estudiante",
             "Seccion_Estudiante",
             "Asignatura_Profesor"
         ];
         const exampleData = [
-            ["Sede", "Sede Principal", "Calle 123", "", "", "", "", ""],
-            ["Admin", "Sede Principal", "", "Admin Principal", "admin@colegio.com", "", "", ""],
-            ["Profesor", "Sede Principal", "", "Juan Perez", "juan@colegio.com", "", "", "Matemáticas"],
-            ["Estudiante", "Sede Principal", "", "Maria Gomez", "maria@colegio.com", "6", "A", ""]
+            ["Sede", "Sede Principal", "Calle 123", "", "", "", "", "", "", ""],
+            ["Admin", "Sede Principal", "", "Admin Principal", "admin@colegio.com", "12345678", "3001234567", "", "", ""],
+            ["Profesor", "Sede Principal", "", "Juan Perez", "juan@colegio.com", "87654321", "3109876543", "", "", "Matemáticas"],
+            ["Estudiante", "Sede Principal", "", "Maria Gomez", "maria@colegio.com", "11223344", "3201122334", "6", "A", ""]
         ];
         
         const csvContent = [
@@ -191,6 +363,9 @@ const CampusManagementPage: React.FC = () => {
                         <p className="text-sm text-slate-500 mt-1 ml-10">Administra los campus y su personal.</p>
                     </div>
                     <div className="flex gap-3">
+                        <button onClick={() => setIsBulkModalOpen(true)} className="bg-blue-600 text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all flex items-center gap-2 text-sm">
+                            <UploadIcon className="w-5 h-5"/> Carga Masiva
+                        </button>
                         <button onClick={downloadTemplate} className="bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-lg transition-all flex items-center gap-2 text-sm">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -249,6 +424,7 @@ const CampusManagementPage: React.FC = () => {
                 </div>
             </Card>
 
+            {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} />}
             {isModalOpen && <CampusFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} campusToEdit={editingCampus} admins={admins} />}
             {deletingCampus && <DeleteConfirmationModal campus={deletingCampus} onClose={() => setDeletingCampus(null)} onConfirm={handleDelete} />}
         </>
