@@ -324,7 +324,7 @@ const EventFormModal: React.FC<{
                     )}
                     <div className="flex justify-end gap-3 pt-4 border-t dark:border-slate-700">
                         <button type="button" onClick={onClose} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors text-sm dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700">Cancelar</button>
-                        <button type="submit" className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all text-sm">
+                        <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all text-sm">
                             {isEditing ? 'Guardar Cambios' : 'Guardar Evento'}
                         </button>
                     </div>
@@ -469,7 +469,7 @@ const CommunicationsPage: React.FC = () => {
                     </button>
                     <button
                         onClick={() => setActiveTab('events')}
-                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'events' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}
+                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'events' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}
                     >
                         <CalendarIcon className="w-5 h-5" />
                         Agenda Escolar
@@ -482,7 +482,7 @@ const CommunicationsPage: React.FC = () => {
                             <PlusIcon className="w-4 h-4"/> Nuevo Comunicado
                         </button>
                     ) : (
-                        <button onClick={openNewEvent} className="w-full sm:w-auto bg-indigo-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2 text-sm">
+                        <button onClick={openNewEvent} className="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-2 text-sm">
                             <PlusIcon className="w-4 h-4"/> Agendar Evento
                         </button>
                     )}
@@ -564,13 +564,13 @@ const CommunicationsPage: React.FC = () => {
                                         <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-2xl text-xs font-bold text-white shadow-sm ${
                                             daysText === 'Hoy' ? 'bg-rose-500' : 
                                             daysText === 'Mañana' ? 'bg-amber-500' : 
-                                            isPast ? 'bg-slate-400' : 'bg-indigo-500'
+                                            isPast ? 'bg-slate-400' : 'bg-blue-500'
                                         }`}>
                                             {daysText}
                                         </div>
 
                                         <div className="flex items-start gap-4 mb-4">
-                                            <div className="flex flex-col items-center justify-center w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100 shadow-sm dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800 overflow-hidden relative">
+                                            <div className="flex flex-col items-center justify-center w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 shadow-sm dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 overflow-hidden relative">
                                                 {event.fileType?.startsWith('image/') && event.fileUrl ? (
                                                     <img src={event.fileUrl} alt="Cover" className="absolute inset-0 w-full h-full object-cover opacity-30" />
                                                 ) : null}
@@ -596,7 +596,7 @@ const CommunicationsPage: React.FC = () => {
                                                 <a 
                                                     href={event.fileUrl} 
                                                     download={event.fileName || 'archivo'}
-                                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-900/40"
+                                                    className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40"
                                                 >
                                                     <DownloadIcon className="w-3.5 h-3.5" /> Adjunto
                                                 </a>

@@ -105,7 +105,7 @@ export const GradesManagementModal: React.FC<any> = ({ student, grades, onClose,
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Comentario</label>
                         <div className="flex gap-2">
                             <textarea value={comments} onChange={e => setComments(e.target.value)} className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
-                            <button onClick={handleGenerateComment} disabled={isGenerating || !score || !assignmentTitle} className="bg-purple-600 text-white px-4 py-2 rounded disabled:opacity-50">
+                            <button onClick={handleGenerateComment} disabled={isGenerating || !score || !assignmentTitle} className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50">
                                 {isGenerating ? '...' : 'IA'}
                             </button>
                         </div>

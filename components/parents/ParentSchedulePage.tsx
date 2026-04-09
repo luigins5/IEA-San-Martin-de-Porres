@@ -49,7 +49,7 @@ const ParentSchedulePage: React.FC = () => {
             </header>
 
             <Card className="overflow-hidden flex flex-col p-0 border-none shadow-soft">
-                <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-600 text-white flex justify-between items-center">
+                <div className="p-6 bg-gradient-to-r from-blue-700 to-blue-600 text-white flex justify-between items-center">
                     <h3 className="font-bold text-lg flex items-center gap-2">
                         <CalendarIcon className="w-6 h-6"/>
                         Horario Escolar

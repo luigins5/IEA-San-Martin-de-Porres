@@ -84,9 +84,9 @@ const BulkUploadTeachersModal: React.FC<{
                 </div>
                 
                 <div className="space-y-4 mb-6">
-                    <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800 flex justify-between items-center">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex justify-between items-center">
                         <div>
-                            <p className="text-sm font-bold text-indigo-800 dark:text-indigo-300 flex items-center gap-2 mb-1">
+                            <p className="text-sm font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2 mb-1">
                                 <DownloadIcon className="w-4 h-4"/> Formato requerido (CSV):
                             </p>
                             <code className="text-[10px] block bg-white dark:bg-slate-800 p-2 rounded border dark:border-slate-700 dark:text-slate-300">
@@ -95,7 +95,7 @@ const BulkUploadTeachersModal: React.FC<{
                         </div>
                         <button 
                             onClick={downloadTemplate}
-                            className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-xs font-bold border border-indigo-200 hover:bg-indigo-50 transition-colors shadow-sm"
+                            className="bg-white text-blue-600 px-4 py-2 rounded-lg text-xs font-bold border border-blue-200 hover:bg-blue-50 transition-colors shadow-sm"
                         >
                             Descargar Plantilla
                         </button>
@@ -128,7 +128,7 @@ const BulkUploadTeachersModal: React.FC<{
                     <button 
                         onClick={() => onSave(parsedData)} 
                         disabled={parsedData.length === 0 || isProcessing}
-                        className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 shadow-lg shadow-indigo-500/20 transition-all"
+                        className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/20 transition-all"
                     >
                         Procesar Importación
                     </button>
@@ -670,7 +670,7 @@ const TeacherManagementPage: React.FC = () => {
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-900">
                     <div>
                         <h2 className="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-3">
-                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg dark:bg-indigo-900/20 dark:text-indigo-400">
+                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg dark:bg-blue-900/20 dark:text-blue-400">
                                 <IdentificationIcon className="w-6 h-6" />
                             </div>
                             Gestión de Profesores

@@ -107,19 +107,19 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
 
                 <div className="p-6 space-y-6">
                     {/* Template download and info */}
-                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-indigo-600 text-white rounded-lg">
+                            <div className="p-2 bg-blue-600 text-white rounded-lg">
                                 <DownloadIcon className="w-5 h-5"/>
                             </div>
                             <div>
-                                <p className="text-sm font-bold text-indigo-900 dark:text-indigo-300">¿No tienes el formato?</p>
-                                <p className="text-xs text-indigo-700 dark:text-indigo-400">Descarga la plantilla con los estudiantes de este grupo.</p>
+                                <p className="text-sm font-bold text-blue-900 dark:text-blue-300">¿No tienes el formato?</p>
+                                <p className="text-xs text-blue-700 dark:text-blue-400">Descarga la plantilla con los estudiantes de este grupo.</p>
                             </div>
                         </div>
                         <button 
                             onClick={downloadTemplate}
-                            className="w-full sm:w-auto px-4 py-2 bg-white text-indigo-600 font-bold rounded-lg text-xs border border-indigo-200 hover:bg-indigo-100 transition-colors shadow-sm"
+                            className="w-full sm:w-auto px-4 py-2 bg-white text-blue-600 font-bold rounded-lg text-xs border border-blue-200 hover:bg-blue-100 transition-colors shadow-sm"
                         >
                             Descargar Plantilla
                         </button>
@@ -129,7 +129,7 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
                     <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group">
                         <input type="file" accept=".csv" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                         <div className="pointer-events-none">
-                            <UploadIcon className="w-12 h-12 mx-auto text-slate-300 group-hover:text-indigo-500 transition-colors mb-4"/>
+                            <UploadIcon className="w-12 h-12 mx-auto text-slate-300 group-hover:text-blue-500 transition-colors mb-4"/>
                             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{file ? file.name : 'Haz clic o arrastra tu archivo CSV aquí'}</p>
                             <p className="text-xs text-slate-400 mt-2">Tamaño máximo: 5MB</p>
                         </div>
@@ -139,7 +139,7 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
                     <div className="max-h-48 overflow-y-auto space-y-3 custom-scrollbar">
                         {isProcessing && (
                             <div className="flex items-center justify-center p-4">
-                                <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                                 <span className="ml-3 text-sm font-medium text-slate-600">Procesando registros...</span>
                             </div>
                         )}
@@ -162,7 +162,7 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
                                     {parsedData.slice(0, 5).map((item, i) => (
                                         <div key={i} className="flex justify-between text-[10px] bg-white/50 dark:bg-slate-800 p-2 rounded">
                                             <span className="font-medium">{item.studentName}</span>
-                                            <span className="font-bold text-indigo-600">Nota: {item.score}</span>
+                                            <span className="font-bold text-blue-600">Nota: {item.score}</span>
                                         </div>
                                     ))}
                                     {parsedData.length > 5 && <p className="text-[10px] text-slate-400 italic">Y {parsedData.length - 5} estudiantes más...</p>}
@@ -179,7 +179,7 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
                     <button 
                         disabled={parsedData.length === 0 || isProcessing}
                         onClick={() => onSave(parsedData)}
-                        className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 disabled:opacity-50 disabled:shadow-none transition-all"
+                        className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none transition-all"
                     >
                         Importar {parsedData.length} Calificaciones
                     </button>
@@ -215,13 +215,13 @@ const AddCustomConceptModal = ({ onClose, onSave }: { onClose: () => void, onSav
                         autoFocus
                         value={text}
                         onChange={e => setText(e.target.value)}
-                        className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none min-h-[120px] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                        className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none min-h-[120px] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         placeholder="Ej: El estudiante demuestra un excelente dominio de los temas vistos durante la semana..."
                         required
                     />
                     <div className="flex justify-end gap-3 pt-2">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg dark:text-slate-400 dark:hover:bg-slate-800">Cancelar</button>
-                        <button type="submit" className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-lg shadow-indigo-500/20 transition-all">Guardar Concepto</button>
+                        <button type="submit" className="px-6 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg shadow-blue-500/20 transition-all">Guardar Concepto</button>
                     </div>
                 </form>
             </Card>
@@ -261,7 +261,7 @@ const EditRecordModal = ({ record, onClose, onSave, concepts }: { record: any, o
                                     type="text" 
                                     value={formData.detail} 
                                     onChange={e => setFormData({...formData, detail: e.target.value})}
-                                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm"
+                                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm"
                                     required
                                 />
                             </div>
@@ -272,7 +272,7 @@ const EditRecordModal = ({ record, onClose, onSave, concepts }: { record: any, o
                                         type="number" min="0.0" max="5.0" step="0.1"
                                         value={formData.score} 
                                         onChange={e => setFormData({...formData, score: e.target.value})}
-                                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm"
+                                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm"
                                         required
                                     />
                                 </div>
@@ -282,7 +282,7 @@ const EditRecordModal = ({ record, onClose, onSave, concepts }: { record: any, o
                                 <select 
                                     value={formData.observation}
                                     onChange={(e) => setFormData({...formData, observation: e.target.value})}
-                                    className="w-full p-2.5 border border-slate-200 rounded-xl text-sm bg-white text-slate-700 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 cursor-pointer"
+                                    className="w-full p-2.5 border border-slate-200 rounded-xl text-sm bg-white text-slate-700 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 cursor-pointer"
                                     required
                                 >
                                     <option value="">Seleccionar concepto...</option>
@@ -297,7 +297,7 @@ const EditRecordModal = ({ record, onClose, onSave, concepts }: { record: any, o
                                 <select 
                                     value={formData.detail} 
                                     onChange={e => setFormData({...formData, detail: e.target.value})}
-                                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm"
+                                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm"
                                 >
                                     <option value="Ausente">Ausente (Injustificada)</option>
                                     <option value="Justificada">Justificada</option>
@@ -310,7 +310,7 @@ const EditRecordModal = ({ record, onClose, onSave, concepts }: { record: any, o
                                     type="number" min="1"
                                     value={formData.count} 
                                     onChange={e => setFormData({...formData, count: parseInt(e.target.value)})}
-                                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm"
+                                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm"
                                     required
                                 />
                             </div>
@@ -319,7 +319,7 @@ const EditRecordModal = ({ record, onClose, onSave, concepts }: { record: any, o
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700 mt-6">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition-colors text-sm dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600">Cancelar</button>
-                        <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-sm transition-colors text-sm">Guardar Cambios</button>
+                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-sm transition-colors text-sm">Guardar Cambios</button>
                     </div>
                 </form>
             </Card>
@@ -629,7 +629,7 @@ const ClassAnnotationsPage: React.FC = () => {
     };
 
     const getScoreColorClass = (scoreStr: string) => {
-        if (!scoreStr) return 'border-transparent bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500';
+        if (!scoreStr) return 'border-transparent bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500';
         const s = parseFloat(String(scoreStr));
         if (isNaN(s)) return 'border-slate-200';
         if (s < 3.0) return 'bg-red-50 text-red-600 focus:ring-2 focus:ring-red-500';
@@ -639,7 +639,7 @@ const ClassAnnotationsPage: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-10">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 lg:p-8 shadow-xl text-white flex flex-col lg:flex-row justify-between items-center gap-6 relative overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-600 rounded-2xl p-6 lg:p-8 shadow-xl text-white flex flex-col lg:flex-row justify-between items-center gap-6 relative overflow-hidden">
                 <div className="relative z-10">
                     <h2 className="font-bold text-3xl flex items-center gap-4">
                         <div className="p-3 bg-white/10 rounded-xl backdrop-blur-md">
@@ -682,7 +682,7 @@ const ClassAnnotationsPage: React.FC = () => {
                         <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full sm:w-48 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-200 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
                     </div>
-                    <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-indigo-600 font-bold py-3 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                    <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-3 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
                         <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva</span>
                     </button>
                 </div>
@@ -716,7 +716,7 @@ const ClassAnnotationsPage: React.FC = () => {
                                         <tr className={`group transition-all duration-300 ${isExpanded ? 'bg-slate-50/80 dark:bg-slate-800/50' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30'}`}>
                                             <td className="px-8 py-5 align-middle">
                                                 <div className="flex items-center gap-4">
-                                                    <button onClick={() => setExpandedStudentId(isExpanded ? null : student.id)} className={`p-1.5 rounded-lg transition-all ${isExpanded ? 'bg-indigo-100 text-indigo-600 rotate-90' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}>
+                                                    <button onClick={() => setExpandedStudentId(isExpanded ? null : student.id)} className={`p-1.5 rounded-lg transition-all ${isExpanded ? 'bg-blue-100 text-blue-600 rotate-90' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}>
                                                         <ChevronRightIcon className="w-4 h-4" />
                                                     </button>
                                                     <div>
@@ -756,7 +756,7 @@ const ClassAnnotationsPage: React.FC = () => {
                                                     </div>
                                                     <button 
                                                         onClick={() => setIsConceptModalOpen(true)}
-                                                        className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors dark:bg-indigo-900/20 dark:text-indigo-400" 
+                                                        className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors dark:bg-blue-900/20 dark:text-blue-400" 
                                                         title="Añadir concepto personalizado"
                                                     >
                                                         <PlusIcon className="w-4 h-4" />
@@ -772,7 +772,7 @@ const ClassAnnotationsPage: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-5 text-center align-middle">
                                                 <button onClick={() => handleSaveStudentRow(student)} disabled={(!hasPendingChanges || isSaved) && Object.keys(studentErrors).length === 0}
-                                                    className={`p-3 rounded-xl transition-all duration-500 shadow-sm ${isSaved ? 'bg-emerald-500 text-white scale-110' : hasPendingChanges || Object.keys(studentErrors).length > 0 ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:-translate-y-1' : 'bg-slate-100 text-slate-300 dark:bg-slate-800 cursor-not-allowed'}`}>
+                                                    className={`p-3 rounded-xl transition-all duration-500 shadow-sm ${isSaved ? 'bg-emerald-500 text-white scale-110' : hasPendingChanges || Object.keys(studentErrors).length > 0 ? 'bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1' : 'bg-slate-100 text-slate-300 dark:bg-slate-800 cursor-not-allowed'}`}>
                                                     {isSaved ? <CheckIcon className="w-5 h-5" /> : <SaveIcon className="w-5 h-5" />}
                                                 </button>
                                             </td>
@@ -782,7 +782,7 @@ const ClassAnnotationsPage: React.FC = () => {
                                                 <td colSpan={7} className="px-8 pb-8 pt-2">
                                                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm flex flex-col gap-4">
                                                         <h4 className="font-bold text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                                                            <ClipboardCheckIcon className="w-5 h-5 text-indigo-500"/>Historial Detallado
+                                                            <ClipboardCheckIcon className="w-5 h-5 text-blue-500"/>Historial Detallado
                                                         </h4>
                                                         <div className="overflow-x-auto">
                                                             <table className="w-full text-xs text-left">
@@ -801,7 +801,7 @@ const ClassAnnotationsPage: React.FC = () => {
                                                                         <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                                             <td className="px-4 py-3 text-slate-500 font-mono">{new Date(item.date).toLocaleDateString()}</td>
                                                                             <td className="px-4 py-3">
-                                                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${item.type === 'Nota' ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'}`}>{item.type}</span>
+                                                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${item.type === 'Nota' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600'}`}>{item.type}</span>
                                                                             </td>
                                                                             <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{item.detail}</td>
                                                                             <td className="px-4 py-3 text-center">

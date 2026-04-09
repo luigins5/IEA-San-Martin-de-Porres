@@ -233,7 +233,7 @@ const GlobalSettingsPage: React.FC = () => {
         { id: 'maintenance', label: 'Sistema', icon: <ExclamationTriangleIcon /> },
     ];
 
-    const inputClasses = "w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white transition-all dark:bg-slate-800 dark:text-white dark:border-slate-700 dark:focus:ring-indigo-500/40 text-sm";
+    const inputClasses = "w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all dark:bg-slate-800 dark:text-white dark:border-slate-700 dark:focus:ring-blue-500/40 text-sm";
     const labelClasses = "block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300";
 
     const renderContent = () => {
@@ -253,7 +253,7 @@ const GlobalSettingsPage: React.FC = () => {
                                 <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Identidad Institucional</h4>
                                 <p className="text-slate-500 text-sm mb-4 dark:text-slate-400">Sube el escudo o logo oficial de la institución. Se recomienda formato PNG transparente.</p>
                                 <div className="relative overflow-hidden inline-block">
-                                    <button className="bg-indigo-50 text-indigo-600 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors border border-indigo-200 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:hover:bg-slate-600">
+                                    <button className="bg-blue-50 text-blue-600 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors border border-blue-200 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:hover:bg-slate-600">
                                         Seleccionar Archivo
                                     </button>
                                     <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 opacity-0 cursor-pointer"/>
@@ -306,7 +306,7 @@ const GlobalSettingsPage: React.FC = () => {
                                             <div className="h-24 flex items-center justify-center text-slate-400 text-sm">Sin imagen</div>
                                         )}
                                         <div className="relative overflow-hidden inline-block">
-                                            <button className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-indigo-100 transition-colors border border-indigo-200 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:hover:bg-slate-600">
+                                            <button className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-blue-100 transition-colors border border-blue-200 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:hover:bg-slate-600">
                                                 Subir Encabezado
                                             </button>
                                             <input type="file" accept="image/*" onChange={handleImageUpload('headerImage')} className="absolute inset-0 opacity-0 cursor-pointer"/>
@@ -322,7 +322,7 @@ const GlobalSettingsPage: React.FC = () => {
                                             <div className="h-24 flex items-center justify-center text-slate-400 text-sm">Sin imagen</div>
                                         )}
                                         <div className="relative overflow-hidden inline-block">
-                                            <button className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-indigo-100 transition-colors border border-indigo-200 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:hover:bg-slate-600">
+                                            <button className="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-bold text-xs hover:bg-blue-100 transition-colors border border-blue-200 dark:bg-slate-700 dark:text-white dark:border-slate-600 dark:hover:bg-slate-600">
                                                 Subir Firma
                                             </button>
                                             <input type="file" accept="image/*" onChange={handleImageUpload('rectorSignature')} className="absolute inset-0 opacity-0 cursor-pointer"/>
@@ -338,7 +338,7 @@ const GlobalSettingsPage: React.FC = () => {
                      <div className="space-y-8 animate-fade-in-up">
                         <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
                             <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                                <CalendarIcon className="w-5 h-5 text-indigo-500" />
+                                <CalendarIcon className="w-5 h-5 text-blue-500" />
                                 Ciclo Escolar
                             </h4>
                             
@@ -387,18 +387,18 @@ const GlobalSettingsPage: React.FC = () => {
                                     {Array.from({ length: settings.numberOfPeriods }).map((_, i) => (
                                         <div key={i} className="flex flex-col md:flex-row items-center gap-4 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-shadow hover:shadow-md">
                                             <div className="w-full md:w-32">
-                                                <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 rounded-lg block text-center md:text-left">
+                                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg block text-center md:text-left">
                                                     Periodo {i + 1}
                                                 </span>
                                             </div>
                                             <div className="flex-1 w-full grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Inicio</label>
-                                                    <input type="date" value={settings.periodDates?.[i]?.startDate || ''} onChange={(e) => handlePeriodDateChange(i, 'startDate', e.target.value)} className="w-full p-2 text-sm border rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:border-indigo-500"/>
+                                                    <input type="date" value={settings.periodDates?.[i]?.startDate || ''} onChange={(e) => handlePeriodDateChange(i, 'startDate', e.target.value)} className="w-full p-2 text-sm border rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:border-blue-500"/>
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Cierre</label>
-                                                    <input type="date" value={settings.periodDates?.[i]?.endDate || ''} onChange={(e) => handlePeriodDateChange(i, 'endDate', e.target.value)} className="w-full p-2 text-sm border rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:border-indigo-500"/>
+                                                    <input type="date" value={settings.periodDates?.[i]?.endDate || ''} onChange={(e) => handlePeriodDateChange(i, 'endDate', e.target.value)} className="w-full p-2 text-sm border rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:border-blue-500"/>
                                                 </div>
                                             </div>
                                         </div>
@@ -424,7 +424,7 @@ const GlobalSettingsPage: React.FC = () => {
                                     <input id="primaryColor" type="color" name="primaryColor" value={settings.primaryColor} onChange={handleChange} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"/>
                                 </div>
                                 <div className="w-full relative">
-                                    <input type="text" name="primaryColor" value={settings.primaryColor} onChange={handleChange} className="w-full text-center p-3 font-mono text-sm border rounded-xl bg-slate-50 dark:bg-slate-900 dark:text-white dark:border-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none uppercase" maxLength={7} />
+                                    <input type="text" name="primaryColor" value={settings.primaryColor} onChange={handleChange} className="w-full text-center p-3 font-mono text-sm border rounded-xl bg-slate-50 dark:bg-slate-900 dark:text-white dark:border-slate-600 focus:ring-2 focus:ring-blue-500 outline-none uppercase" maxLength={7} />
                                 </div>
                                 <p className="text-xs text-slate-400 mt-3 text-center">Usado en botones, encabezados y elementos activos.</p>
                             </div>
@@ -436,7 +436,7 @@ const GlobalSettingsPage: React.FC = () => {
                                     <input id="secondaryColor" type="color" name="secondaryColor" value={settings.secondaryColor} onChange={handleChange} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"/>
                                 </div>
                                 <div className="w-full relative">
-                                    <input type="text" name="secondaryColor" value={settings.secondaryColor} onChange={handleChange} className="w-full text-center p-3 font-mono text-sm border rounded-xl bg-slate-50 dark:bg-slate-900 dark:text-white dark:border-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none uppercase" maxLength={7} />
+                                    <input type="text" name="secondaryColor" value={settings.secondaryColor} onChange={handleChange} className="w-full text-center p-3 font-mono text-sm border rounded-xl bg-slate-50 dark:bg-slate-900 dark:text-white dark:border-slate-600 focus:ring-2 focus:ring-blue-500 outline-none uppercase" maxLength={7} />
                                 </div>
                                 <p className="text-xs text-slate-400 mt-3 text-center">Usado en acentos, etiquetas y elementos decorativos.</p>
                             </div>
@@ -496,7 +496,7 @@ const GlobalSettingsPage: React.FC = () => {
                                 <select
                                     value={selectedConfigId}
                                     onChange={e => setSelectedConfigId(e.target.value)}
-                                    className="w-full md:w-64 p-2.5 pl-4 border rounded-xl bg-slate-50 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800 dark:text-white dark:border-slate-700 cursor-pointer"
+                                    className="w-full md:w-64 p-2.5 pl-4 border rounded-xl bg-slate-50 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white dark:border-slate-700 cursor-pointer"
                                 >
                                     <option value="" disabled>Seleccione configuración...</option>
                                     <option value="global">Global (Por Defecto)</option>
@@ -515,7 +515,7 @@ const GlobalSettingsPage: React.FC = () => {
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`${
                                     activeTab === tab.id
-                                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-800'
+                                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-800'
                                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
                                 } flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap`}
                             >
@@ -544,7 +544,7 @@ const GlobalSettingsPage: React.FC = () => {
                     <button 
                         onClick={handleSave}
                         disabled={isFormDisabled}
-                        className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Guardar Cambios
                     </button>

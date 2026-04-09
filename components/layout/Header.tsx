@@ -162,7 +162,7 @@ const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ us
     return (
         <div className="fixed inset-0 bg-slate-900/40 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md dark:bg-slate-900 dark:border dark:border-slate-800 relative overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-blue-500 to-blue-500"></div>
                 
                 <div className="flex justify-between items-center p-5 border-b border-slate-100 dark:border-slate-800">
                     <h2 className="text-lg font-bold text-slate-800 dark:text-white">Perfil de Usuario</h2>
@@ -517,10 +517,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                            {notifications.length > 0 ? (
                                <div className="divide-y divide-slate-50 dark:divide-slate-800">
                                    {notifications.map((item) => (
-                                       <div key={item.id} className={`group flex items-start gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-default ${item.type === 'event' ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}>
+                                       <div key={item.id} className={`group flex items-start gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-default ${item.type === 'event' ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}>
                                            <div className="flex-shrink-0 mt-1">
                                                {item.type === 'event' ? (
-                                                   <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-300 shadow-sm">
+                                                   <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-300 shadow-sm">
                                                        <CalendarIcon className="w-5 h-5" />
                                                    </div>
                                                ) : (

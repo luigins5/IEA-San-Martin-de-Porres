@@ -66,20 +66,20 @@ export const UpcomingEventsCard: React.FC<{ className?: string }> = ({ className
                         const dateObj = new Date(year, month - 1, day);
                         return (
                             <div key={evt.id} className="flex items-center gap-4 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group">
-                                <div className="flex-shrink-0 w-12 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-100 dark:border-indigo-800 flex flex-col items-center justify-center overflow-hidden">
-                                    <span className="text-[9px] font-black uppercase text-indigo-400 bg-white dark:bg-indigo-950 w-full text-center py-0.5 border-b border-indigo-100 dark:border-indigo-800">
+                                <div className="flex-shrink-0 w-12 h-14 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center overflow-hidden">
+                                    <span className="text-[9px] font-black uppercase text-blue-400 bg-white dark:bg-blue-950 w-full text-center py-0.5 border-b border-blue-100 dark:border-blue-800">
                                         {dateObj.toLocaleString('es-ES', { month: 'short' }).replace('.', '')}
                                     </span>
-                                    <span className="text-xl font-black text-indigo-600 dark:text-indigo-400 leading-none mt-1">
+                                    <span className="text-xl font-black text-blue-600 dark:text-blue-400 leading-none mt-1">
                                         {dateObj.getDate()}
                                     </span>
                                 </div>
                                 <div className="flex-grow min-w-0">
-                                    <p className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{evt.title}</p>
+                                    <p className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{evt.title}</p>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{evt.description || 'Sin descripción adicional'}</p>
                                 </div>
                                 {evt.fileUrl && (
-                                    <a href={evt.fileUrl} download={evt.fileName} className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded-full transition-all" title="Descargar adjunto">
+                                    <a href={evt.fileUrl} download={evt.fileName} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-full transition-all" title="Descargar adjunto">
                                         <DownloadIcon className="w-4 h-4"/>
                                     </a>
                                 )}
@@ -373,8 +373,8 @@ const TeacherDashboard: React.FC<{ setCurrentPage: (page: string) => void }> = (
                                                 {dayAssignments.map(a => {
                                                     const hours = a.schedule?.find((s: any) => s.day === dayName)?.hours || 0;
                                                     return (
-                                                        <div key={`assign-${a.id}`} className="p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-800 shadow-sm bg-indigo-50 dark:bg-indigo-900/30">
-                                                            <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400">
+                                                        <div key={`assign-${a.id}`} className="p-2.5 rounded-xl border border-blue-100 dark:border-blue-800 shadow-sm bg-blue-50 dark:bg-blue-900/30">
+                                                            <p className="text-[10px] font-bold text-blue-500 dark:text-blue-400">
                                                                 Carga Asignada: {hours} hr(s)
                                                             </p>
                                                             <p className="text-xs font-black truncate mt-0.5 text-slate-800 dark:text-slate-200">

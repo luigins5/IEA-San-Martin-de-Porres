@@ -275,7 +275,7 @@ const SchedulePage: React.FC = () => {
                                     {dayAssignments.map(a => {
                                         const hours = a.schedule?.find(s => s.day === dayName)?.hours || 0;
                                         return (
-                                            <div key={`assign-${a.id}`} className="p-2 rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+                                            <div key={`assign-${a.id}`} className="p-2 rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
                                                 <p className="font-semibold text-xs">{a.subject}</p>
                                                 <p className="text-xs">{a.class} - {a.section}</p>
                                                 <p className="text-xs mt-1">{hours} hora(s) asignada(s)</p>
@@ -283,7 +283,7 @@ const SchedulePage: React.FC = () => {
                                         );
                                     })}
                                     {dayExams.map(e => (
-                                        <div key={e.id} className="p-2 rounded-md bg-purple-100 text-purple-800">
+                                        <div key={e.id} className="p-2 rounded-md bg-blue-100 text-blue-800">
                                             <p className="font-semibold text-xs">{e.time || 'Todo el día'}</p>
                                             <p className="text-xs font-bold">{e.title}</p>
                                         </div>

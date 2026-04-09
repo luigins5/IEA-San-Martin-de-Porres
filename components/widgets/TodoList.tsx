@@ -64,7 +64,7 @@ const TodoList: React.FC = () => {
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden flex flex-col h-full">
-            <div className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white flex justify-between items-center">
+            <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex justify-between items-center">
                 <h3 className="font-bold text-lg">Mis Tareas</h3>
                 <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
                     {tasks.filter(t => !t.completed).length} pendientes
@@ -78,12 +78,12 @@ const TodoList: React.FC = () => {
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         placeholder="Añadir nueva tarea..."
-                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-lg py-3 pl-4 pr-12 focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm text-sm dark:text-white"
+                        className="w-full bg-gray-50 dark:bg-slate-900 border-none rounded-lg py-3 pl-4 pr-12 focus:ring-2 focus:ring-blue-500 transition-all shadow-sm text-sm dark:text-white"
                     />
                     <button 
                         type="submit"
                         disabled={!inputValue.trim()}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 disabled:opacity-50 disabled:hover:bg-indigo-500 transition-colors"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:hover:bg-blue-500 transition-colors"
                     >
                         <PlusIcon className="w-4 h-4" />
                     </button>
@@ -97,7 +97,7 @@ const TodoList: React.FC = () => {
                                 className={`group flex items-center justify-between p-3 rounded-lg border transition-all duration-300 ${
                                     task.completed 
                                         ? 'bg-gray-50 border-gray-100 dark:bg-slate-800/50 dark:border-slate-700' 
-                                        : 'bg-white border-gray-100 hover:border-indigo-100 hover:shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:hover:border-slate-600'
+                                        : 'bg-white border-gray-100 hover:border-blue-100 hover:shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:hover:border-slate-600'
                                 }`}
                             >
                                 <div className="flex items-center gap-3 overflow-hidden">
@@ -106,7 +106,7 @@ const TodoList: React.FC = () => {
                                         className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-all duration-200 ${
                                             task.completed 
                                                 ? 'bg-green-500 border-green-500 text-white' 
-                                                : 'border-gray-300 hover:border-indigo-400 dark:border-gray-600'
+                                                : 'border-gray-300 hover:border-blue-400 dark:border-gray-600'
                                         }`}
                                     >
                                         {task.completed && <CheckIcon className="w-3.5 h-3.5" />}

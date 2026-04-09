@@ -214,7 +214,7 @@ const LoginPage: React.FC = () => {
       {isResetModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 z-50 flex justify-center items-center p-4 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md dark:bg-slate-900 dark:border dark:border-slate-800 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-blue-500"></div>
             
             <div className="flex justify-between items-center p-5 border-b border-slate-100 dark:border-slate-800">
                 <h2 className="text-lg font-bold text-slate-800 dark:text-white">Restablecer Contraseña</h2>
