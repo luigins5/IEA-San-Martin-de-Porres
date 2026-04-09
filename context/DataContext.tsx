@@ -4,6 +4,7 @@ import {
     Campus, AdminUser, Teacher, Student, Grade, Communication, Message, ClassSchedule, Exam, TeacherCourseAssignment, UserRole, AttendanceRecord, SchoolEvent
 } from '../types';
 import { useAuth } from './AuthContext';
+import { logAuditAction, AuditAction } from '../utils/audit';
 import { db, auth } from '../firebase';
 import { 
     collection, 
@@ -295,6 +296,12 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
 
     // Generic CRUD Mappings using Firestore
+    const logAction = (action: AuditAction, details: string) => {
+        if (user) {
+            logAuditAction(user, action, details);
+        }
+    };
+
     const sanitizeData = (data: any) => {
         const sanitized = { ...data };
         Object.keys(sanitized).forEach(key => {
@@ -308,6 +315,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addCampus = async (data: any) => {
         try {
             const docRef = await addDoc(collection(db, 'campuses'), sanitizeData(data));
+            logAction(AuditAction.CREATE, `Sede creada: ${data.name || 'Nueva sede'}`);
             return docRef.id;
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'campuses');
@@ -316,6 +324,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateCampus = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'campuses', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Sede actualizada: ${data.name || id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `campuses/${id}`);
         }
@@ -323,6 +332,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteCampus = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'campuses', id));
+            logAction(AuditAction.DELETE, `Sede eliminada: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `campuses/${id}`);
         }
@@ -331,6 +341,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addAdmin = async (data: any) => {
         try {
             await addDoc(collection(db, 'admins'), sanitizeData({ ...data, role: UserRole.CAMPUS_ADMIN }));
+            logAction(AuditAction.CREATE, `Administrador creado: ${data.name || data.email}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'admins');
         }
@@ -338,6 +349,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateAdmin = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'admins', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Administrador actualizado: ${data.name || id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `admins/${id}`);
         }
@@ -345,6 +357,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteAdmin = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'admins', id));
+            logAction(AuditAction.DELETE, `Administrador eliminado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `admins/${id}`);
         }
@@ -353,6 +366,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addTeacher = async (data: any) => {
         try {
             await addDoc(collection(db, 'teachers'), sanitizeData({ ...data, role: UserRole.TEACHER }));
+            logAction(AuditAction.CREATE, `Profesor creado: ${data.name || data.email}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'teachers');
         }
@@ -360,6 +374,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateTeacher = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'teachers', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Profesor actualizado: ${data.name || id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `teachers/${id}`);
         }
@@ -367,6 +382,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteTeacher = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'teachers', id));
+            logAction(AuditAction.DELETE, `Profesor eliminado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `teachers/${id}`);
         }
@@ -375,6 +391,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addStudent = async (data: any) => {
         try {
             await addDoc(collection(db, 'students'), sanitizeData({ ...data, role: UserRole.STUDENT }));
+            logAction(AuditAction.CREATE, `Estudiante creado: ${data.name || data.email}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'students');
         }
@@ -382,6 +399,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateStudent = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'students', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Estudiante actualizado: ${data.name || id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `students/${id}`);
         }
@@ -389,6 +407,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteStudent = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'students', id));
+            logAction(AuditAction.DELETE, `Estudiante eliminado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `students/${id}`);
         }
@@ -397,6 +416,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addGrade = async (data: any) => {
         try {
             await addDoc(collection(db, 'grades'), sanitizeData(data));
+            logAction(AuditAction.CREATE, `Calificación añadida para estudiante ID: ${data.studentId}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'grades');
         }
@@ -404,6 +424,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateGrade = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'grades', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Calificación actualizada: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `grades/${id}`);
         }
@@ -411,6 +432,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteGrade = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'grades', id));
+            logAction(AuditAction.DELETE, `Calificación eliminada: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `grades/${id}`);
         }
@@ -419,6 +441,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addCommunication = async (data: any) => {
         try {
             await addDoc(collection(db, 'communications'), sanitizeData({ ...data, date: new Date().toISOString(), authorId: auth.currentUser?.uid }));
+            logAction(AuditAction.CREATE, `Comunicado creado: ${data.title}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'communications');
         }
@@ -426,6 +449,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateCommunication = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'communications', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Comunicado actualizado: ${data.title || id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `communications/${id}`);
         }
@@ -433,6 +457,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteCommunication = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'communications', id));
+            logAction(AuditAction.DELETE, `Comunicado eliminado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `communications/${id}`);
         }
@@ -441,6 +466,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addMessage = async (data: any) => {
         try {
             await addDoc(collection(db, 'messages'), sanitizeData({ ...data, timestamp: new Date().toISOString(), read: false }));
+            logAction(AuditAction.CREATE, `Mensaje enviado a: ${data.receiverId}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'messages');
         }
@@ -448,6 +474,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateMessage = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'messages', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Mensaje actualizado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `messages/${id}`);
         }
@@ -455,6 +482,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteMessage = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'messages', id));
+            logAction(AuditAction.DELETE, `Mensaje eliminado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `messages/${id}`);
         }
@@ -463,6 +491,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addEvent = async (data: any) => {
         try {
             await addDoc(collection(db, 'events'), sanitizeData(data));
+            logAction(AuditAction.CREATE, `Evento creado: ${data.title}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'events');
         }
@@ -470,6 +499,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateEvent = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'events', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Evento actualizado: ${data.title || id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `events/${id}`);
         }
@@ -477,6 +507,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteEvent = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'events', id));
+            logAction(AuditAction.DELETE, `Evento eliminado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `events/${id}`);
         }
@@ -485,6 +516,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addExam = async (data: any) => {
         try {
             await addDoc(collection(db, 'exams'), sanitizeData(data));
+            logAction(AuditAction.CREATE, `Examen creado: ${data.title}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'exams');
         }
@@ -492,6 +524,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateExam = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'exams', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Examen actualizado: ${data.title || id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `exams/${id}`);
         }
@@ -499,6 +532,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteExam = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'exams', id));
+            logAction(AuditAction.DELETE, `Examen eliminado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `exams/${id}`);
         }
@@ -507,6 +541,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addSchedule = async (data: any) => {
         try {
             await addDoc(collection(db, 'schedules'), sanitizeData(data));
+            logAction(AuditAction.CREATE, `Horario creado para clase: ${data.class}-${data.section}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'schedules');
         }
@@ -514,6 +549,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateSchedule = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'schedules', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Horario actualizado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `schedules/${id}`);
         }
@@ -521,6 +557,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteSchedule = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'schedules', id));
+            logAction(AuditAction.DELETE, `Horario eliminado: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `schedules/${id}`);
         }
@@ -529,6 +566,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const addAssignment = async (data: any) => {
         try {
             await addDoc(collection(db, 'assignments'), sanitizeData(data));
+            logAction(AuditAction.CREATE, `Asignación creada para profesor ID: ${data.teacherId}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'assignments');
         }
@@ -536,6 +574,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const updateAssignment = async (id: string, data: any) => {
         try {
             await updateDoc(doc(db, 'assignments', id), sanitizeData(data));
+            logAction(AuditAction.UPDATE, `Asignación actualizada: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, `assignments/${id}`);
         }
@@ -543,6 +582,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteAssignment = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'assignments', id));
+            logAction(AuditAction.DELETE, `Asignación eliminada: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `assignments/${id}`);
         }
@@ -552,8 +592,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         try {
             if (data.id) {
                 await updateDoc(doc(db, 'attendance', data.id), sanitizeData(data));
+                logAction(AuditAction.UPDATE, `Asistencia actualizada: ${data.id}`);
             } else {
                 await addDoc(collection(db, 'attendance'), sanitizeData(data));
+                logAction(AuditAction.CREATE, `Asistencia registrada para estudiante ID: ${data.studentId}`);
             }
         } catch (error) {
             handleFirestoreError(error, OperationType.WRITE, 'attendance');
@@ -563,6 +605,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const deleteAttendance = async (id: string) => {
         try {
             await deleteDoc(doc(db, 'attendance', id));
+            logAction(AuditAction.DELETE, `Asistencia eliminada: ${id}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, `attendance/${id}`);
         }
@@ -606,6 +649,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             }
             // Always update the user profile in 'users' collection
             await updateDoc(doc(db, 'users', userId), sanitizeData({ avatar }));
+            logAction(AuditAction.UPDATE, `Avatar actualizado para usuario ID: ${userId}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, col ? `${col}/${docId}` : `users/${userId}`);
         }
@@ -647,6 +691,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
                 }
             }
             await updateDoc(doc(db, 'users', userId), sanitizeData({ name }));
+            logAction(AuditAction.UPDATE, `Nombre actualizado para usuario ID: ${userId}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.UPDATE, col ? `${col}/${docId}` : `users/${userId}`);
         }
@@ -665,6 +710,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (col) {
             try {
                 await updateDoc(doc(db, col, userId), sanitizeData({ tempPassword: tempPass }));
+                logAction(AuditAction.UPDATE, `Contraseña temporal asignada para usuario ID: ${userId}`);
             } catch (error) {
                 handleFirestoreError(error, OperationType.UPDATE, `${col}/${userId}`);
             }
@@ -689,6 +735,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const setUserSetting = async (userId: string, key: string, value: any) => {
         try {
             await setDoc(doc(db, 'user_settings', userId), sanitizeData({ user_id: userId, key, value }), { merge: true });
+            logAction(AuditAction.UPDATE, `Configuración actualizada: ${key}`);
         } catch (error) {
             handleFirestoreError(error, OperationType.WRITE, `user_settings/${userId}`);
         }

@@ -58,12 +58,15 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
 
   const logout = useCallback(async () => {
     try {
+      if (user) {
+        await logAuditAction(user, AuditAction.LOGOUT, 'Cierre de sesión');
+      }
       await signOut(auth);
       setUser(null);
     } catch (error) {
       console.error("Error signing out:", error);
     }
-  }, []);
+  }, [user]);
 
   // Listen to auth state changes
   useEffect(() => {
