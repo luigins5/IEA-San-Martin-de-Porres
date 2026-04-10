@@ -372,6 +372,19 @@ const DeleteConfirmationModal: React.FC<{ student: Student; onClose: () => void;
     </div>
 );
 
+const BulkDeleteConfirmationModal: React.FC<{ count: number; onClose: () => void; onConfirm: () => void; }> = ({ count, onClose, onConfirm }) => (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
+        <Card className="w-full max-w-md">
+            <h2 className="text-lg font-bold mb-2 text-gray-800 dark:text-white">Eliminar Estudiantes</h2>
+            <p className="mb-6 text-sm text-gray-600 dark:text-gray-300">¿Está seguro de que desea eliminar <span className="font-bold text-gray-900 dark:text-white">{count}</span> estudiantes seleccionados? Esta acción es irreversible.</p>
+            <div className="flex justify-end space-x-3">
+                <button onClick={onClose} className="bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg text-sm hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button onClick={onConfirm} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm hover:bg-red-700 shadow-sm transition-colors">Eliminar</button>
+            </div>
+        </Card>
+    </div>
+);
+
 
 const StudentManagementPage: React.FC = () => {
     const { students, campuses, addStudent, updateStudent, deleteStudent, assignTemporaryPassword } = useData();
@@ -379,6 +392,8 @@ const StudentManagementPage: React.FC = () => {
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBulkOpen, setIsBulkOpen] = useState(false);
+    const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
     const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
@@ -406,6 +421,33 @@ const StudentManagementPage: React.FC = () => {
             if (user?.role === UserRole.SUPER_ADMIN) return matchesFilters;
             return matchesFilters && s.campusId === user?.campusId;
         });
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedStudents(filteredStudents.map(s => s.id));
+        } else {
+            setSelectedStudents([]);
+        }
+    };
+
+    const handleSelectStudent = (id: string) => {
+        setSelectedStudents(prev => 
+            prev.includes(id) ? prev.filter(sId => sId !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkDelete = async () => {
+        try {
+            for (const id of selectedStudents) {
+                await deleteStudent(id);
+            }
+            showNotification(`Se eliminaron ${selectedStudents.length} estudiantes`, 'success');
+            setSelectedStudents([]);
+            setIsBulkDeleting(false);
+        } catch (error) {
+            showNotification('Error al eliminar estudiantes', 'error');
+        }
+    };
 
     const handleSaveStudent = async (studentData: any) => {
         try {
@@ -553,6 +595,11 @@ const StudentManagementPage: React.FC = () => {
                                 <option value="">Todas las secciones</option>
                                 {['A', 'B', 'C', '1', '2', '3'].map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
+                            {selectedStudents.length > 0 && (
+                                <button onClick={() => setIsBulkDeleting(true)} className="bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 px-4 rounded-lg hover:bg-red-100 transition-all text-sm flex items-center justify-center gap-2 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/40">
+                                    <TrashIcon className="w-4 h-4"/> Eliminar ({selectedStudents.length})
+                                </button>
+                            )}
                             <button onClick={() => setIsBulkOpen(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-sm flex items-center justify-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
                                 <UploadIcon className="w-4 h-4"/> Masiva
                             </button>
@@ -566,6 +613,12 @@ const StudentManagementPage: React.FC = () => {
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 font-semibold tracking-wider dark:bg-slate-800 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
                                 <tr>
+                                    <th className="px-6 py-4 w-10">
+                                        <input type="checkbox" className="rounded text-primary focus:ring-primary w-4 h-4 cursor-pointer" 
+                                            checked={selectedStudents.length === filteredStudents.length && filteredStudents.length > 0}
+                                            onChange={handleSelectAll}
+                                        />
+                                    </th>
                                     <th className="px-6 py-4">Nombre Completo</th>
                                     <th className="px-6 py-4">Documento</th>
                                     <th className="px-6 py-4">Grado</th>
@@ -578,6 +631,12 @@ const StudentManagementPage: React.FC = () => {
                                 {filteredStudents.length > 0 ? (
                                     filteredStudents.map(student => (
                                         <tr key={student.id} className="bg-white hover:bg-slate-50/80 transition-colors dark:bg-slate-900 dark:hover:bg-slate-800/50">
+                                            <td className="px-6 py-4">
+                                                <input type="checkbox" className="rounded text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                                                    checked={selectedStudents.includes(student.id)}
+                                                    onChange={() => handleSelectStudent(student.id)}
+                                                />
+                                            </td>
                                             <td className="px-6 py-4 font-medium text-slate-900 dark:text-white whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300 shadow-sm border border-slate-200 dark:border-slate-700">
@@ -604,11 +663,6 @@ const StudentManagementPage: React.FC = () => {
                                                     <button onClick={() => setViewingStudent(student)} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-blue-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white" title="Ver Detalles">
                                                         <EyeIcon className="w-4 h-4"/>
                                                     </button>
-                                                    {isSuperAdmin && (
-                                                        <button onClick={() => setAssigningPassStudent(student)} className="p-2 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 transition-all focus:outline-none shadow-sm dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40" title="Asignar Clave Provisional">
-                                                            <KeyIcon className="w-4 h-4"/>
-                                                        </button>
-                                                    )}
                                                     <button onClick={() => setResettingPasswordStudent(student)} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-emerald-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-emerald-400" title="Restablecer Contraseña (Email)">
                                                         <PaperAirplaneIcon className="w-4 h-4"/>
                                                     </button>
@@ -644,6 +698,7 @@ const StudentManagementPage: React.FC = () => {
             {isBulkOpen && <BulkUploadModal onClose={() => setIsBulkOpen(false)} onSave={handleBulkSave} user={user} campuses={campuses} />}
             {viewingStudent && <ViewStudentModal student={viewingStudent} onClose={() => setViewingStudent(null)} />}
             {deletingStudent && <DeleteConfirmationModal student={deletingStudent} onClose={() => setDeletingStudent(null)} onConfirm={handleDeleteStudent} />}
+            {isBulkDeleting && <BulkDeleteConfirmationModal count={selectedStudents.length} onClose={() => setIsBulkDeleting(false)} onConfirm={handleBulkDelete} />}
             {resettingPasswordStudent && <ResetPasswordConfirmationModal user={resettingPasswordStudent} onClose={() => setResettingPasswordStudent(null)} onConfirm={handleSendResetLink} />}
             {assigningPassStudent && <TempPasswordModal user={assigningPassStudent} onClose={() => setAssigningPassStudent(null)} onSave={handleAssignTempPass} />}
         </>

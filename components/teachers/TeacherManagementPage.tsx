@@ -417,11 +417,74 @@ const TempPasswordModal: React.FC<{ user: User; onClose: () => void; onSave: (te
     );
 };
 
+const ViewTeacherModal: React.FC<any> = ({ teacher, onClose }) => (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
+        <Card className="w-full max-w-2xl">
+             <div className="flex justify-between items-center mb-6 pb-3 border-b dark:border-gray-700">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-white">Detalles del Profesor</h2>
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><CloseIcon className="w-6 h-6"/></button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold">Nombre Completo</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">{teacher.name}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold">Documento de Identidad</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">{teacher.documentNumber}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold">Correo Electrónico</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">{teacher.email}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold">Teléfono Móvil</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">{teacher.phone || '-'}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold">Asignatura Principal</p>
+                    <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold mt-1">
+                        {teacher.subject}
+                    </span>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold">Sede</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">{teacher.campusName || 'Sin sede'}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold">Dirección de Residencia</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">{teacher.address || '-'}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500 text-xs uppercase font-bold">Perfil Profesional</p>
+                    <p className="font-semibold text-gray-800 dark:text-white">{teacher.professionalProfile || '-'}</p>
+                </div>
+            </div>
+            <div className="mt-6 text-right">
+                <button onClick={onClose} className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-lg text-sm transition-colors">Cerrar</button>
+            </div>
+        </Card>
+    </div>
+);
+
 const DeleteConfirmationModal: React.FC<{ teacher: Teacher; onClose: () => void; onConfirm: () => void; }> = ({ teacher, onClose, onConfirm }) => (
     <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
         <Card className="w-full max-w-md">
             <h2 className="text-lg font-bold mb-2 text-gray-800 dark:text-white">Eliminar Profesor</h2>
             <p className="mb-6 text-sm text-gray-600 dark:text-gray-300">¿Está seguro de que desea eliminar a <span className="font-bold text-gray-900 dark:text-white">{teacher.name}</span>?</p>
+            <div className="flex justify-end space-x-3">
+                <button onClick={onClose} className="bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg text-sm hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button onClick={onConfirm} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm hover:bg-red-700 shadow-sm transition-colors">Eliminar</button>
+            </div>
+        </Card>
+    </div>
+);
+
+const BulkDeleteConfirmationModal: React.FC<{ count: number; onClose: () => void; onConfirm: () => void; }> = ({ count, onClose, onConfirm }) => (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
+        <Card className="w-full max-w-md">
+            <h2 className="text-lg font-bold mb-2 text-gray-800 dark:text-white">Eliminar Profesores</h2>
+            <p className="mb-6 text-sm text-gray-600 dark:text-gray-300">¿Está seguro de que desea eliminar <span className="font-bold text-gray-900 dark:text-white">{count}</span> profesores seleccionados? Esta acción es irreversible.</p>
             <div className="flex justify-end space-x-3">
                 <button onClick={onClose} className="bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg text-sm hover:bg-gray-200 transition-colors">Cancelar</button>
                 <button onClick={onConfirm} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm hover:bg-red-700 shadow-sm transition-colors">Eliminar</button>
@@ -468,8 +531,11 @@ const TeacherManagementPage: React.FC = () => {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBulkOpen, setIsBulkOpen] = useState(false);
+    const [selectedTeachers, setSelectedTeachers] = useState<string[]>([]);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
     const [deletingTeacher, setDeletingTeacher] = useState<Teacher | null>(null);
+    const [viewingTeacher, setViewingTeacher] = useState<Teacher | null>(null);
     const [deletingAssignment, setDeletingAssignment] = useState<TeacherCourseAssignment | null>(null);
     const [resettingPasswordTeacher, setResettingPasswordTeacher] = useState<Teacher | null>(null);
     const [assigningPassTeacher, setAssigningPassTeacher] = useState<Teacher | null>(null);
@@ -480,6 +546,44 @@ const TeacherManagementPage: React.FC = () => {
     const [expandedTeacherId, setExpandedTeacherId] = useState<string | null>(null);
     const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
     const [editAssignmentData, setEditAssignmentData] = useState<Partial<TeacherCourseAssignment>>({});
+
+    const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 5000);
+    };
+
+    const teachersForView = teachers.filter(t => {
+        const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.documentNumber.includes(searchQuery);
+        if (user?.role === UserRole.SUPER_ADMIN) return matchesSearch;
+        return matchesSearch && t.campusId === user?.campusId;
+    });
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedTeachers(teachersForView.map(t => t.id));
+        } else {
+            setSelectedTeachers([]);
+        }
+    };
+
+    const handleSelectTeacher = (id: string) => {
+        setSelectedTeachers(prev => 
+            prev.includes(id) ? prev.filter(tId => tId !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkDelete = async () => {
+        try {
+            for (const id of selectedTeachers) {
+                await deleteTeacher(id);
+            }
+            showNotification(`Se eliminaron ${selectedTeachers.length} profesores`, 'success');
+            setSelectedTeachers([]);
+            setIsBulkDeleting(false);
+        } catch (error) {
+            showNotification('Error al eliminar profesores', 'error');
+        }
+    };
 
     const toggleExpand = (teacherId: string) => {
         if (expandedTeacherId === teacherId) {
@@ -535,11 +639,6 @@ const TeacherManagementPage: React.FC = () => {
             }
             setDeletingAssignment(null);
         }
-    };
-    
-    const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
-        setNotification({ message, type });
-        setTimeout(() => setNotification(null), 5000);
     };
 
     const handleSaveTeacher = async (data: any) => {
@@ -649,9 +748,6 @@ const TeacherManagementPage: React.FC = () => {
         showNotification(`Se han importado ${added} docentes correctamente.`, 'success');
     };
 
-    const teachersForView = (user?.role === UserRole.SUPER_ADMIN ? teachers : teachers.filter(t => t.campusId === user?.campusId))
-        .filter(teacher => teacher.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
     const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
 
     return (
@@ -695,6 +791,11 @@ const TeacherManagementPage: React.FC = () => {
                         </div>
                         {user && hasPermission(user.role, Action.MANAGE_TEACHERS) && (
                             <div className="flex gap-2">
+                                {selectedTeachers.length > 0 && (
+                                    <button onClick={() => setIsBulkDeleting(true)} className="bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 px-4 rounded-lg hover:bg-red-100 transition-all text-sm flex items-center justify-center gap-2 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/40">
+                                        <TrashIcon className="w-4 h-4"/> Eliminar ({selectedTeachers.length})
+                                    </button>
+                                )}
                                 <button onClick={() => setIsBulkOpen(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-sm flex items-center justify-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
                                     <UploadIcon className="w-4 h-4"/> Masiva
                                 </button>
@@ -710,6 +811,12 @@ const TeacherManagementPage: React.FC = () => {
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 font-semibold tracking-wider dark:bg-slate-800 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
                             <tr>
+                                <th scope="col" className="px-6 py-4 w-10">
+                                    <input type="checkbox" className="rounded text-primary focus:ring-primary w-4 h-4 cursor-pointer" 
+                                        checked={selectedTeachers.length === teachersForView.length && teachersForView.length > 0}
+                                        onChange={handleSelectAll}
+                                    />
+                                </th>
                                 <th scope="col" className="px-6 py-4 w-10"></th>
                                 <th scope="col" className="px-6 py-4">Nombre Completo</th>
                                 <th scope="col" className="px-6 py-4">Asignatura</th>
@@ -727,6 +834,12 @@ const TeacherManagementPage: React.FC = () => {
                                 return (
                                 <React.Fragment key={teacher.id}>
                                 <tr className="bg-white hover:bg-slate-50/80 transition-colors dark:bg-slate-900 dark:hover:bg-slate-800/50">
+                                    <td className="px-6 py-4">
+                                        <input type="checkbox" className="rounded text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                                            checked={selectedTeachers.includes(teacher.id)}
+                                            onChange={() => handleSelectTeacher(teacher.id)}
+                                        />
+                                    </td>
                                     <td className="px-6 py-4 text-center">
                                         <button onClick={() => toggleExpand(teacher.id)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transform transition-transform ${expandedTeacherId === teacher.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -757,6 +870,12 @@ const TeacherManagementPage: React.FC = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
                                        {user && hasPermission(user.role, Action.MANAGE_TEACHERS) && (
                                            <div className="flex justify-end items-center gap-2">
+                                                                                <button onClick={() => setViewingTeacher(teacher)} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-blue-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white" title="Ver Detalles">
+                                                    <EyeIcon className="w-4 h-4"/>
+                                                </button>
+                                                <button onClick={() => setResettingPasswordTeacher(teacher)} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-emerald-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-emerald-400" title="Restablecer Contraseña (Email)">
+                                                    <PaperAirplaneIcon className="w-4 h-4"/>
+                                                </button>
                                                 <button onClick={() => setAssigningTeacher(teacher)} className="p-2 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-all focus:outline-none shadow-sm dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40" title="Asignar Carga Académica">
                                                     <BookOpenIcon className="w-4 h-4"/>
                                                 </button>
@@ -909,7 +1028,10 @@ const TeacherManagementPage: React.FC = () => {
         </Card>
         
         {isModalOpen && <TeacherFormModal onClose={() => setIsModalOpen(false)} onSave={handleSaveTeacher} teacherToEdit={editingTeacher} user={user} campuses={campuses} />}
+        {viewingTeacher && <ViewTeacherModal teacher={viewingTeacher} onClose={() => setViewingTeacher(null)} />}
+        {resettingPasswordTeacher && <ResetPasswordConfirmationModal user={resettingPasswordTeacher} onClose={() => setResettingPasswordTeacher(null)} onConfirm={handleSendResetLink} />}
         {deletingTeacher && <DeleteConfirmationModal teacher={deletingTeacher} onClose={() => setDeletingTeacher(null)} onConfirm={handleDeleteTeacher} />}
+        {isBulkDeleting && <BulkDeleteConfirmationModal count={selectedTeachers.length} onClose={() => setIsBulkDeleting(false)} onConfirm={handleBulkDelete} />}
         {deletingAssignment && <DeleteAssignmentConfirmationModal assignment={deletingAssignment} onClose={() => setDeletingAssignment(null)} onConfirm={handleDeleteAssignment} />}
         {assigningTeacher && <AssignmentModal teacher={assigningTeacher} onClose={() => setAssigningTeacher(null)} onSave={handleSaveAssignment} />}
         {isBulkOpen && <BulkUploadTeachersModal onClose={() => setIsBulkOpen(false)} onSave={handleBulkSave} user={user} campuses={campuses} />}

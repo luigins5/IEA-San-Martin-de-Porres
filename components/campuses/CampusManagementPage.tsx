@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Campus, User, UserRole } from '../../types';
 import Card from '../ui/Card';
-import { BuildingOfficeIcon, EditIcon, TrashIcon, CloseIcon, ClipboardDocumentListIcon, UploadIcon, DownloadIcon } from '../icons';
+import { BuildingOfficeIcon, EditIcon, TrashIcon, CloseIcon, ClipboardDocumentListIcon, UploadIcon, DownloadIcon, PlusIcon } from '../icons';
 import { useData } from '../../context/DataContext';
 
 const BulkUploadModal: React.FC<{
@@ -44,6 +44,41 @@ const BulkUploadModal: React.FC<{
         }
     };
 
+    const downloadTemplate = () => {
+        const headers = [
+            "Tipo_Perfil (Sede/Admin/Profesor/Estudiante)",
+            "Nombre_Sede",
+            "Direccion_Sede",
+            "Nombre_Usuario",
+            "Email_Usuario",
+            "Documento_Usuario",
+            "Telefono_Usuario",
+            "Grado_Estudiante",
+            "Seccion_Estudiante",
+            "Asignatura_Profesor"
+        ];
+        const exampleData = [
+            ["Sede", "Sede Principal", "Calle 123", "", "", "", "", "", "", ""],
+            ["Admin", "Sede Principal", "", "Admin Principal", "admin@colegio.com", "12345678", "3001234567", "", "", ""],
+            ["Profesor", "Sede Principal", "", "Juan Perez", "juan@colegio.com", "87654321", "3109876543", "", "", "Matemáticas"],
+            ["Estudiante", "Sede Principal", "", "Maria Gomez", "maria@colegio.com", "11223344", "3201122334", "6", "A", ""]
+        ];
+        
+        const csvContent = [
+            headers.join(";"),
+            ...exampleData.map(row => row.join(";"))
+        ].join("\n");
+        
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "plantilla_cargue_colegio.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
             <Card className="w-full max-w-2xl flex flex-col">
@@ -62,6 +97,12 @@ const BulkUploadModal: React.FC<{
                                 Tipo_Perfil;Nombre_Sede;Direccion_Sede;Nombre_Usuario;Email_Usuario;Documento_Usuario;Telefono_Usuario;Grado_Estudiante;Seccion_Estudiante;Asignatura_Profesor
                             </code>
                         </div>
+                        <button 
+                            onClick={downloadTemplate}
+                            className="bg-white text-blue-600 px-4 py-2 rounded-lg text-xs font-bold border border-blue-200 hover:bg-blue-50 transition-colors shadow-sm"
+                        >
+                            Descargar Plantilla
+                        </button>
                     </div>
 
                     <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative">
@@ -164,10 +205,25 @@ const DeleteConfirmationModal: React.FC<{ campus: Campus; onClose: () => void; o
     </div>
 );
 
+const BulkDeleteConfirmationModal: React.FC<{ count: number; onClose: () => void; onConfirm: () => void; }> = ({ count, onClose, onConfirm }) => (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
+        <Card className="w-full max-w-md">
+            <h2 className="text-lg font-bold mb-2 text-gray-800 dark:text-white">Eliminar Sedes</h2>
+            <p className="mb-6 text-sm text-gray-600 dark:text-gray-300">¿Está seguro de que desea eliminar <span className="font-bold text-gray-900 dark:text-white">{count}</span> sedes seleccionadas? Esta acción es irreversible.</p>
+            <div className="flex justify-end space-x-3">
+                <button onClick={onClose} className="bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg text-sm hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button onClick={onConfirm} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm hover:bg-red-700 shadow-sm transition-colors">Eliminar</button>
+            </div>
+        </Card>
+    </div>
+);
+
 const CampusManagementPage: React.FC = () => {
     const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin, addAdmin, addTeacher, addStudent } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+    const [selectedCampuses, setSelectedCampuses] = useState<string[]>([]);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [editingCampus, setEditingCampus] = useState<Campus | null>(null);
     const [deletingCampus, setDeletingCampus] = useState<Campus | null>(null);
     const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
@@ -175,6 +231,25 @@ const CampusManagementPage: React.FC = () => {
     const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
         setNotification({ message, type });
         setTimeout(() => setNotification(null), 5000);
+    };
+
+    const handleSelectCampus = (id: string) => {
+        setSelectedCampuses(prev => 
+            prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkDelete = async () => {
+        try {
+            for (const id of selectedCampuses) {
+                await deleteCampus(id);
+            }
+            showNotification(`Se eliminaron ${selectedCampuses.length} sedes`, 'success');
+            setSelectedCampuses([]);
+            setIsBulkDeleting(false);
+        } catch (error) {
+            showNotification('Error al eliminar sedes', 'error');
+        }
     };
 
     const handleBulkSave = async (parsedData: any[]) => {
@@ -235,6 +310,7 @@ const CampusManagementPage: React.FC = () => {
                         documentNumber: row.documentoUsuario || '',
                         phone: row.telefonoUsuario || '',
                         campusId: campusId,
+                        campusName: row.nombreSede,
                         subject: row.asignaturaProfesor || ''
                     });
                     successCount++;
@@ -245,6 +321,7 @@ const CampusManagementPage: React.FC = () => {
                         documentNumber: row.documentoUsuario || '',
                         phone: row.telefonoUsuario || '',
                         campusId: campusId,
+                        campusName: row.nombreSede,
                         class: row.gradoEstudiante || '',
                         section: row.seccionEstudiante || '',
                         status: 'active'
@@ -307,41 +384,6 @@ const CampusManagementPage: React.FC = () => {
     const openCreateModal = () => { setEditingCampus(null); setIsModalOpen(true); };
     const openEditModal = (campus: Campus) => { setEditingCampus(campus); setIsModalOpen(true); };
 
-    const downloadTemplate = () => {
-        const headers = [
-            "Tipo_Perfil (Sede/Admin/Profesor/Estudiante)",
-            "Nombre_Sede",
-            "Direccion_Sede",
-            "Nombre_Usuario",
-            "Email_Usuario",
-            "Documento_Usuario",
-            "Telefono_Usuario",
-            "Grado_Estudiante",
-            "Seccion_Estudiante",
-            "Asignatura_Profesor"
-        ];
-        const exampleData = [
-            ["Sede", "Sede Principal", "Calle 123", "", "", "", "", "", "", ""],
-            ["Admin", "Sede Principal", "", "Admin Principal", "admin@colegio.com", "12345678", "3001234567", "", "", ""],
-            ["Profesor", "Sede Principal", "", "Juan Perez", "juan@colegio.com", "87654321", "3109876543", "", "", "Matemáticas"],
-            ["Estudiante", "Sede Principal", "", "Maria Gomez", "maria@colegio.com", "11223344", "3201122334", "6", "A", ""]
-        ];
-        
-        const csvContent = [
-            headers.join(";"),
-            ...exampleData.map(row => row.join(";"))
-        ].join("\n");
-        
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", "plantilla_cargue_colegio.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
     return (
         <>
             {notification && (
@@ -363,24 +405,29 @@ const CampusManagementPage: React.FC = () => {
                         <p className="text-sm text-slate-500 mt-1 ml-10">Administra los campus y su personal.</p>
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={() => setIsBulkModalOpen(true)} className="bg-blue-600 text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all flex items-center gap-2 text-sm">
-                            <UploadIcon className="w-5 h-5"/> Carga Masiva
+                        {selectedCampuses.length > 0 && (
+                            <button onClick={() => setIsBulkDeleting(true)} className="bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 px-4 rounded-lg hover:bg-red-100 transition-all text-sm flex items-center justify-center gap-2 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/40">
+                                <TrashIcon className="w-4 h-4"/> Eliminar ({selectedCampuses.length})
+                            </button>
+                        )}
+                        <button onClick={() => setIsBulkModalOpen(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-sm flex items-center justify-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
+                            <UploadIcon className="w-4 h-4"/> Masiva
                         </button>
-                        <button onClick={downloadTemplate} className="bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-lg transition-all flex items-center gap-2 text-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                            Descargar Plantilla
-                        </button>
-                        <button onClick={openCreateModal} className="bg-primary text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all flex items-center gap-2 text-sm">
-                            <BuildingOfficeIcon className="w-5 h-5"/> Añadir Sede
+                        <button onClick={openCreateModal} className="bg-primary text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transition-all text-sm flex items-center justify-center gap-2">
+                            <PlusIcon className="w-4 h-4"/> Añadir Sede
                         </button>
                     </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {campuses.map(campus => (
-                        <div key={campus.id} className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-100 dark:border-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow duration-300">
+                        <div key={campus.id} className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-100 dark:border-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow duration-300 relative">
+                            <div className="absolute top-4 right-4 z-10">
+                                <input type="checkbox" className="rounded text-primary focus:ring-primary w-5 h-5 cursor-pointer"
+                                    checked={selectedCampuses.includes(campus.id)}
+                                    onChange={() => handleSelectCampus(campus.id)}
+                                />
+                            </div>
                             <div className="p-6">
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="p-3 bg-blue-50 text-blue-600 rounded-xl dark:bg-blue-900/20 dark:text-blue-400">
@@ -427,6 +474,7 @@ const CampusManagementPage: React.FC = () => {
             {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} />}
             {isModalOpen && <CampusFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} campusToEdit={editingCampus} admins={admins} />}
             {deletingCampus && <DeleteConfirmationModal campus={deletingCampus} onClose={() => setDeletingCampus(null)} onConfirm={handleDelete} />}
+            {isBulkDeleting && <BulkDeleteConfirmationModal count={selectedCampuses.length} onClose={() => setIsBulkDeleting(false)} onConfirm={handleBulkDelete} />}
         </>
     );
 };
