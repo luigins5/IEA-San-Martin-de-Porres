@@ -12,6 +12,8 @@ const BulkUploadModal: React.FC<{
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [errors, setErrors] = useState<string[]>([]);
+    const { campuses, admins, teachers, students } = useData();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
@@ -19,6 +21,7 @@ const BulkUploadModal: React.FC<{
             setFile(selectedFile);
             const reader = new FileReader();
             setIsProcessing(true);
+            setErrors([]);
             reader.onload = (event) => {
                 const text = event.target?.result as string;
                 const rows = text.split('\n').filter(row => row.trim());
@@ -37,7 +40,66 @@ const BulkUploadModal: React.FC<{
                         asignaturaProfesor: columns[9]
                     };
                 });
-                setParsedData(data);
+
+                // Validation
+                const newErrors: string[] = [];
+                const existingEmails = new Set([
+                    ...admins.map(a => a.email.toLowerCase()),
+                    ...teachers.map(t => t.email.toLowerCase()),
+                    ...students.map(s => s.email.toLowerCase())
+                ]);
+                const existingDocuments = new Set([
+                    ...teachers.map(t => t.documentNumber),
+                    ...students.map(s => s.documentNumber)
+                ]);
+
+                const emailsInFile = new Set<string>();
+                const documentsInFile = new Set<string>();
+
+                data.forEach((row, index) => {
+                    const rowNum = index + 2; // +1 for header, +1 for 0-index
+                    if (!row.tipoPerfil || !['sede', 'admin', 'profesor', 'estudiante'].includes(row.tipoPerfil.toLowerCase())) {
+                        newErrors.push(`Fila ${rowNum}: Tipo de perfil inválido (${row.tipoPerfil}).`);
+                    }
+                    if (!row.nombreSede) {
+                        newErrors.push(`Fila ${rowNum}: Nombre de sede es requerido.`);
+                    }
+
+                    if (row.tipoPerfil?.toLowerCase() !== 'sede') {
+                        if (!row.nombreUsuario) newErrors.push(`Fila ${rowNum}: Nombre de usuario es requerido.`);
+                        if (!row.emailUsuario) newErrors.push(`Fila ${rowNum}: Email es requerido.`);
+                        
+                        if (row.emailUsuario) {
+                            if (existingEmails.has(row.emailUsuario.toLowerCase())) {
+                                newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} ya existe en el sistema.`);
+                            }
+                            if (emailsInFile.has(row.emailUsuario.toLowerCase())) {
+                                newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} está duplicado en el archivo.`);
+                            }
+                            emailsInFile.add(row.emailUsuario.toLowerCase());
+                        }
+
+                        if (['profesor', 'estudiante'].includes(row.tipoPerfil?.toLowerCase())) {
+                            if (!row.documentoUsuario) newErrors.push(`Fila ${rowNum}: Documento es requerido para profesores y estudiantes.`);
+                            if (row.documentoUsuario) {
+                                if (existingDocuments.has(row.documentoUsuario)) {
+                                    newErrors.push(`Fila ${rowNum}: El documento ${row.documentoUsuario} ya existe en el sistema.`);
+                                }
+                                if (documentsInFile.has(row.documentoUsuario)) {
+                                    newErrors.push(`Fila ${rowNum}: El documento ${row.documentoUsuario} está duplicado en el archivo.`);
+                                }
+                                documentsInFile.add(row.documentoUsuario);
+                            }
+                        }
+                    }
+                });
+
+                if (newErrors.length > 0) {
+                    setErrors(newErrors);
+                    setParsedData([]); // Don't allow saving if there are errors
+                } else {
+                    setParsedData(data);
+                }
                 setIsProcessing(false);
             };
             reader.readAsText(selectedFile);
@@ -81,7 +143,7 @@ const BulkUploadModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
-            <Card className="w-full max-w-2xl flex flex-col">
+            <Card className="w-full max-w-3xl flex flex-col">
                 <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-gray-700">
                     <h2 className="text-xl font-bold text-gray-800 dark:text-white">Carga Masiva General</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><CloseIcon className="w-6 h-6"/></button>
@@ -89,41 +151,56 @@ const BulkUploadModal: React.FC<{
                 
                 <div className="space-y-4 mb-6">
                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex justify-between items-center">
-                        <div>
-                            <p className="text-sm font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2 mb-1">
+                        <div className="flex-1 mr-4">
+                            <p className="text-sm font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2 mb-2">
                                 <DownloadIcon className="w-4 h-4"/> Formato requerido (CSV separado por punto y coma):
                             </p>
-                            <code className="text-[10px] block bg-white dark:bg-slate-800 p-2 rounded border dark:border-slate-700 dark:text-slate-300">
+                            <code className="text-xs block bg-white dark:bg-slate-800 p-3 rounded-lg border border-blue-100 dark:border-slate-700 dark:text-slate-300 overflow-x-auto whitespace-nowrap">
                                 Tipo_Perfil;Nombre_Sede;Direccion_Sede;Nombre_Usuario;Email_Usuario;Documento_Usuario;Telefono_Usuario;Grado_Estudiante;Seccion_Estudiante;Asignatura_Profesor
                             </code>
                         </div>
                         <button 
                             onClick={downloadTemplate}
-                            className="bg-white text-blue-600 px-4 py-2 rounded-lg text-xs font-bold border border-blue-200 hover:bg-blue-50 transition-colors shadow-sm"
+                            className="bg-white text-blue-600 px-4 py-3 rounded-lg text-sm font-bold border border-blue-200 hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap flex items-center gap-2"
                         >
+                            <DownloadIcon className="w-4 h-4"/>
                             Descargar Plantilla
                         </button>
                     </div>
 
-                    <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative">
+                    <div className="border-2 border-dashed border-blue-200 bg-blue-50/50 dark:bg-slate-800/50 dark:border-slate-700 rounded-2xl p-10 text-center hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors relative">
                         <input type="file" accept=".csv" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                        <UploadIcon className="w-10 h-10 mx-auto text-slate-300 mb-2"/>
-                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{file ? file.name : 'Haz clic o arrastra tu archivo CSV aquí'}</p>
+                        <UploadIcon className="w-12 h-12 mx-auto text-blue-400 mb-3"/>
+                        <p className="text-base font-medium text-slate-600 dark:text-slate-400">{file ? file.name : 'Haz clic o arrastra tu archivo CSV aquí'}</p>
                     </div>
 
-                    {parsedData.length > 0 && (
-                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
-                            <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">✓ Se detectaron {parsedData.length} registros listos para importar.</p>
+                    {errors.length > 0 && (
+                        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800 max-h-40 overflow-y-auto">
+                            <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-2">Se encontraron errores en el archivo:</p>
+                            <ul className="list-disc pl-5 text-xs text-red-600 dark:text-red-300 space-y-1">
+                                {errors.map((err, i) => (
+                                    <li key={i}>{err}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {parsedData.length > 0 && errors.length === 0 && (
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                            <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                                Se detectaron {parsedData.length} registros listos para importar.
+                            </p>
                         </div>
                     )}
                 </div>
 
                 <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700">
-                    <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200">Cancelar</button>
+                    <button onClick={onClose} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
                     <button 
                         onClick={() => onSave(parsedData)} 
-                        disabled={parsedData.length === 0 || isProcessing}
-                        className="px-6 py-2 bg-primary text-white font-bold rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/20 transition-all"
+                        disabled={parsedData.length === 0 || isProcessing || errors.length > 0}
+                        className="px-6 py-2.5 bg-primary text-white font-bold rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/20 transition-all"
                     >
                         Procesar Importación
                     </button>
@@ -261,8 +338,10 @@ const CampusManagementPage: React.FC = () => {
         
         // First pass: Create campuses
         const campusMap = new Map<string, string>(); // name -> id
+        const campusNameMap = new Map<string, string>(); // id -> actual name
         for (const campus of campuses) {
             campusMap.set(campus.name.toLowerCase(), campus.id);
+            campusNameMap.set(campus.id, campus.name);
         }
 
         for (const row of parsedData) {
@@ -275,7 +354,10 @@ const CampusManagementPage: React.FC = () => {
                             address: row.direccionSede,
                             admin: row.nombreUsuario || ''
                         });
-                        if (id) campusMap.set(row.nombreSede.toLowerCase(), id);
+                        if (id) {
+                            campusMap.set(row.nombreSede.toLowerCase(), id);
+                            campusNameMap.set(id, row.nombreSede);
+                        }
                         successCount++;
                     }
                 }
@@ -289,6 +371,7 @@ const CampusManagementPage: React.FC = () => {
             try {
                 const tipo = row.tipoPerfil?.toLowerCase();
                 const campusId = campusMap.get(row.nombreSede?.toLowerCase());
+                const actualCampusName = campusId ? campusNameMap.get(campusId) : row.nombreSede;
                 
                 if (!campusId && tipo !== 'sede') {
                     errorCount++;
@@ -300,7 +383,7 @@ const CampusManagementPage: React.FC = () => {
                         name: row.nombreUsuario,
                         email: row.emailUsuario,
                         campusId: campusId,
-                        campusName: row.nombreSede
+                        campusName: actualCampusName
                     });
                     successCount++;
                 } else if (tipo === 'profesor') {
@@ -310,7 +393,7 @@ const CampusManagementPage: React.FC = () => {
                         documentNumber: row.documentoUsuario || '',
                         phone: row.telefonoUsuario || '',
                         campusId: campusId,
-                        campusName: row.nombreSede,
+                        campusName: actualCampusName,
                         subject: row.asignaturaProfesor || ''
                     });
                     successCount++;
@@ -321,7 +404,7 @@ const CampusManagementPage: React.FC = () => {
                         documentNumber: row.documentoUsuario || '',
                         phone: row.telefonoUsuario || '',
                         campusId: campusId,
-                        campusName: row.nombreSede,
+                        campusName: actualCampusName,
                         class: row.gradoEstudiante || '',
                         section: row.seccionEstudiante || '',
                         status: 'active'
