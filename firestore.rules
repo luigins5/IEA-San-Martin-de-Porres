@@ -112,6 +112,12 @@ service cloud.firestore {
       allow write: if isAdmin() || isOwner(request.resource.data.user_id);
     }
 
+    match /audit_logs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     // User profiles for role checking
     match /users/{userId} {
       allow read: if isAuthenticated();
