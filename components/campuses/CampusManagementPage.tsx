@@ -53,42 +53,58 @@ const BulkUploadModal: React.FC<{
                     ...students.map(s => s.documentNumber)
                 ]);
 
-                const emailsInFile = new Set<string>();
-                const documentsInFile = new Set<string>();
+                const emailsInFile = new Map<string, string>(); // email -> tipoPerfil
+                const documentsInFile = new Map<string, string>(); // document -> tipoPerfil
 
                 data.forEach((row, index) => {
                     const rowNum = index + 2; // +1 for header, +1 for 0-index
-                    if (!row.tipoPerfil || !['sede', 'admin', 'profesor', 'estudiante'].includes(row.tipoPerfil.toLowerCase())) {
+                    const tipoPerfil = row.tipoPerfil?.toLowerCase();
+                    
+                    if (!tipoPerfil || !['sede', 'admin', 'profesor', 'estudiante'].includes(tipoPerfil)) {
                         newErrors.push(`Fila ${rowNum}: Tipo de perfil inválido (${row.tipoPerfil}).`);
                     }
                     if (!row.nombreSede) {
                         newErrors.push(`Fila ${rowNum}: Nombre de sede es requerido.`);
                     }
 
-                    if (row.tipoPerfil?.toLowerCase() !== 'sede') {
+                    if (tipoPerfil && tipoPerfil !== 'sede') {
                         if (!row.nombreUsuario) newErrors.push(`Fila ${rowNum}: Nombre de usuario es requerido.`);
                         if (!row.emailUsuario) newErrors.push(`Fila ${rowNum}: Email es requerido.`);
                         
                         if (row.emailUsuario) {
-                            if (existingEmails.has(row.emailUsuario.toLowerCase())) {
+                            const email = row.emailUsuario.toLowerCase();
+                            // If it exists in DB, it's an error unless we are updating (not supported in bulk upload yet)
+                            if (existingEmails.has(email)) {
                                 newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} ya existe en el sistema.`);
                             }
-                            if (emailsInFile.has(row.emailUsuario.toLowerCase())) {
-                                newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} está duplicado en el archivo.`);
+                            
+                            // If it exists in the file, it's an error UNLESS both are 'profesor'
+                            if (emailsInFile.has(email)) {
+                                const existingTipo = emailsInFile.get(email);
+                                if (!(existingTipo === 'profesor' && tipoPerfil === 'profesor')) {
+                                    newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} está duplicado en el archivo.`);
+                                }
+                            } else {
+                                emailsInFile.set(email, tipoPerfil);
                             }
-                            emailsInFile.add(row.emailUsuario.toLowerCase());
                         }
 
-                        if (['profesor', 'estudiante'].includes(row.tipoPerfil?.toLowerCase())) {
+                        if (['profesor', 'estudiante'].includes(tipoPerfil)) {
                             if (!row.documentoUsuario) newErrors.push(`Fila ${rowNum}: Documento es requerido para profesores y estudiantes.`);
                             if (row.documentoUsuario) {
-                                if (existingDocuments.has(row.documentoUsuario)) {
-                                    newErrors.push(`Fila ${rowNum}: El documento ${row.documentoUsuario} ya existe en el sistema.`);
+                                const doc = row.documentoUsuario;
+                                if (existingDocuments.has(doc)) {
+                                    newErrors.push(`Fila ${rowNum}: El documento ${doc} ya existe en el sistema.`);
                                 }
-                                if (documentsInFile.has(row.documentoUsuario)) {
-                                    newErrors.push(`Fila ${rowNum}: El documento ${row.documentoUsuario} está duplicado en el archivo.`);
+                                
+                                if (documentsInFile.has(doc)) {
+                                    const existingTipo = documentsInFile.get(doc);
+                                    if (!(existingTipo === 'profesor' && tipoPerfil === 'profesor')) {
+                                        newErrors.push(`Fila ${rowNum}: El documento ${doc} está duplicado en el archivo.`);
+                                    }
+                                } else {
+                                    documentsInFile.set(doc, tipoPerfil);
                                 }
-                                documentsInFile.add(row.documentoUsuario);
                             }
                         }
                     }
@@ -98,7 +114,33 @@ const BulkUploadModal: React.FC<{
                     setErrors(newErrors);
                     setParsedData([]); // Don't allow saving if there are errors
                 } else {
-                    setParsedData(data);
+                    // Combine subjects for duplicate teachers
+                    const combinedData: any[] = [];
+                    const teacherMap = new Map<string, any>(); // email -> teacher data
+
+                    data.forEach(row => {
+                        const tipoPerfil = row.tipoPerfil?.toLowerCase();
+                        if (tipoPerfil === 'profesor' && row.emailUsuario) {
+                            const email = row.emailUsuario.toLowerCase();
+                            if (teacherMap.has(email)) {
+                                const existingTeacher = teacherMap.get(email);
+                                if (row.asignaturaProfesor) {
+                                    const subjects = existingTeacher.asignaturaProfesor ? existingTeacher.asignaturaProfesor.split(',').map((s: string) => s.trim()) : [];
+                                    if (!subjects.includes(row.asignaturaProfesor.trim())) {
+                                        subjects.push(row.asignaturaProfesor.trim());
+                                        existingTeacher.asignaturaProfesor = subjects.join(', ');
+                                    }
+                                }
+                            } else {
+                                teacherMap.set(email, { ...row });
+                                combinedData.push(teacherMap.get(email));
+                            }
+                        } else {
+                            combinedData.push(row);
+                        }
+                    });
+
+                    setParsedData(combinedData);
                 }
                 setIsProcessing(false);
             };
