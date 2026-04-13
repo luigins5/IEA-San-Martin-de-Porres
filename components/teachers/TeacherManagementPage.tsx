@@ -56,8 +56,38 @@ const BulkUploadTeachersModal: React.FC<{
             reader.onload = (event) => {
                 const text = event.target?.result as string;
                 const rows = text.split('\n').filter(row => row.trim());
+                
+                // Detect separator
+                const firstRow = rows[0] || '';
+                let separator = ';';
+                if (firstRow.includes('\t')) separator = '\t';
+                else if (firstRow.includes(';') && firstRow.includes(',')) {
+                    separator = firstRow.split(';').length > firstRow.split(',').length ? ';' : ',';
+                }
+                else if (firstRow.includes(',')) separator = ',';
+
+                // Robust CSV parser to handle quotes
+                const parseCSVRow = (row: string) => {
+                    const cols = [];
+                    let current = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < row.length; i++) {
+                        const char = row[i];
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === separator && !inQuotes) {
+                            cols.push(current.trim());
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    cols.push(current.trim());
+                    return cols.map(col => col.replace(/^"|"$/g, '').trim());
+                };
+
                 const data = rows.slice(1).map(row => {
-                    const columns = row.split(',').map(col => col.trim());
+                    const columns = parseCSVRow(row);
                     return {
                         name: columns[0],
                         documentNumber: columns[1],
