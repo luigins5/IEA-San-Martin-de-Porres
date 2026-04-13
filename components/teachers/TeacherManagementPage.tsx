@@ -67,7 +67,7 @@ const BulkUploadTeachersModal: React.FC<{
                         campusId: campusId,
                         status: 'active'
                     };
-                });
+                }).filter(row => row.name || row.documentNumber || row.email);
                 setParsedData(data);
                 setIsProcessing(false);
             };
@@ -143,12 +143,16 @@ const AssignmentModal: React.FC<{
     onClose: () => void;
     onSave: (data: { subjects: string[], grade: string, section: string, isHomeroom: boolean, schedule: { day: string; hours: number }[] }) => void;
 }> = ({ teacher, onClose, onSave }) => {
-    const [subjects, setSubjects] = useState<string[]>([teacher.subject || SUBJECTS_LIST[0]]);
+    const teacherSubjects = teacher.subject ? teacher.subject.split(',').map(s => s.trim()).filter(s => s) : [];
+    const [subjects, setSubjects] = useState<string[]>(teacherSubjects.length > 0 ? teacherSubjects : [SUBJECTS_LIST[0]]);
     const [grade, setGrade] = useState(GRADES_LIST[0]);
     const [section, setSection] = useState(SECTIONS_LIST[0]);
     const [isHomeroom, setIsHomeroom] = useState(false);
     const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const [schedule, setSchedule] = useState<{ day: string; hours: number }[]>([]);
+
+    // Combine default subjects with any custom subjects the teacher might have
+    const availableSubjects = Array.from(new Set([...SUBJECTS_LIST, ...teacherSubjects]));
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -188,7 +192,7 @@ const AssignmentModal: React.FC<{
                     <div>
                         <label className="block text-sm font-bold mb-1.5 dark:text-gray-300">Asignaturas (Seleccione una o más)</label>
                         <div className="max-h-32 overflow-y-auto border rounded-lg bg-gray-50 p-2 dark:bg-slate-800 dark:border-slate-700 space-y-1">
-                            {SUBJECTS_LIST.map(s => (
+                            {availableSubjects.map(s => (
                                 <label key={s} className="flex items-center gap-2 p-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 rounded cursor-pointer">
                                     <input 
                                         type="checkbox" 

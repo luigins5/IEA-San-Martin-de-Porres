@@ -117,7 +117,7 @@ const BulkUploadModal: React.FC<{
                         schoolYear: 2025,
                         status: 'active'
                     };
-                });
+                }).filter(row => row.name || row.documentNumber || row.email);
                 setParsedData(data);
                 setIsProcessing(false);
             };

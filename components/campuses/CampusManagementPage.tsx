@@ -39,7 +39,7 @@ const BulkUploadModal: React.FC<{
                         seccionEstudiante: columns[8],
                         asignaturaProfesor: columns[9]
                     };
-                });
+                }).filter(row => row.tipoPerfil || row.nombreSede || row.nombreUsuario); // Filter out completely empty rows
 
                 // Validation
                 const newErrors: string[] = [];
@@ -52,6 +52,11 @@ const BulkUploadModal: React.FC<{
                     ...teachers.map(t => t.documentNumber),
                     ...students.map(s => s.documentNumber)
                 ]);
+                const existingCampuses = new Set(campuses.map(c => c.name.toLowerCase()));
+                const campusesInFile = new Set(
+                    data.filter(row => row.tipoPerfil?.toLowerCase() === 'sede' && row.nombreSede)
+                        .map(row => row.nombreSede.toLowerCase())
+                );
 
                 const emailsInFile = new Map<string, string>(); // email -> tipoPerfil
                 const documentsInFile = new Map<string, string>(); // document -> tipoPerfil
@@ -65,6 +70,12 @@ const BulkUploadModal: React.FC<{
                     }
                     if (!row.nombreSede) {
                         newErrors.push(`Fila ${rowNum}: Nombre de sede es requerido.`);
+                    } else if (tipoPerfil !== 'sede') {
+                        // If it's not a campus, the campus must exist in DB or be created in this file
+                        const campusName = row.nombreSede.toLowerCase();
+                        if (!existingCampuses.has(campusName) && !campusesInFile.has(campusName)) {
+                            newErrors.push(`Fila ${rowNum}: La sede "${row.nombreSede}" no existe en el sistema y no se está creando en este archivo.`);
+                        }
                     }
 
                     if (tipoPerfil && tipoPerfil !== 'sede') {
