@@ -34,9 +34,9 @@ const BulkUploadTeachersModal: React.FC<{
     const [campusId, setCampusId] = useState(user?.role === UserRole.SUPER_ADMIN ? (campuses[0]?.id || '') : (user?.campusId || ''));
 
     const downloadTemplate = () => {
-        const headers = "nombre,documento,correo,telefono,asignatura\n";
-        const example = "Marta Gomez,87654321,marta@ejemplo.com,3109876543,Matemáticas\n";
-        const blob = new Blob([headers + example], { type: 'text/csv;charset=utf-8;' });
+        const headers = "nombre,documento,correo,telefono,asignatura,grado,grupo,intensidad_horaria\n";
+        const example = "Marta Gomez,87654321,marta@ejemplo.com,3109876543,Matemáticas,7,A,4\n";
+        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), headers + example], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
@@ -64,14 +64,59 @@ const BulkUploadTeachersModal: React.FC<{
                         email: columns[2],
                         phone: columns[3],
                         subject: columns[4] || 'General',
+                        class: columns[5],
+                        section: columns[6],
+                        intensidadHoraria: columns[7],
                         campusId: campusId,
                         status: 'active'
                     };
                 }).filter(row => row.name || row.documentNumber || row.email);
-                setParsedData(data);
+                
+                // Combine subjects and assignments for duplicate teachers
+                const combinedData: any[] = [];
+                const teacherMap = new Map<string, any>();
+
+                data.forEach(row => {
+                    if (row.email) {
+                        const email = row.email.toLowerCase();
+                        if (teacherMap.has(email)) {
+                            const existingTeacher = teacherMap.get(email);
+                            if (row.subject) {
+                                const subjects = existingTeacher.subject ? existingTeacher.subject.split(',').map((s: string) => s.trim()) : [];
+                                if (!subjects.includes(row.subject.trim())) {
+                                    subjects.push(row.subject.trim());
+                                    existingTeacher.subject = subjects.join(', ');
+                                }
+                                if (!existingTeacher.assignments) existingTeacher.assignments = [];
+                                existingTeacher.assignments.push({
+                                    subject: row.subject,
+                                    class: row.class,
+                                    section: row.section,
+                                    intensidadHoraria: row.intensidadHoraria ? parseInt(row.intensidadHoraria) : undefined
+                                });
+                            }
+                        } else {
+                            const newTeacher = { ...row };
+                            if (row.subject && row.class && row.section) {
+                                newTeacher.assignments = [{
+                                    subject: row.subject,
+                                    class: row.class,
+                                    section: row.section,
+                                    intensidadHoraria: row.intensidadHoraria ? parseInt(row.intensidadHoraria) : undefined
+                                }];
+                            }
+                            teacherMap.set(email, newTeacher);
+                            combinedData.push(teacherMap.get(email));
+                        }
+                    } else {
+                        combinedData.push(row);
+                    }
+                });
+
+                setParsedData(combinedData);
                 setIsProcessing(false);
             };
-            reader.readAsText(selectedFile);
+            reader.readAsText(selectedFile, 'UTF-8');
         }
     };
 
@@ -742,8 +787,21 @@ const TeacherManagementPage: React.FC = () => {
                     const campus = campuses.find(c => c.id === teacherData.campusId);
                     if (campus) teacherData.campusName = campus.name;
                 }
-                await addTeacher(teacherData);
+                const teacherId = await addTeacher(teacherData);
+                
+                if (teacherData.assignments && teacherData.assignments.length > 0 && teacherId) {
+                    for (const assignment of teacherData.assignments) {
+                        await addAssignment({
+                            teacherId: teacherId as string,
+                            subject: assignment.subject,
+                            class: assignment.class,
+                            section: assignment.section,
+                            intensidadHoraria: assignment.intensidadHoraria
+                        });
+                    }
+                }
                 added++;
+                await new Promise(resolve => setTimeout(resolve, 300));
             } catch (e) {
                 console.error(e);
             }

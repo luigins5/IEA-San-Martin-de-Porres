@@ -172,7 +172,7 @@ const BulkUploadModal: React.FC<{
                 }
                 setIsProcessing(false);
             };
-            reader.readAsText(selectedFile);
+            reader.readAsText(selectedFile, 'UTF-8');
         }
     };
 
@@ -202,7 +202,7 @@ const BulkUploadModal: React.FC<{
             ...exampleData.map(row => row.join(";"))
         ].join("\n");
         
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);

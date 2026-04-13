@@ -83,7 +83,7 @@ const BulkUploadModal: React.FC<{
     const downloadTemplate = () => {
         const headers = "nombre,documento,correo,telefono,grado,grupo\n";
         const example = "Juan Perez,12345678,juan@ejemplo.com,3001234567,7,1\n";
-        const blob = new Blob([headers + example], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), headers + example], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
@@ -121,7 +121,7 @@ const BulkUploadModal: React.FC<{
                 setParsedData(data);
                 setIsProcessing(false);
             };
-            reader.readAsText(selectedFile);
+            reader.readAsText(selectedFile, 'UTF-8');
         }
     };
 
