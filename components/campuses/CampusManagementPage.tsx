@@ -37,7 +37,8 @@ const BulkUploadModal: React.FC<{
                         telefonoUsuario: columns[6],
                         gradoEstudiante: columns[7],
                         seccionEstudiante: columns[8],
-                        asignaturaProfesor: columns[9]
+                        asignaturaProfesor: columns[9],
+                        intensidadHoraria: columns[10]
                     };
                 }).filter(row => row.tipoPerfil || row.nombreSede || row.nombreUsuario); // Filter out completely empty rows
 
@@ -141,9 +142,25 @@ const BulkUploadModal: React.FC<{
                                         subjects.push(row.asignaturaProfesor.trim());
                                         existingTeacher.asignaturaProfesor = subjects.join(', ');
                                     }
+                                    if (!existingTeacher.assignments) existingTeacher.assignments = [];
+                                    existingTeacher.assignments.push({
+                                        subject: row.asignaturaProfesor,
+                                        class: row.gradoEstudiante,
+                                        section: row.seccionEstudiante,
+                                        intensidadHoraria: row.intensidadHoraria ? parseInt(row.intensidadHoraria) : undefined
+                                    });
                                 }
                             } else {
-                                teacherMap.set(email, { ...row });
+                                const newTeacher = { ...row };
+                                if (row.asignaturaProfesor) {
+                                    newTeacher.assignments = [{
+                                        subject: row.asignaturaProfesor,
+                                        class: row.gradoEstudiante,
+                                        section: row.seccionEstudiante,
+                                        intensidadHoraria: row.intensidadHoraria ? parseInt(row.intensidadHoraria) : undefined
+                                    }];
+                                }
+                                teacherMap.set(email, newTeacher);
                                 combinedData.push(teacherMap.get(email));
                             }
                         } else {
@@ -170,13 +187,14 @@ const BulkUploadModal: React.FC<{
             "Telefono_Usuario",
             "Grado_Estudiante",
             "Seccion_Estudiante",
-            "Asignatura_Profesor"
+            "Asignatura_Profesor",
+            "Intensidad_horaria"
         ];
         const exampleData = [
-            ["Sede", "Sede Principal", "Calle 123", "", "", "", "", "", "", ""],
-            ["Admin", "Sede Principal", "", "Admin Principal", "admin@colegio.com", "12345678", "3001234567", "", "", ""],
-            ["Profesor", "Sede Principal", "", "Juan Perez", "juan@colegio.com", "87654321", "3109876543", "", "", "Matemáticas"],
-            ["Estudiante", "Sede Principal", "", "Maria Gomez", "maria@colegio.com", "11223344", "3201122334", "6", "A", ""]
+            ["Sede", "Sede Principal", "Calle 123", "", "", "", "", "", "", "", ""],
+            ["Admin", "Sede Principal", "", "Admin Principal", "admin@colegio.com", "12345678", "3001234567", "", "", "", ""],
+            ["Profesor", "Sede Principal", "", "Juan Perez", "juan@colegio.com", "87654321", "3109876543", "TERCERO", "", "Matemáticas", "4"],
+            ["Estudiante", "Sede Principal", "", "Maria Gomez", "maria@colegio.com", "11223344", "3201122334", "6", "A", "", ""]
         ];
         
         const csvContent = [
@@ -209,7 +227,7 @@ const BulkUploadModal: React.FC<{
                                 <DownloadIcon className="w-4 h-4"/> Formato requerido (CSV separado por punto y coma):
                             </p>
                             <code className="text-xs block bg-white dark:bg-slate-800 p-3 rounded-lg border border-blue-100 dark:border-slate-700 dark:text-slate-300 overflow-x-auto whitespace-nowrap">
-                                Tipo_Perfil;Nombre_Sede;Direccion_Sede;Nombre_Usuario;Email_Usuario;Documento_Usuario;Telefono_Usuario;Grado_Estudiante;Seccion_Estudiante;Asignatura_Profesor
+                                Tipo_Perfil;Nombre_Sede;Direccion_Sede;Nombre_Usuario;Email_Usuario;Documento_Usuario;Telefono_Usuario;Grado_Estudiante;Seccion_Estudiante;Asignatura_Profesor;Intensidad_horaria
                             </code>
                         </div>
                         <button 
@@ -349,7 +367,7 @@ const BulkDeleteConfirmationModal: React.FC<{ count: number; onClose: () => void
 );
 
 const CampusManagementPage: React.FC = () => {
-    const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin, addAdmin, addTeacher, addStudent } = useData();
+    const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin, addAdmin, addTeacher, addStudent, addAssignment } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     const [selectedCampuses, setSelectedCampuses] = useState<string[]>([]);
@@ -440,7 +458,7 @@ const CampusManagementPage: React.FC = () => {
                     });
                     successCount++;
                 } else if (tipo === 'profesor') {
-                    await addTeacher({
+                    const teacherId = await addTeacher({
                         name: row.nombreUsuario,
                         email: row.emailUsuario,
                         documentNumber: row.documentoUsuario || '',
@@ -449,6 +467,20 @@ const CampusManagementPage: React.FC = () => {
                         campusName: actualCampusName,
                         subject: row.asignaturaProfesor || ''
                     });
+                    
+                    if (teacherId && row.assignments && row.assignments.length > 0) {
+                        for (const assignment of row.assignments) {
+                            if (assignment.subject && assignment.class && assignment.section) {
+                                await addAssignment({
+                                    teacherId: teacherId,
+                                    subject: assignment.subject,
+                                    class: assignment.class,
+                                    section: assignment.section,
+                                    intensidadHoraria: assignment.intensidadHoraria
+                                });
+                            }
+                        }
+                    }
                     successCount++;
                 } else if (tipo === 'estudiante') {
                     await addStudent({

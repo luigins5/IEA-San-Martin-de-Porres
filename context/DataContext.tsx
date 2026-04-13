@@ -108,7 +108,7 @@ interface DataContextType {
     updateAdmin: (id: string, data: Partial<AdminUser>) => Promise<void>;
     deleteAdmin: (id: string) => Promise<void>;
 
-    addTeacher: (data: Omit<Teacher, 'id' | 'role' | 'avatar'>) => Promise<void>;
+    addTeacher: (data: Omit<Teacher, 'id' | 'role' | 'avatar'>) => Promise<string | void>;
     updateTeacher: (id: string, data: Partial<Teacher>) => Promise<void>;
     deleteTeacher: (id: string) => Promise<void>;
 
@@ -365,8 +365,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const addTeacher = async (data: any) => {
         try {
-            await addDoc(collection(db, 'teachers'), sanitizeData({ ...data, role: UserRole.TEACHER }));
+            const docRef = await addDoc(collection(db, 'teachers'), sanitizeData({ ...data, role: UserRole.TEACHER }));
             logAction(AuditAction.CREATE, `Profesor creado: ${data.name || data.email}`);
+            return docRef.id;
         } catch (error) {
             handleFirestoreError(error, OperationType.CREATE, 'teachers');
         }
