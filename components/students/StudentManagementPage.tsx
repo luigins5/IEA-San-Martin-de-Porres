@@ -284,8 +284,8 @@ const StudentFormModal: React.FC<{
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-bold mb-1 dark:text-gray-300">Correo Electrónico *</label>
-                            <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white" required />
+                            <label className="block text-sm font-bold mb-1 dark:text-gray-300">Correo Electrónico</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
                         </div>
                         <div>
                             <label className="block text-sm font-bold mb-1 dark:text-gray-300">Teléfono Móvil</label>

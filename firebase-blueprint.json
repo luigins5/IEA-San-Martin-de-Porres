@@ -80,7 +80,7 @@
         "motherName": { "type": "string" },
         "motherPhone": { "type": "string" }
       },
-      "required": ["name", "email", "role", "campusId", "class", "section", "schoolYear", "documentNumber"]
+      "required": ["name", "role", "campusId", "class", "section", "schoolYear", "documentNumber"]
     },
     "Grade": {
       "title": "Grade",

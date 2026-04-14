@@ -111,7 +111,7 @@ const BulkUploadModal: React.FC<{
 
                     if (tipoPerfil && tipoPerfil !== 'sede') {
                         if (!row.nombreUsuario) newErrors.push(`Fila ${rowNum}: Nombre de usuario es requerido.`);
-                        if (!row.emailUsuario) newErrors.push(`Fila ${rowNum}: Email es requerido.`);
+                        if (!row.emailUsuario && tipoPerfil !== 'estudiante') newErrors.push(`Fila ${rowNum}: Email es requerido.`);
                         
                         if (row.emailUsuario) {
                             const email = row.emailUsuario.toLowerCase();
