@@ -110,26 +110,30 @@ const BulkUploadModal: React.FC<{
                     }
 
                     if (tipoPerfil && tipoPerfil !== 'sede') {
-                        if (!row.nombreUsuario) newErrors.push(`Fila ${rowNum}: Nombre de usuario es requerido.`);
-                        if (!row.emailUsuario && tipoPerfil !== 'estudiante') newErrors.push(`Fila ${rowNum}: Email es requerido.`);
+                        if (!row.nombreUsuario) { newErrors.push(`Fila ${rowNum}: Nombre de usuario es requerido.`); hasError = true; }
+                        if (!row.emailUsuario && tipoPerfil !== 'estudiante') { newErrors.push(`Fila ${rowNum}: Email es requerido.`); hasError = true; }
                         
                         if (row.emailUsuario) {
                             const email = row.emailUsuario.toLowerCase();
                             // If it exists in DB, it's an error unless we are updating (not supported in bulk upload yet)
                             if (existingEmails.has(email)) {
                                 if (tipoPerfil !== 'admin') {
-                                    newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} ya existe en el sistema.`);
+                                    skippedWarnings.push(`Fila ${rowNum}: El email ${row.emailUsuario} ya existe en el sistema (Omitido).`);
+                                    isDuplicate = true;
                                 }
                             }
                             
                             // If it exists in the file, it's an error UNLESS both are 'profesor' or both are 'admin'
-                            if (emailsInFile.has(email)) {
-                                const existingTipo = emailsInFile.get(email);
-                                if (!((existingTipo === 'profesor' && tipoPerfil === 'profesor') || (existingTipo === 'admin' && tipoPerfil === 'admin'))) {
-                                    newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} está duplicado en el archivo.`);
+                            if (!isDuplicate) {
+                                if (emailsInFile.has(email)) {
+                                    const existingTipo = emailsInFile.get(email);
+                                    if (!((existingTipo === 'profesor' && tipoPerfil === 'profesor') || (existingTipo === 'admin' && tipoPerfil === 'admin'))) {
+                                        newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} está duplicado en el archivo.`);
+                                        hasError = true;
+                                    }
+                                } else {
+                                    emailsInFile.set(email, tipoPerfil);
                                 }
-                            } else {
-                                emailsInFile.set(email, tipoPerfil);
                             }
                         }
 
