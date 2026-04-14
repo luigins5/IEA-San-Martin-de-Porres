@@ -13,6 +13,7 @@ const BulkUploadModal: React.FC<{
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [errors, setErrors] = useState<string[]>([]);
+    const [warnings, setWarnings] = useState<string[]>([]);
     const { campuses, admins, teachers, students } = useData();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -22,6 +23,7 @@ const BulkUploadModal: React.FC<{
             const reader = new FileReader();
             setIsProcessing(true);
             setErrors([]);
+            setWarnings([]);
             reader.onload = (event) => {
                 const text = event.target?.result as string;
                 const rows = text.split('\n').filter(row => row.trim());
@@ -74,6 +76,8 @@ const BulkUploadModal: React.FC<{
 
                 // Validation
                 const newErrors: string[] = [];
+                const skippedWarnings: string[] = [];
+                const validData: any[] = [];
                 const existingEmails = new Set([
                     ...admins.map(a => a.email.toLowerCase()),
                     ...teachers.map(t => t.email.toLowerCase()),
@@ -95,17 +99,22 @@ const BulkUploadModal: React.FC<{
                 data.forEach((row, index) => {
                     const rowNum = index + 2; // +1 for header, +1 for 0-index
                     const tipoPerfil = row.tipoPerfil?.toLowerCase();
+                    let hasError = false;
+                    let isDuplicate = false;
                     
                     if (!tipoPerfil || !['sede', 'admin', 'profesor', 'estudiante'].includes(tipoPerfil)) {
                         newErrors.push(`Fila ${rowNum}: Tipo de perfil inválido (${row.tipoPerfil}).`);
+                        hasError = true;
                     }
                     if (!row.nombreSede) {
                         newErrors.push(`Fila ${rowNum}: Nombre de sede es requerido.`);
+                        hasError = true;
                     } else if (tipoPerfil !== 'sede') {
                         // If it's not a campus, the campus must exist in DB or be created in this file
                         const campusName = row.nombreSede.toLowerCase();
                         if (!existingCampuses.has(campusName) && !campusesInFile.has(campusName)) {
                             newErrors.push(`Fila ${rowNum}: La sede "${row.nombreSede}" no existe en el sistema y no se está creando en este archivo.`);
+                            hasError = true;
                         }
                     }
 
@@ -138,35 +147,42 @@ const BulkUploadModal: React.FC<{
                         }
 
                         if (['profesor', 'estudiante'].includes(tipoPerfil)) {
-                            if (!row.documentoUsuario) newErrors.push(`Fila ${rowNum}: Documento es requerido para profesores y estudiantes.`);
+                            if (!row.documentoUsuario) { newErrors.push(`Fila ${rowNum}: Documento es requerido para profesores y estudiantes.`); hasError = true; }
                             if (row.documentoUsuario) {
                                 const doc = row.documentoUsuario;
                                 if (existingDocuments.has(doc)) {
-                                    newErrors.push(`Fila ${rowNum}: El documento ${doc} ya existe en el sistema.`);
+                                    skippedWarnings.push(`Fila ${rowNum}: El documento ${doc} ya existe en el sistema (Omitido).`);
+                                    isDuplicate = true;
                                 }
                                 
-                                if (documentsInFile.has(doc)) {
-                                    const existingTipo = documentsInFile.get(doc);
-                                    if (!(existingTipo === 'profesor' && tipoPerfil === 'profesor')) {
-                                        newErrors.push(`Fila ${rowNum}: El documento ${doc} está duplicado en el archivo.`);
+                                if (!isDuplicate) {
+                                    if (documentsInFile.has(doc)) {
+                                        const existingTipo = documentsInFile.get(doc);
+                                        if (!(existingTipo === 'profesor' && tipoPerfil === 'profesor')) {
+                                            newErrors.push(`Fila ${rowNum}: El documento ${doc} está duplicado en el archivo.`);
+                                            hasError = true;
+                                        }
+                                    } else {
+                                        documentsInFile.set(doc, tipoPerfil);
                                     }
-                                } else {
-                                    documentsInFile.set(doc, tipoPerfil);
                                 }
                             }
                         }
+                    }
+
+                    if (!hasError && !isDuplicate) {
+                        validData.push(row);
                     }
                 });
 
                 if (newErrors.length > 0) {
                     setErrors(newErrors);
+                    setWarnings([]);
                     setParsedData([]); // Don't allow saving if there are errors
                 } else {
-                    if (skippedWarnings.length > 0) {
-                        setErrors(skippedWarnings); // Show warnings in the error box, but allow saving
-                    } else {
-                        setErrors([]);
-                    }
+                    setErrors([]);
+                    setWarnings(skippedWarnings);
+                    
                     // Combine subjects for duplicate teachers
                     const combinedData: any[] = [];
                     const teacherMap = new Map<string, any>(); // email -> teacher data
@@ -262,18 +278,18 @@ const BulkUploadModal: React.FC<{
                 </div>
                 
                 <div className="space-y-4 mb-6">
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex justify-between items-center">
-                        <div className="flex-1 mr-4">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex-1 w-full overflow-hidden">
                             <p className="text-sm font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2 mb-2">
                                 <DownloadIcon className="w-4 h-4"/> Formato requerido (CSV separado por punto y coma):
                             </p>
-                            <code className="text-xs block bg-white dark:bg-slate-800 p-3 rounded-lg border border-blue-100 dark:border-slate-700 dark:text-slate-300 overflow-x-auto whitespace-nowrap">
+                            <code className="text-xs block bg-white dark:bg-slate-800 p-3 rounded-lg border border-blue-100 dark:border-slate-700 dark:text-slate-300 overflow-x-auto whitespace-nowrap w-full">
                                 Tipo_Perfil;Nombre_Sede;Direccion_Sede;Nombre_Usuario;Email_Usuario;Documento_Usuario;Telefono_Usuario;Grado_Estudiante;Seccion_Estudiante;Asignatura_Profesor;Intensidad_horaria
                             </code>
                         </div>
                         <button 
                             onClick={downloadTemplate}
-                            className="bg-white text-blue-600 px-4 py-3 rounded-lg text-sm font-bold border border-blue-200 hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap flex items-center gap-2"
+                            className="bg-white text-blue-600 px-4 py-3 rounded-lg text-sm font-bold border border-blue-200 hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap flex items-center gap-2 shrink-0"
                         >
                             <DownloadIcon className="w-4 h-4"/>
                             Descargar Plantilla
@@ -292,6 +308,17 @@ const BulkUploadModal: React.FC<{
                             <ul className="list-disc pl-5 text-xs text-red-600 dark:text-red-300 space-y-1">
                                 {errors.map((err, i) => (
                                     <li key={i}>{err}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {warnings.length > 0 && errors.length === 0 && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800 max-h-40 overflow-y-auto">
+                            <p className="text-sm font-bold text-amber-700 dark:text-amber-400 mb-2">Advertencias (se omitirán estos registros):</p>
+                            <ul className="list-disc pl-5 text-xs text-amber-600 dark:text-amber-300 space-y-1">
+                                {warnings.map((warn, i) => (
+                                    <li key={i}>{warn}</li>
                                 ))}
                             </ul>
                         </div>
