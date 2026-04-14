@@ -74,11 +74,13 @@ const BulkUploadModal: React.FC<{
     onSave: (newStudents: any[]) => void;
     user: User | null;
     campuses: Campus[];
-}> = ({ onClose, onSave, user, campuses }) => {
+    students: Student[];
+}> = ({ onClose, onSave, user, campuses, students }) => {
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [campusId, setCampusId] = useState(user?.role === UserRole.SUPER_ADMIN ? (campuses[0]?.id || '') : (user?.campusId || ''));
+    const [skippedCount, setSkippedCount] = useState(0);
 
     const downloadTemplate = () => {
         const headers = "nombre,documento,correo,telefono,grado,grupo\n";
@@ -148,7 +150,18 @@ const BulkUploadModal: React.FC<{
                         status: 'active'
                     };
                 }).filter(row => row.name || row.documentNumber || row.email);
-                setParsedData(data);
+                
+                const existingDocs = new Set(students.map(s => s.documentNumber));
+                const existingEmails = new Set(students.map(s => s.email?.toLowerCase()).filter(Boolean));
+
+                const newData = data.filter(row => {
+                    if (row.documentNumber && existingDocs.has(row.documentNumber)) return false;
+                    if (row.email && existingEmails.has(row.email.toLowerCase())) return false;
+                    return true;
+                });
+
+                setSkippedCount(data.length - newData.length);
+                setParsedData(newData);
                 setIsProcessing(false);
             };
             reader.readAsText(selectedFile, 'UTF-8');
@@ -199,6 +212,11 @@ const BulkUploadModal: React.FC<{
                     {parsedData.length > 0 && (
                         <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
                             <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">✓ Se detectaron {parsedData.length} estudiantes listos para importar.</p>
+                        </div>
+                    )}
+                    {skippedCount > 0 && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-100 dark:border-amber-800">
+                            <p className="text-xs font-bold text-amber-700 dark:text-amber-400">⚠ Se omitieron {skippedCount} registros porque ya existen en el sistema (documento o correo duplicado).</p>
                         </div>
                     )}
                 </div>
@@ -725,7 +743,7 @@ const StudentManagementPage: React.FC = () => {
             </Card>
 
             {isModalOpen && <StudentFormModal onClose={() => setIsModalOpen(false)} onSave={handleSaveStudent} studentToEdit={editingStudent} campuses={campuses} user={user} />}
-            {isBulkOpen && <BulkUploadModal onClose={() => setIsBulkOpen(false)} onSave={handleBulkSave} user={user} campuses={campuses} />}
+            {isBulkOpen && <BulkUploadModal onClose={() => setIsBulkOpen(false)} onSave={handleBulkSave} user={user} campuses={campuses} students={students} />}
             {viewingStudent && <ViewStudentModal student={viewingStudent} onClose={() => setViewingStudent(null)} />}
             {deletingStudent && <DeleteConfirmationModal student={deletingStudent} onClose={() => setDeletingStudent(null)} onConfirm={handleDeleteStudent} />}
             {isBulkDeleting && <BulkDeleteConfirmationModal count={selectedStudents.length} onClose={() => setIsBulkDeleting(false)} onConfirm={handleBulkDelete} />}

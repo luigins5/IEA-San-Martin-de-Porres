@@ -158,11 +158,16 @@ const BulkUploadModal: React.FC<{
                     setErrors(newErrors);
                     setParsedData([]); // Don't allow saving if there are errors
                 } else {
+                    if (skippedWarnings.length > 0) {
+                        setErrors(skippedWarnings); // Show warnings in the error box, but allow saving
+                    } else {
+                        setErrors([]);
+                    }
                     // Combine subjects for duplicate teachers
                     const combinedData: any[] = [];
                     const teacherMap = new Map<string, any>(); // email -> teacher data
 
-                    data.forEach(row => {
+                    validData.forEach(row => {
                         const tipoPerfil = row.tipoPerfil?.toLowerCase();
                         if (tipoPerfil === 'profesor' && row.emailUsuario) {
                             const email = row.emailUsuario.toLowerCase();

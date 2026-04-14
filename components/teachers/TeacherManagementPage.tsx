@@ -27,11 +27,13 @@ const BulkUploadTeachersModal: React.FC<{
     onSave: (newTeachers: any[]) => void;
     user: User | null;
     campuses: Campus[];
-}> = ({ onClose, onSave, user, campuses }) => {
+    teachers: Teacher[];
+}> = ({ onClose, onSave, user, campuses, teachers }) => {
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [campusId, setCampusId] = useState(user?.role === UserRole.SUPER_ADMIN ? (campuses[0]?.id || '') : (user?.campusId || ''));
+    const [skippedCount, setSkippedCount] = useState(0);
 
     const downloadTemplate = () => {
         const headers = "nombre,documento,correo,telefono,asignatura,grado,grupo,intensidad_horaria\n";
@@ -102,11 +104,21 @@ const BulkUploadTeachersModal: React.FC<{
                     };
                 }).filter(row => row.name || row.documentNumber || row.email);
                 
+                const existingDocs = new Set(teachers.map(t => t.documentNumber));
+                const existingEmails = new Set(teachers.map(t => t.email?.toLowerCase()).filter(Boolean));
+                let skipped = 0;
+
                 // Combine subjects and assignments for duplicate teachers
                 const combinedData: any[] = [];
                 const teacherMap = new Map<string, any>();
 
                 data.forEach(row => {
+                    if ((row.documentNumber && existingDocs.has(row.documentNumber)) || 
+                        (row.email && existingEmails.has(row.email.toLowerCase()))) {
+                        skipped++;
+                        return;
+                    }
+
                     if (row.email) {
                         const email = row.email.toLowerCase();
                         if (teacherMap.has(email)) {
@@ -143,6 +155,7 @@ const BulkUploadTeachersModal: React.FC<{
                     }
                 });
 
+                setSkippedCount(skipped);
                 setParsedData(combinedData);
                 setIsProcessing(false);
             };
@@ -194,6 +207,11 @@ const BulkUploadTeachersModal: React.FC<{
                     {parsedData.length > 0 && (
                         <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
                             <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">✓ Se detectaron {parsedData.length} docentes listos para importar.</p>
+                        </div>
+                    )}
+                    {skippedCount > 0 && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-100 dark:border-amber-800">
+                            <p className="text-xs font-bold text-amber-700 dark:text-amber-400">⚠ Se omitieron {skippedCount} registros porque ya existen en el sistema (documento o correo duplicado).</p>
                         </div>
                     )}
                 </div>
@@ -1126,7 +1144,7 @@ const TeacherManagementPage: React.FC = () => {
         {isBulkDeleting && <BulkDeleteConfirmationModal count={selectedTeachers.length} onClose={() => setIsBulkDeleting(false)} onConfirm={handleBulkDelete} />}
         {deletingAssignment && <DeleteAssignmentConfirmationModal assignment={deletingAssignment} onClose={() => setDeletingAssignment(null)} onConfirm={handleDeleteAssignment} />}
         {assigningTeacher && <AssignmentModal teacher={assigningTeacher} onClose={() => setAssigningTeacher(null)} onSave={handleSaveAssignment} />}
-        {isBulkOpen && <BulkUploadTeachersModal onClose={() => setIsBulkOpen(false)} onSave={handleBulkSave} user={user} campuses={campuses} />}
+        {isBulkOpen && <BulkUploadTeachersModal onClose={() => setIsBulkOpen(false)} onSave={handleBulkSave} user={user} campuses={campuses} teachers={teachers} />}
         </>
     );
 };
