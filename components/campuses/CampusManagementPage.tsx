@@ -117,13 +117,15 @@ const BulkUploadModal: React.FC<{
                             const email = row.emailUsuario.toLowerCase();
                             // If it exists in DB, it's an error unless we are updating (not supported in bulk upload yet)
                             if (existingEmails.has(email)) {
-                                newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} ya existe en el sistema.`);
+                                if (tipoPerfil !== 'admin') {
+                                    newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} ya existe en el sistema.`);
+                                }
                             }
                             
-                            // If it exists in the file, it's an error UNLESS both are 'profesor'
+                            // If it exists in the file, it's an error UNLESS both are 'profesor' or both are 'admin'
                             if (emailsInFile.has(email)) {
                                 const existingTipo = emailsInFile.get(email);
-                                if (!(existingTipo === 'profesor' && tipoPerfil === 'profesor')) {
+                                if (!((existingTipo === 'profesor' && tipoPerfil === 'profesor') || (existingTipo === 'admin' && tipoPerfil === 'admin'))) {
                                     newErrors.push(`Fila ${rowNum}: El email ${row.emailUsuario} está duplicado en el archivo.`);
                                 }
                             } else {
