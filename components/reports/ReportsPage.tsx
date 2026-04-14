@@ -16,7 +16,7 @@ const ReportsPage: React.FC = () => {
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
 
     // Form States
-    const [reportType, setReportType] = useState<'boletin' | 'puestos' | 'consolidado' | 'valoracion' | 'libro_final'>('boletin');
+    const [reportType, setReportType] = useState<'boletin' | 'puestos' | 'consolidado' | 'valoracion' | 'libro_final' | 'lista_auxiliar'>('boletin');
     const [filterClass, setFilterClass] = useState('');
     const [filterSection, setFilterSection] = useState('');
     const [filterPeriod, setFilterPeriod] = useState(1);
@@ -466,6 +466,93 @@ const ReportsPage: React.FC = () => {
         doc.save(`Puestos_${filterClass}_${filterSection}_P${filterPeriod}.pdf`);
     };
 
+    const generateListaAuxiliarPDF = () => {
+        if (!filterClass || !filterSection) {
+            alert("Por favor seleccione un grado y un grupo para generar la lista auxiliar.");
+            return;
+        }
+
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        // Get all assignments for this class and section
+        const courseAssignments = assignments.filter(a => a.class === filterClass && a.section === filterSection);
+
+        // Sort students alphabetically
+        const sortedStudents = [...studentsForContext].sort((a, b) => a.name.localeCompare(b.name));
+
+        const renderPage = (assignment?: any) => {
+            getSchoolHeader(doc);
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            
+            doc.text(`Curso:`, 15, 45);
+            doc.text(`${filterClass} - ${filterSection}`, 40, 45);
+            
+            if (assignment) {
+                const teacher = teachers.find(t => t.id === assignment.teacherId);
+                const teacherName = teacher ? teacher.name.toUpperCase() : 'NO ASIGNADO';
+                doc.text(`Asignatura:`, 15, 50);
+                doc.text(`${assignment.subject}`, 40, 50);
+                
+                doc.text(`Docente:`, 15, 55);
+                doc.text(`${teacherName}`, 40, 55);
+            }
+
+            const tableBody = sortedStudents.map((student, sIndex) => {
+                const { lastName, firstName } = splitName(student.name);
+                return [
+                    (sIndex + 1).toString(),
+                    student.documentNumber,
+                    lastName.toUpperCase(),
+                    firstName.toUpperCase(),
+                    '', '', '', '', ''
+                ];
+            });
+
+            autoTable(doc, {
+                startY: assignment ? 60 : 50,
+                head: [['id', 'Código', 'Apellidos', 'Nombres', '', '', '', '', '']],
+                body: tableBody,
+                theme: 'grid',
+                styles: {
+                    fontSize: 9,
+                    cellPadding: 2,
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1,
+                    textColor: [0, 0, 0]
+                },
+                headStyles: {
+                    fillColor: [255, 255, 255],
+                    textColor: [0, 0, 0],
+                    fontStyle: 'bold',
+                    lineWidth: 0.1,
+                    lineColor: [0, 0, 0]
+                },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 25 },
+                    2: { cellWidth: 45 },
+                    3: { cellWidth: 45 },
+                }
+            });
+        };
+
+        if (courseAssignments.length === 0) {
+            renderPage();
+        } else {
+            courseAssignments.forEach((assignment, index) => {
+                if (index > 0) {
+                    doc.addPage();
+                }
+                renderPage(assignment);
+            });
+        }
+
+        doc.save(`Lista_Auxiliar_${filterClass}_${filterSection}.pdf`);
+    };
+
     const generateLibroFinalPDF = () => {
         if (!filterClass || !filterSection) {
             alert("Por favor seleccione un grado y un grupo para generar el Libro Final.");
@@ -728,6 +815,8 @@ const ReportsPage: React.FC = () => {
             generateValoracionPDF();
         } else if (reportType === 'libro_final') {
             generateLibroFinalPDF();
+        } else if (reportType === 'lista_auxiliar') {
+            generateListaAuxiliarPDF();
         } else {
             if (selectedStudentId === 'all') {
                 if (!filterClass || !filterSection) {
@@ -778,6 +867,7 @@ const ReportsPage: React.FC = () => {
                             <option value="puestos">Puestos (Ranking)</option>
                             <option value="consolidado">Consolidado (Sábana)</option>
                             <option value="valoracion">Informe de Valoración</option>
+                            <option value="lista_auxiliar">Lista Auxiliar</option>
                         </select>
                     </div>
 
