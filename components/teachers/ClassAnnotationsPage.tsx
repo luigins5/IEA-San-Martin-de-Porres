@@ -386,9 +386,17 @@ const ClassAnnotationsPage: React.FC = () => {
         setSelectedPeriod(currentPeriod);
 
         if (user) {
-            const currentTeacher = teachers.find(t => t.email === user.email);
-            const teacherId = currentTeacher?.id || user.id;
-            const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
+            let teacherAssignments = [];
+            if (user.role === UserRole.SUPER_ADMIN) {
+                teacherAssignments = assignments;
+            } else if (user.role === UserRole.CAMPUS_ADMIN) {
+                const campusTeachersIds = teachers.filter(t => t.campusId === user.campusId).map(t => t.id);
+                teacherAssignments = assignments.filter(a => campusTeachersIds.includes(a.teacherId));
+            } else {
+                const currentTeacher = teachers.find(t => t.email === user.email);
+                const teacherId = currentTeacher?.id || user.id;
+                teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
+            }
             setMyClasses(teacherAssignments);
             setSelectedClassId(prev => {
                 if (!prev && teacherAssignments.length > 0) return teacherAssignments[0].id;
@@ -398,7 +406,9 @@ const ClassAnnotationsPage: React.FC = () => {
         }
 
         refreshConcepts();
-    }, [user, assignments, globalSettings, campusSettings]);
+    }, [user, assignments, teachers, globalSettings, campusSettings]);
+
+    const isReadOnly = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN;
 
     const handleSaveCustomConcept = async (text: string) => {
         let custom = [];
@@ -682,9 +692,11 @@ const ClassAnnotationsPage: React.FC = () => {
                         <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full sm:w-48 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-200 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
                     </div>
-                    <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-3 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
-                        <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva</span>
-                    </button>
+                    {!isReadOnly && (
+                        <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-3 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                            <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -730,33 +742,38 @@ const ClassAnnotationsPage: React.FC = () => {
                                             <td className="px-4 py-5 align-middle">
                                                 <div className="space-y-2">
                                                     <select value={input.criterion} onChange={(e) => handleInputChange(student.id, 'criterion', e.target.value)}
-                                                        className={`w-full py-2 px-3 rounded-xl text-xs bg-slate-50 text-slate-600 font-medium outline-none transition-all dark:bg-slate-800 dark:text-slate-300 cursor-pointer ${studentErrors.criterion ? 'border-2 border-red-400 bg-red-50' : 'border-none'}`}>
+                                                        disabled={isReadOnly}
+                                                        className={`w-full py-2 px-3 rounded-xl text-xs bg-slate-50 text-slate-600 font-medium outline-none transition-all dark:bg-slate-800 dark:text-slate-300 cursor-pointer ${studentErrors.criterion ? 'border-2 border-red-400 bg-red-50' : 'border-none'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                         <option value="">Seleccionar Criterio...</option>
                                                         {availableExams.map(exam => <option key={exam.id} value={exam.title}>{exam.title}</option>)}
                                                         {CRITERIA_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                                     </select>
                                                     {input.criterion === 'Otro' && (
                                                         <input type="text" placeholder="Especifique..." value={input.customCriterion} onChange={(e) => handleInputChange(student.id, 'customCriterion', e.target.value)}
-                                                            className={`w-full py-2 px-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none dark:bg-slate-800 dark:text-white ${studentErrors.customCriterion ? 'border-2 border-red-400 bg-red-50' : 'border-none'}`} />
+                                                            disabled={isReadOnly}
+                                                            className={`w-full py-2 px-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none dark:bg-slate-800 dark:text-white ${studentErrors.customCriterion ? 'border-2 border-red-400 bg-red-50' : 'border-none'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`} />
                                                     )}
                                                 </div>
                                             </td>
                                             <td className="px-3 py-5 align-middle">
                                                 <input type="number" min="0.0" max="5.0" step="0.1" value={input.score} onChange={(e) => handleInputChange(student.id, 'score', e.target.value)} placeholder="-"
-                                                    className={`w-full py-3 text-center rounded-2xl text-base font-bold transition-all outline-none shadow-sm ${studentErrors.score ? 'border-2 border-red-400 bg-red-50' : getScoreColorClass(input.score)}`} />
+                                                    disabled={isReadOnly}
+                                                    className={`w-full py-3 text-center rounded-2xl text-base font-bold transition-all outline-none shadow-sm ${studentErrors.score ? 'border-2 border-red-400 bg-red-50' : getScoreColorClass(input.score)} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`} />
                                             </td>
                                             <td className="px-4 py-5 align-middle">
                                                 <div className="flex gap-2 items-center">
                                                     <div className="flex-1 min-w-0">
                                                         <select value={input.observation} onChange={(e) => handleInputChange(student.id, 'observation', e.target.value)}
-                                                            className={`w-full py-2.5 px-3 rounded-xl text-xs bg-slate-50 text-slate-500 focus:bg-white outline-none transition-all dark:bg-slate-800 dark:text-slate-400 cursor-pointer ${studentErrors.observation ? 'border-2 border-red-400 bg-red-50' : 'border-none'}`}>
+                                                            disabled={isReadOnly}
+                                                            className={`w-full py-2.5 px-3 rounded-xl text-xs bg-slate-50 text-slate-500 focus:bg-white outline-none transition-all dark:bg-slate-800 dark:text-slate-400 cursor-pointer ${studentErrors.observation ? 'border-2 border-red-400 bg-red-50' : 'border-none'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                             <option value="">Seleccionar concepto...</option>
                                                             {concepts.map(c => <option key={c.code} value={c.text}>[{c.code}] {c.text.length > 55 ? c.text.substring(0,55)+'...' : c.text}</option>)}
                                                         </select>
                                                     </div>
                                                     <button 
                                                         onClick={() => setIsConceptModalOpen(true)}
-                                                        className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors dark:bg-blue-900/20 dark:text-blue-400" 
+                                                        disabled={isReadOnly}
+                                                        className={`p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors dark:bg-blue-900/20 dark:text-blue-400 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                                         title="Añadir concepto personalizado"
                                                     >
                                                         <PlusIcon className="w-4 h-4" />
@@ -765,14 +782,15 @@ const ClassAnnotationsPage: React.FC = () => {
                                             </td>
                                             <td className="px-3 py-5 align-middle">
                                                 <input type="number" min="0" value={input.faults} onChange={(e) => handleInputChange(student.id, 'faults', e.target.value)} placeholder="0"
-                                                    className="w-full py-2.5 text-center rounded-xl text-sm font-bold bg-slate-50 text-slate-700 focus:bg-white focus:ring-2 focus:ring-rose-100 outline-none transition-all dark:bg-slate-800 dark:text-white border-none"/>
+                                                    disabled={isReadOnly}
+                                                    className={`w-full py-2.5 text-center rounded-xl text-sm font-bold bg-slate-50 text-slate-700 focus:bg-white focus:ring-2 focus:ring-rose-100 outline-none transition-all dark:bg-slate-800 dark:text-white border-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}/>
                                             </td>
                                             <td className="px-3 py-5 text-center align-middle">
                                                 <span className={`text-xs font-bold w-8 h-8 flex items-center justify-center rounded-full ${baseAccumulated > 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/30' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}>{baseAccumulated}</span>
                                             </td>
                                             <td className="px-6 py-5 text-center align-middle">
-                                                <button onClick={() => handleSaveStudentRow(student)} disabled={(!hasPendingChanges || isSaved) && Object.keys(studentErrors).length === 0}
-                                                    className={`p-3 rounded-xl transition-all duration-500 shadow-sm ${isSaved ? 'bg-emerald-500 text-white scale-110' : hasPendingChanges || Object.keys(studentErrors).length > 0 ? 'bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1' : 'bg-slate-100 text-slate-300 dark:bg-slate-800 cursor-not-allowed'}`}>
+                                                <button onClick={() => handleSaveStudentRow(student)} disabled={isReadOnly || ((!hasPendingChanges || isSaved) && Object.keys(studentErrors).length === 0)}
+                                                    className={`p-3 rounded-xl transition-all duration-500 shadow-sm ${isSaved ? 'bg-emerald-500 text-white scale-110' : hasPendingChanges || Object.keys(studentErrors).length > 0 ? 'bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1' : 'bg-slate-100 text-slate-300 dark:bg-slate-800 cursor-not-allowed'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                     {isSaved ? <CheckIcon className="w-5 h-5" /> : <SaveIcon className="w-5 h-5" />}
                                                 </button>
                                             </td>

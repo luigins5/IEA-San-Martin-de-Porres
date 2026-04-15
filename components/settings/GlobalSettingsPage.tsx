@@ -10,6 +10,8 @@ import { useData } from '../../context/DataContext';
 interface GlobalSettings {
     schoolName: string;
     schoolLogo: string; // data URL
+    headerImage?: string; // data URL for reports
+    rectorSignature?: string; // data URL for reports
     rector: string;
     secretary: string;
     address: string;

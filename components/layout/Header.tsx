@@ -123,11 +123,11 @@ const ProfileModal: React.FC<{ user: User | null; onClose: () => void }> = ({ us
                     <div className="grid grid-cols-2 gap-3 mt-4">
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
                             <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Especialidad</p>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{teacherData?.specialty || 'General'}</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{teacherData?.subject || 'General'}</p>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Asignaciones</p>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{teacherData?.assignments?.length || 0} cursos</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Sede</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{teacherData?.campusName || 'No asignada'}</p>
                         </div>
                     </div>
                 );

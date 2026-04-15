@@ -100,7 +100,7 @@ interface DataContextType {
     setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
 
     // CRUD Functions
-    addCampus: (data: Omit<Campus, 'id' | 'teachers' | 'students'>) => Promise<void>;
+    addCampus: (data: Omit<Campus, 'id' | 'teachers' | 'students'>) => Promise<string | undefined>;
     updateCampus: (id: string, data: Partial<Omit<Campus, 'id' | 'teachers' | 'students'>>) => Promise<void>;
     deleteCampus: (id: string) => Promise<void>;
 
@@ -108,7 +108,7 @@ interface DataContextType {
     updateAdmin: (id: string, data: Partial<AdminUser>) => Promise<void>;
     deleteAdmin: (id: string) => Promise<void>;
 
-    addTeacher: (data: Omit<Teacher, 'id' | 'role' | 'avatar'>) => Promise<string | void>;
+    addTeacher: (data: Omit<Teacher, 'id' | 'role' | 'avatar'>) => Promise<string | undefined>;
     updateTeacher: (id: string, data: Partial<Teacher>) => Promise<void>;
     deleteTeacher: (id: string) => Promise<void>;
 

@@ -350,7 +350,7 @@ const AdminManagementPage: React.FC = () => {
                 </div>
             </Card>
             
-            {isModalOpen && <AdminFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} adminToEdit={editingAdmin} campuses={campuses} />}
+            {isModalOpen && <AdminFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} adminToEdit={editingAdmin} />}
             {deletingAdmin && <DeleteConfirmationModal admin={deletingAdmin} onClose={() => setDeletingAdmin(null)} onConfirm={handleDelete} />}
             {resettingPasswordAdmin && <ResetPasswordConfirmationModal user={resettingPasswordAdmin} onClose={() => setResettingPasswordAdmin(null)} onConfirm={handleSendResetLink} />}
             {assigningPassAdmin && <TempPasswordModal user={assigningPassAdmin} onClose={() => setAssigningPassAdmin(null)} onSave={handleAssignTempPass} />}

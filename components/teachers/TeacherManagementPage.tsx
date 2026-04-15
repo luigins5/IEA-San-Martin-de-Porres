@@ -138,7 +138,7 @@ const BulkUploadTeachersModal: React.FC<{
                                 });
                             }
                         } else {
-                            const newTeacher = { ...row };
+                            const newTeacher: any = { ...row };
                             if (row.subject && row.class && row.section) {
                                 newTeacher.assignments = [{
                                     subject: row.subject,

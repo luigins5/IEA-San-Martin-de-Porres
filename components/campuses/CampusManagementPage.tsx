@@ -522,7 +522,8 @@ const CampusManagementPage: React.FC = () => {
                         name: row.nombreUsuario,
                         email: row.emailUsuario,
                         campusId: campusId,
-                        campusName: actualCampusName
+                        campusName: actualCampusName,
+                        status: 'active'
                     });
                     successCount++;
                 } else if (tipo === 'profesor') {
@@ -533,7 +534,8 @@ const CampusManagementPage: React.FC = () => {
                         phone: row.telefonoUsuario || '',
                         campusId: campusId,
                         campusName: actualCampusName,
-                        subject: row.asignaturaProfesor || ''
+                        subject: row.asignaturaProfesor || '',
+                        status: 'active'
                     });
                     
                     if (teacherId && row.assignments && row.assignments.length > 0) {
@@ -560,7 +562,9 @@ const CampusManagementPage: React.FC = () => {
                         campusName: actualCampusName,
                         class: row.gradoEstudiante || '',
                         section: row.seccionEstudiante || '',
-                        status: 'active'
+                        status: 'active',
+                        schoolPeriod: 'A',
+                        schoolYear: new Date().getFullYear()
                     });
                     successCount++;
                 }
