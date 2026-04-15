@@ -408,7 +408,7 @@ const ClassAnnotationsPage: React.FC = () => {
         refreshConcepts();
     }, [user, assignments, teachers, globalSettings, campusSettings]);
 
-    const isReadOnly = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN;
+    const isReadOnly = user?.role === UserRole.SUPER_ADMIN;
 
     const handleSaveCustomConcept = async (text: string) => {
         let custom = [];

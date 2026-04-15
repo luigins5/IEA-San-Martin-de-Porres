@@ -49,6 +49,22 @@
         },
       }
     </script>
+    <script>
+      // Fix for html2canvas trying to overwrite window.fetch
+      if (typeof window !== 'undefined') {
+        let _fetch = window.fetch;
+        try {
+          Object.defineProperty(window, 'fetch', {
+            get: () => _fetch,
+            set: (f) => { _fetch = f; },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          console.error("Could not redefine window.fetch", e);
+        }
+      }
+    </script>
   <script type="importmap">
 {
   "imports": {
