@@ -20,6 +20,8 @@ const ReportsPage: React.FC = () => {
     const [filterClass, setFilterClass] = useState('');
     const [filterSection, setFilterSection] = useState('');
     const [filterPeriod, setFilterPeriod] = useState(1);
+    const [filterTeacher, setFilterTeacher] = useState('');
+    const [filterSubject, setFilterSubject] = useState('');
     const [selectedStudentId, setSelectedStudentId] = useState('');
 
     // Helper to get settings based on context
@@ -64,6 +66,59 @@ const ReportsPage: React.FC = () => {
         }
     }, [user, globalSettings, campusSettings]);
 
+    const availableAssignments = useMemo(() => {
+        let filtered = assignments;
+        if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
+            const campusTeacherIds = new Set(teachers.filter(t => t.campusId === user.campusId).map(t => t.id));
+            filtered = filtered.filter(a => campusTeacherIds.has(a.teacherId));
+        }
+        if (filterTeacher) {
+            filtered = filtered.filter(a => a.teacherId === filterTeacher);
+        }
+        if (filterSubject) {
+            filtered = filtered.filter(a => a.subject === filterSubject);
+        }
+        if (filterClass) {
+            filtered = filtered.filter(a => a.class === filterClass);
+        }
+        if (filterSection) {
+            filtered = filtered.filter(a => a.section === filterSection);
+        }
+        return filtered;
+    }, [assignments, teachers, user, filterTeacher, filterSubject, filterClass, filterSection]);
+
+    const availableClasses = useMemo(() => {
+        if (filterTeacher || filterSubject) {
+            return Array.from(new Set(availableAssignments.map(a => a.class))).sort();
+        }
+        return ['Pre jardín', 'Jardín', 'Transición', '1ro', '2do', '3ro', '4to', '5to', '6', '7', '8', '9', '10', '11'];
+    }, [availableAssignments, filterTeacher, filterSubject]);
+
+    const availableSections = useMemo(() => {
+        if (filterTeacher || filterSubject || filterClass) {
+            return Array.from(new Set(availableAssignments.map(a => a.section))).sort();
+        }
+        return ['1', '2', '3', 'A', 'B'];
+    }, [availableAssignments, filterTeacher, filterSubject, filterClass]);
+
+    const availableSubjects = useMemo(() => {
+        let filtered = assignments;
+        if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
+            const campusTeacherIds = new Set(teachers.filter(t => t.campusId === user.campusId).map(t => t.id));
+            filtered = filtered.filter(a => campusTeacherIds.has(a.teacherId));
+        }
+        if (filterTeacher) {
+            filtered = filtered.filter(a => a.teacherId === filterTeacher);
+        }
+        if (filterClass) {
+            filtered = filtered.filter(a => a.class === filterClass);
+        }
+        if (filterSection) {
+            filtered = filtered.filter(a => a.section === filterSection);
+        }
+        return Array.from(new Set(filtered.map(a => a.subject))).sort();
+    }, [assignments, teachers, user, filterTeacher, filterClass, filterSection]);
+
     // Filtered students for dropdown and table
     const studentsForContext = useMemo(() => {
         if (!user) return [];
@@ -87,8 +142,13 @@ const ReportsPage: React.FC = () => {
             filtered = filtered.filter(s => s.section === filterSection);
         }
 
+        if (filterTeacher || filterSubject) {
+            const validClasses = new Set(availableAssignments.map(a => `${a.class}-${a.section}`));
+            filtered = filtered.filter(s => validClasses.has(`${s.class}-${s.section}`));
+        }
+
         return filtered.sort((a, b) => a.name.localeCompare(b.name));
-    }, [user, allStudents, filterClass, filterSection]);
+    }, [user, allStudents, filterClass, filterSection, filterTeacher, filterSubject, availableAssignments]);
 
     const accessibleStudents = useMemo(() => {
         return studentsForContext.filter(s => 
@@ -125,7 +185,10 @@ const ReportsPage: React.FC = () => {
 
     const calculateStudentAverages = (studentId: string) => {
         const studentGrades = grades.filter(g => g.studentId === studentId);
-        const subjects = Array.from(new Set(studentGrades.map(g => g.subject)));
+        let subjects = Array.from(new Set(studentGrades.map(g => g.subject)));
+        if (filterSubject) {
+            subjects = subjects.filter(s => s === filterSubject);
+        }
         
         let periodSum = 0;
         let periodCount = 0;
@@ -250,7 +313,10 @@ const ReportsPage: React.FC = () => {
         const groupStudentIds = studentsForContext.map(s => s.id);
         const groupGrades = grades.filter(g => groupStudentIds.includes(g.studentId));
         const subjectsSet = new Set(groupGrades.map(g => g.subject));
-        const subjects = Array.from(subjectsSet).sort();
+        let subjects = Array.from(subjectsSet).sort();
+        if (filterSubject) {
+            subjects = subjects.filter(s => s === filterSubject);
+        }
 
         const headRow = ['No.', 'Estudiante', ...subjects, 'PROM', 'PUESTO'];
 
@@ -475,8 +541,8 @@ const ReportsPage: React.FC = () => {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
 
-        // Get all assignments for this class and section
-        const courseAssignments = assignments.filter(a => a.class === filterClass && a.section === filterSection);
+        // Get all assignments for this class and section, respecting teacher and subject filters
+        const courseAssignments = availableAssignments.filter(a => a.class === filterClass && a.section === filterSection);
 
         // Sort students alphabetically
         const sortedStudents = [...studentsForContext].sort((a, b) => a.name.localeCompare(b.name));
@@ -594,7 +660,10 @@ const ReportsPage: React.FC = () => {
 
             // 2. Grades Table
             const studentGrades = grades.filter(g => g.studentId === student.id);
-            const subjects = Array.from(new Set(studentGrades.map(g => g.subject)));
+            let subjects = Array.from(new Set(studentGrades.map(g => g.subject)));
+            if (filterSubject) {
+                subjects = subjects.filter(s => s === filterSubject);
+            }
             
             // Build Columns based on numberOfPeriods
             const headCols = ['Materias'];
@@ -719,7 +788,10 @@ const ReportsPage: React.FC = () => {
         });
 
         const studentGrades = grades.filter(g => g.studentId === student.id);
-        const subjects = Array.from(new Set(studentGrades.map(g => g.subject)));
+        let subjects = Array.from(new Set(studentGrades.map(g => g.subject)));
+        if (filterSubject) {
+            subjects = subjects.filter(s => s === filterSubject);
+        }
         const tableBody: any[] = [];
 
         subjects.forEach(subject => {
@@ -853,7 +925,7 @@ const ReportsPage: React.FC = () => {
 
             {/* Form */}
             <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border dark:border-gray-700 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
                     {/* Report Type */}
                     <div>
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Tipo de Informe</label>
@@ -882,6 +954,36 @@ const ReportsPage: React.FC = () => {
                             {Array.from({ length: numberOfPeriods }, (_, i) => i + 1).map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
                     </div>
+
+                    {/* Teacher */}
+                    <div>
+                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">Profesor</label>
+                        <select 
+                            value={filterTeacher} 
+                            onChange={e => { setFilterTeacher(e.target.value); setSelectedStudentId(''); }} 
+                            className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                        >
+                            <option value="">Todos los Profesores...</option>
+                            {teachers.filter(t => user?.role === UserRole.SUPER_ADMIN || t.campusId === user?.campusId).map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Subject */}
+                    <div>
+                        <label className="block text-sm font-bold mb-1 dark:text-gray-300">Asignatura</label>
+                        <select 
+                            value={filterSubject} 
+                            onChange={e => { setFilterSubject(e.target.value); setSelectedStudentId(''); }} 
+                            className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                        >
+                            <option value="">Todas las Asignaturas...</option>
+                            {availableSubjects.map(subject => (
+                                <option key={subject} value={subject}>{subject}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4">
@@ -894,26 +996,7 @@ const ReportsPage: React.FC = () => {
                             className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">Seleccione Grado...</option>
-                            <optgroup label="Preescolar">
-                                <option value="Pre jardín">Pre jardín</option>
-                                <option value="Jardín">Jardín</option>
-                                <option value="Transición">Transición</option>
-                            </optgroup>
-                            <optgroup label="Primaria">
-                                <option value="1ro">1ro</option>
-                                <option value="2do">2do</option>
-                                <option value="3ro">3ro</option>
-                                <option value="4to">4to</option>
-                                <option value="5to">5to</option>
-                            </optgroup>
-                            <optgroup label="Secundaria">
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="10">10</option>
-                                <option value="11">11</option>
-                            </optgroup>
+                            {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     </div>
 
@@ -926,7 +1009,7 @@ const ReportsPage: React.FC = () => {
                             className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">Seleccione Grupo...</option>
-                            {['1', '2', '3', 'A', 'B'].map(s => <option key={s} value={s}>{s}</option>)}
+                            {availableSections.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                     </div>
 
