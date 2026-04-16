@@ -12,8 +12,9 @@ const COLORS = ['#10B981', '#EF4444', '#3B82F6', '#F59E0B', '#8B5CF6'];
 
 export const MetricsDashboard: React.FC = () => {
     const { user } = useAuth();
-    const { students: allStudents, grades, assignments, teachers, globalSettings, campusSettings } = useData();
+    const { students: allStudents, grades, assignments, teachers, globalSettings, campusSettings, campuses } = useData();
 
+    const [filterCampus, setFilterCampus] = useState('');
     const [filterClass, setFilterClass] = useState('');
     const [filterSection, setFilterSection] = useState('');
     const [filterPeriod, setFilterPeriod] = useState<number | 'all'>('all');
@@ -29,7 +30,14 @@ export const MetricsDashboard: React.FC = () => {
 
     const availableAssignments = useMemo(() => {
         let filtered = assignments;
-        if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
+        if (user?.role === UserRole.SUPER_ADMIN) {
+             if (filterCampus) {
+                 filtered = filtered.filter(a => {
+                     const t = teachers.find(teacher => teacher.id === a.teacherId);
+                     return t?.campusId === filterCampus;
+                 });
+             }
+        } else if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
             filtered = filtered.filter(a => {
                 const t = teachers.find(teacher => teacher.id === a.teacherId);
                 return t?.campusId === user.campusId;
@@ -40,7 +48,7 @@ export const MetricsDashboard: React.FC = () => {
         if (filterClass) filtered = filtered.filter(a => a.class === filterClass);
         if (filterSection) filtered = filtered.filter(a => a.section === filterSection);
         return filtered;
-    }, [assignments, teachers, user, filterTeacher, filterSubject, filterClass, filterSection]);
+    }, [assignments, teachers, user, filterCampus, filterTeacher, filterSubject, filterClass, filterSection]);
 
     const availableClasses = useMemo(() => {
         if (filterTeacher || filterSubject) return Array.from(new Set(availableAssignments.map(a => a.class))).sort();
@@ -54,7 +62,14 @@ export const MetricsDashboard: React.FC = () => {
 
     const availableSubjects = useMemo(() => {
         let filtered = assignments;
-        if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
+        if (user?.role === UserRole.SUPER_ADMIN) {
+             if (filterCampus) {
+                 filtered = filtered.filter(a => {
+                     const t = teachers.find(teacher => teacher.id === a.teacherId);
+                     return t?.campusId === filterCampus;
+                 });
+             }
+        } else if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
             filtered = filtered.filter(a => {
                 const t = teachers.find(teacher => teacher.id === a.teacherId);
                 return t?.campusId === user.campusId;
@@ -64,12 +79,14 @@ export const MetricsDashboard: React.FC = () => {
         if (filterClass) filtered = filtered.filter(a => a.class === filterClass);
         if (filterSection) filtered = filtered.filter(a => a.section === filterSection);
         return Array.from(new Set(filtered.map(a => a.subject))).sort();
-    }, [assignments, teachers, user, filterTeacher, filterClass, filterSection]);
+    }, [assignments, teachers, user, filterCampus, filterTeacher, filterClass, filterSection]);
 
     const studentsForContext = useMemo(() => {
         if (!user) return [];
         let filtered = allStudents;
-        if (user.role === UserRole.CAMPUS_ADMIN || user.role === UserRole.TEACHER) {
+        if (user.role === UserRole.SUPER_ADMIN) {
+            if (filterCampus) filtered = filtered.filter(s => s.campusId === filterCampus);
+        } else if (user.role === UserRole.CAMPUS_ADMIN || user.role === UserRole.TEACHER) {
             filtered = filtered.filter(s => s.campusId === user.campusId);
         }
         if (filterClass) filtered = filtered.filter(s => s.class === filterClass);
@@ -79,7 +96,7 @@ export const MetricsDashboard: React.FC = () => {
             filtered = filtered.filter(s => validClasses.has(`${s.class}-${s.section}`));
         }
         return filtered;
-    }, [user, allStudents, filterClass, filterSection, filterTeacher, filterSubject, availableAssignments]);
+    }, [user, allStudents, filterCampus, filterClass, filterSection, filterTeacher, filterSubject, availableAssignments]);
 
     const filteredGrades = useMemo(() => {
         const studentIds = new Set(studentsForContext.map(s => s.id));
@@ -171,6 +188,20 @@ export const MetricsDashboard: React.FC = () => {
             {/* Filters */}
             <Card className="p-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
                 <div className="flex flex-wrap gap-4 items-end">
+                    {user?.role === UserRole.SUPER_ADMIN && (
+                        <div className="flex-1 min-w-[150px]">
+                            <label className="block text-xs font-bold mb-1 text-slate-500 uppercase">Sede</label>
+                            <select 
+                                value={filterCampus} 
+                                onChange={e => { setFilterCampus(e.target.value); setFilterTeacher(''); setFilterClass(''); setFilterSection(''); }} 
+                                className="w-full p-2 border rounded bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-primary"
+                            >
+                                <option value="">Todas las Sedes</option>
+                                {campuses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="flex-1 min-w-[150px]">
                         <label className="block text-xs font-bold mb-1 text-slate-500 uppercase">Periodo</label>
                         <select 
@@ -191,7 +222,14 @@ export const MetricsDashboard: React.FC = () => {
                             className="w-full p-2 border rounded bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-primary"
                         >
                             <option value="">Todos los Profesores...</option>
-                            {teachers.filter(t => user?.role === UserRole.SUPER_ADMIN || t.campusId === user?.campusId).map(t => (
+                            {teachers
+                                .filter(t => {
+                                    if (user?.role === UserRole.SUPER_ADMIN) {
+                                        return filterCampus ? t.campusId === filterCampus : true;
+                                    }
+                                    return t.campusId === user?.campusId;
+                                })
+                                .map(t => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
                         </select>
@@ -234,7 +272,7 @@ export const MetricsDashboard: React.FC = () => {
                     </div>
                     
                     <button 
-                        onClick={() => { setFilterClass(''); setFilterSection(''); setFilterPeriod('all'); setFilterTeacher(''); setFilterSubject(''); }}
+                        onClick={() => { setFilterCampus(''); setFilterClass(''); setFilterSection(''); setFilterPeriod('all'); setFilterTeacher(''); setFilterSubject(''); }}
                         className="px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg hover:bg-slate-100 transition-colors dark:border-slate-600 dark:hover:bg-slate-700"
                     >
                         Limpiar Filtros

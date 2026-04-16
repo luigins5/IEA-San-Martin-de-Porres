@@ -4,13 +4,15 @@ import { db } from '../../firebase';
 import Card from '../ui/Card';
 import { AuditLog } from '../../utils/audit';
 import { DocumentTextIcon } from '../icons';
+import AuditMetricsDashboard from './AuditMetricsDashboard';
 
 const AuditLogsPage: React.FC = () => {
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'logs' | 'metrics'>('logs');
 
     useEffect(() => {
-        const q = query(collection(db, 'audit_logs'), limit(100));
+        const q = query(collection(db, 'audit_logs'), limit(1000));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const auditLogs: AuditLog[] = [];
             snapshot.forEach((doc) => {
@@ -35,16 +37,33 @@ const AuditLogsPage: React.FC = () => {
                         <DocumentTextIcon className="w-8 h-8 text-primary" />
                         Registro de Auditoría
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Historial de acciones realizadas en el sistema.</p>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Historial de acciones y métricas sobre la actividad del sistema.</p>
                 </div>
             </header>
 
-            <Card>
-                {isLoading ? (
-                    <div className="flex justify-center items-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                ) : (
+            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+                <button
+                    className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'logs' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                    onClick={() => setActiveTab('logs')}
+                >
+                    Listado de Registros
+                </button>
+                <button
+                    className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'metrics' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                    onClick={() => setActiveTab('metrics')}
+                >
+                    Métricas de Auditoría
+                </button>
+            </div>
+
+            {isLoading ? (
+                <div className="flex justify-center items-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+            ) : activeTab === 'metrics' ? (
+                <AuditMetricsDashboard logs={logs} />
+            ) : (
+                <Card>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left text-slate-500 dark:text-slate-400">
                             <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-800/50 dark:text-slate-300">
@@ -96,8 +115,8 @@ const AuditLogsPage: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
-                )}
-            </Card>
+                </Card>
+            )}
         </div>
     );
 };
