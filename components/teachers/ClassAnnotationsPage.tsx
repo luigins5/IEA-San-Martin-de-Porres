@@ -7,24 +7,24 @@ import { PlusIcon, SaveIcon, CheckIcon, ClipboardCheckIcon, TrashIcon, UploadIco
 import { getPeriodFromDate, conceptsCSV } from './GradesPage';
 import Card from '../ui/Card';
 
-const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[] }) => {
+const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean }) => {
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [errors, setErrors] = useState<string[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
 
     const downloadTemplate = () => {
-        const headers = "documento_identidad,nota,actividad,observacion\n";
+        const headers = "documento_identidad,criterio,nota,observacion,faltas\n";
         // Usar los primeros 3 estudiantes como ejemplo para la plantilla
         const examples = classStudents.slice(0, 3).map(s => 
-            `${s.documentNumber},4.5,Tarea de Clase,Excelente participación`
+            `${s.documentNumber},Examen,4.5,Excelente participación,`
         ).join('\n');
         
         const blob = new Blob([headers + examples], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", "plantilla_carga_notas.csv");
+        link.setAttribute("download", "plantilla_carga_notas_faltas.csv");
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -56,27 +56,41 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
                 const newErrors: string[] = [];
 
                 dataRows.forEach((row, index) => {
-                    const cols = row.split(',').map(c => c.trim());
+                    const cols = row.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
                     if (cols.length < 2) return;
 
                     const docNum = cols[0];
-                    const score = parseFloat(cols[1]);
-                    const activity = cols[2] || 'Actividad Masiva';
+                    const criterion = cols[1] || 'Actividad en clase';
+                    const scoreRaw = cols[2];
                     const observation = cols[3] || '';
+                    const faultsRaw = cols[4];
 
                     const student = classStudents.find(s => s.documentNumber === docNum);
+                    
+                    let score: number | undefined = undefined;
+                    if (scoreRaw !== undefined && scoreRaw !== '') {
+                         score = parseFloat(scoreRaw);
+                    }
+                    
+                    let faults: number | undefined = undefined;
+                    if (faultsRaw !== undefined && faultsRaw !== '') {
+                        faults = parseInt(faultsRaw);
+                    }
 
                     if (!student) {
                         newErrors.push(`Fila ${index + 2}: El estudiante con documento ${docNum} no pertenece a esta clase.`);
-                    } else if (isNaN(score) || score < 0 || score > 5) {
-                        newErrors.push(`Fila ${index + 2}: La nota (${cols[1]}) debe ser un número entre 0.0 y 5.0.`);
+                    } else if (score !== undefined && (isNaN(score) || score < 0 || score > 5)) {
+                        newErrors.push(`Fila ${index + 2}: La nota (${scoreRaw}) debe ser un número entre 0.0 y 5.0.`);
+                    } else if (score === undefined && faults === undefined) {
+                        newErrors.push(`Fila ${index + 2}: Debe ingresar una nota o una cantidad de faltas para el documento ${docNum}.`);
                     } else {
                         results.push({
                             studentId: student.id,
                             studentName: student.name,
                             score,
-                            detail: activity,
-                            observation
+                            criterion,
+                            observation,
+                            faults
                         });
                     }
                 });
@@ -97,8 +111,9 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
             <Card className="bg-white dark:bg-slate-900 p-0 rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 overflow-hidden">
                 <div className="flex justify-between items-center p-6 border-b dark:border-slate-800">
                     <div>
-                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Importar Calificaciones</h2>
-                        <p className="text-sm text-slate-500">Carga notas para múltiples estudiantes mediante un archivo CSV.</p>
+                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Importar Calificaciones y Faltas</h2>
+                        <p className="text-sm text-slate-500">Carga notas y faltas para múltiples estudiantes mediante un archivo CSV.</p>
+                        {isReadOnly && <p className="text-sm text-red-500 font-bold mt-1">El periodo está cerrado (Solo lectura).</p>}
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                         <CloseIcon className="w-6 h-6 text-slate-400"/>
@@ -127,7 +142,7 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
 
                     {/* File Dropzone */}
                     <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group">
-                        <input type="file" accept=".csv" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                        <input type="file" accept=".csv" onChange={handleFileChange} disabled={isReadOnly} className="absolute inset-0 opacity-0 cursor-pointer" />
                         <div className="pointer-events-none">
                             <UploadIcon className="w-12 h-12 mx-auto text-slate-300 group-hover:text-blue-500 transition-colors mb-4"/>
                             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{file ? file.name : 'Haz clic o arrastra tu archivo CSV aquí'}</p>
@@ -162,7 +177,11 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
                                     {parsedData.slice(0, 5).map((item, i) => (
                                         <div key={i} className="flex justify-between text-[10px] bg-white/50 dark:bg-slate-800 p-2 rounded">
                                             <span className="font-medium">{item.studentName}</span>
-                                            <span className="font-bold text-blue-600">Nota: {item.score}</span>
+                                            <span className="font-bold text-blue-600">
+                                                {item.score !== undefined ? `Nota: ${item.score}` : ''}
+                                                {item.score !== undefined && item.faults !== undefined ? ' | ' : ''}
+                                                {item.faults !== undefined ? `Faltas: ${item.faults}` : ''}
+                                            </span>
                                         </div>
                                     ))}
                                     {parsedData.length > 5 && <p className="text-[10px] text-slate-400 italic">Y {parsedData.length - 5} estudiantes más...</p>}
@@ -177,11 +196,11 @@ const BulkUploadModal = ({ onClose, onSave, classStudents }: { onClose: () => vo
                         Cancelar
                     </button>
                     <button 
-                        disabled={parsedData.length === 0 || isProcessing}
+                        disabled={parsedData.length === 0 || isProcessing || isReadOnly}
                         onClick={() => onSave(parsedData)}
                         className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none transition-all"
                     >
-                        Importar {parsedData.length} Calificaciones
+                        Importar {parsedData.length} Registros
                     </button>
                 </div>
             </Card>
@@ -408,7 +427,8 @@ const ClassAnnotationsPage: React.FC = () => {
         refreshConcepts();
     }, [user, assignments, teachers, globalSettings, campusSettings]);
 
-    const isReadOnly = user?.role === UserRole.SUPER_ADMIN;
+    const isPeriodLocked = globalSettings?.lockedPeriods?.includes(selectedPeriod) || false;
+    const isReadOnly = isPeriodLocked && user?.role !== UserRole.SUPER_ADMIN && user?.role !== UserRole.CAMPUS_ADMIN;
 
     const handleSaveCustomConcept = async (text: string) => {
         let custom = [];
@@ -567,17 +587,32 @@ const ClassAnnotationsPage: React.FC = () => {
         for (const item of data) {
             try {
                 const selectedConcept = concepts.find(c => c.text === item.observation);
-                await addGrade({
-                    studentId: item.studentId,
-                    subject: selectedClass.subject,
-                    class: selectedClass.class,
-                    assignmentTitle: item.detail,
-                    score: item.score,
-                    percentage: 10, // Porcentaje por defecto para notas rápidas
-                    date: today,
-                    comments: item.observation || 'Carga masiva',
-                    conceptCode: selectedConcept ? selectedConcept.code : ''
-                });
+                
+                if (item.score !== undefined) {
+                    await addGrade({
+                        studentId: item.studentId,
+                        subject: selectedClass.subject,
+                        class: selectedClass.class,
+                        assignmentTitle: item.criterion,
+                        score: item.score,
+                        percentage: 10, // Porcentaje por defecto para notas rápidas
+                        date: today,
+                        comments: item.observation || 'Carga masiva',
+                        conceptCode: selectedConcept ? selectedConcept.code : ''
+                    });
+                }
+                
+                if (item.faults !== undefined && item.faults > 0) {
+                    const existingRecord = attendanceRecords.find(r => r.studentId === item.studentId && r.date === today && r.period === selectedPeriod);
+                    const totalDailyFaults = (existingRecord?.count || 0) + item.faults;
+                    await saveAttendance({
+                        studentId: item.studentId,
+                        date: today,
+                        status: 'Ausente',
+                        count: totalDailyFaults,
+                        period: selectedPeriod
+                    });
+                }
                 count++;
             } catch (err) {
                 console.error("Error cargando nota masiva para studentId:", item.studentId, err);
@@ -585,7 +620,7 @@ const ClassAnnotationsPage: React.FC = () => {
         }
         
         setIsBulkModalOpen(false);
-        alert(`Se han importado ${count} calificaciones exitosamente.`);
+        alert(`Se han importado ${count} registros exitosamente.`);
     };
 
     const handleUpdateRecord = async (updatedRecord: any) => {
@@ -848,7 +883,7 @@ const ClassAnnotationsPage: React.FC = () => {
                     </table>
                 </div>
             </div>
-            {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} classStudents={classStudents} />}
+            {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} classStudents={classStudents} isReadOnly={isReadOnly} />}
             {isConceptModalOpen && <AddCustomConceptModal onClose={() => setIsConceptModalOpen(false)} onSave={handleSaveCustomConcept} />}
             {editingRecord && <EditRecordModal record={editingRecord} onClose={() => setEditingRecord(null)} onSave={handleUpdateRecord} concepts={concepts} />}
         </div>
