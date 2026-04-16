@@ -160,12 +160,12 @@ const DashboardLayout: React.FC = () => {
 
       <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative">
         <Header toggleSidebar={toggleSidebar} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 scroll-smooth">
-          <div className="w-full px-2 sm:px-4 max-w-8xl mx-auto">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto scroll-smooth flex flex-col">
+          <div className="w-full px-2 sm:px-4 max-w-8xl mx-auto p-4 sm:p-6 flex-1">
             {renderCurrentPage()}
           </div>
+          <Footer />
         </main>
-        <Footer />
       </div>
     </div>
   );
