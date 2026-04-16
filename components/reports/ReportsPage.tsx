@@ -16,7 +16,7 @@ const ReportsPage: React.FC = () => {
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
 
     // Form States
-    const [reportType, setReportType] = useState<'boletin' | 'puestos' | 'consolidado' | 'valoracion' | 'libro_final' | 'lista_auxiliar'>('boletin');
+    const [reportType, setReportType] = useState<'boletin' | 'puestos' | 'consolidado' | 'valoracion' | 'libro_final' | 'lista_auxiliar' | 'sabana_perdidos'>('boletin');
     const [filterClass, setFilterClass] = useState('');
     const [filterSection, setFilterSection] = useState('');
     const [filterPeriod, setFilterPeriod] = useState(1);
@@ -878,6 +878,88 @@ const ReportsPage: React.FC = () => {
         addSignatures(doc, finalY + 25);
     };
 
+    const generateSabanaPerdidosPDF = () => {
+        const doc = new jsPDF();
+        getSchoolHeader(doc);
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`SÁBANA DE PERDIDOS - PERIODO ${filterPeriod}`, pageWidth / 2, 45, { align: 'center' });
+        
+        let subTitleStr = `Filtros: `;
+        if (filterClass) subTitleStr += `Curso: ${filterClass} `;
+        if (filterSection) subTitleStr += `Grupo: ${filterSection} `;
+        if (filterTeacher) { 
+             const t = teachers.find(t=>t.id===filterTeacher);
+             if (t) subTitleStr += `Profesor: ${t.name} `;
+        }
+        if (filterSubject) subTitleStr += `Asignatura: ${filterSubject}`;
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(subTitleStr, 15, 52);
+
+        const tableBody: any[][] = [];
+        let indexCnt = 1;
+
+        studentsForContext.forEach(student => {
+            const studentGrades = grades.filter(g => g.studentId === student.id);
+            let subjects = Array.from(new Set(studentGrades.map(g => g.subject)));
+            if (filterSubject) {
+                subjects = subjects.filter(s => s === filterSubject);
+            }
+            
+            subjects.forEach(subject => {
+                const subjectGrades = studentGrades.filter(g => 
+                    g.subject === subject && 
+                    getPeriodFromDate(g.date, numberOfPeriods) === filterPeriod
+                );
+
+                if (subjectGrades.length > 0) {
+                    const totalScore = subjectGrades.reduce((acc, g) => acc + (g.score * g.percentage/100), 0);
+                    const totalPerc = subjectGrades.reduce((acc, g) => acc + g.percentage, 0);
+                    const final = totalPerc > 0 ? (totalScore * 100) / totalPerc : 0;
+                    
+                    if (totalPerc > 0 && final < 3.0) {
+                        const faults = attendanceRecords
+                            .filter(r => r.studentId === student.id && r.period === filterPeriod && r.status !== 'Presente')
+                            .reduce((acc, r) => acc + (r.count || 1), 0);
+
+                        tableBody.push([
+                            indexCnt++,
+                            student.name.toUpperCase(),
+                            `${student.class} ${student.section}`,
+                            subject.toUpperCase(),
+                            final.toFixed(1),
+                            faults
+                        ]);
+                    }
+                }
+            });
+        });
+
+        if (tableBody.length === 0) {
+            doc.text("No se encontraron estudiantes con asignaturas perdidas para estos filtros.", 15, 62);
+        } else {
+            autoTable(doc, {
+                startY: 58,
+                head: [['No.', 'Estudiante', 'Curso/Grupo', 'Asignatura Perdida', 'Nota', 'Faltas']],
+                body: tableBody,
+                theme: 'grid',
+                headStyles: { fillColor: [220, 220, 220], textColor: [0,0,0], fontStyle: 'bold', fontSize: 9, lineWidth: 0.1, lineColor: [0,0,0] },
+                styles: { fontSize: 8, textColor: [0,0,0], cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1 },
+                columnStyles: {
+                    4: { halign: 'center', textColor: [255,0,0], fontStyle: 'bold' },
+                    5: { halign: 'center' }
+                }
+            });
+        }
+
+        addSignatures(doc, ((doc as any).lastAutoTable?.finalY || 70) + 10);
+        doc.save(`Sabana_Perdidos_P${filterPeriod}.pdf`);
+    };
+
     const handleGenerate = () => {
         if (reportType === 'puestos') {
             generateRankingsPDF();
@@ -889,6 +971,8 @@ const ReportsPage: React.FC = () => {
             generateLibroFinalPDF();
         } else if (reportType === 'lista_auxiliar') {
             generateListaAuxiliarPDF();
+        } else if (reportType === 'sabana_perdidos') {
+            generateSabanaPerdidosPDF();
         } else {
             if (selectedStudentId === 'all') {
                 if (!filterClass || !filterSection) {
@@ -940,6 +1024,7 @@ const ReportsPage: React.FC = () => {
                             <option value="consolidado">Consolidado (Sábana)</option>
                             <option value="valoracion">Informe de Valoración</option>
                             <option value="lista_auxiliar">Lista Auxiliar</option>
+                            <option value="sabana_perdidos">Sábana de Perdidos</option>
                         </select>
                     </div>
 
@@ -1048,7 +1133,7 @@ const ReportsPage: React.FC = () => {
                     </button>
                     <button 
                         onClick={handleGenerate}
-                        disabled={(reportType === 'boletin' && !selectedStudentId) || (reportType !== 'boletin' && (!filterClass || !filterSection))}
+                        disabled={(reportType === 'boletin' && !selectedStudentId) || (!(reportType === 'boletin' || reportType === 'sabana_perdidos') && (!filterClass || !filterSection))}
                         className="bg-red-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed shadow-md"
                     >
                         <DocumentTextIcon className="w-5 h-5" />
