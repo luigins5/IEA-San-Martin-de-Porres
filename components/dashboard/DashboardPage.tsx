@@ -8,6 +8,7 @@ import Card from '../ui/Card';
 import StudentDashboard from '../students/StudentDashboard';
 import ParentDashboard from '../parents/ParentDashboard';
 import { useData } from '../../context/DataContext';
+import MetricsDashboard from './MetricsDashboard';
 
 const iconForFileType = (type: string) => {
     const className = "w-8 h-8 flex-shrink-0";
@@ -420,8 +421,13 @@ interface DashboardPageProps {
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ setCurrentPage }) => {
     const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState<'general' | 'metrics'>('general');
 
     const renderDashboard = () => {
+        if (activeTab === 'metrics') {
+            return <MetricsDashboard />;
+        }
+        
         switch (user?.role) {
             case UserRole.SUPER_ADMIN: return <SuperAdminDashboard setCurrentPage={setCurrentPage || (() => {})} />;
             case UserRole.CAMPUS_ADMIN: return <CampusAdminDashboard setCurrentPage={setCurrentPage || (() => {})} />;
@@ -456,9 +462,26 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setCurrentPage }) => {
                 </div>
             </header>
 
+            {(user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) && (
+                <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+                    <button
+                        className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'general' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                        onClick={() => setActiveTab('general')}
+                    >
+                        General
+                    </button>
+                    <button
+                        className={`py-3 px-6 text-sm font-medium border-b-2 transition-colors ${activeTab === 'metrics' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                        onClick={() => setActiveTab('metrics')}
+                    >
+                        Métricas y Estadísticas
+                    </button>
+                </div>
+            )}
+
             {renderDashboard()}
 
-            {user?.role !== UserRole.TEACHER && user?.role !== UserRole.SUPER_ADMIN && user?.role !== UserRole.CAMPUS_ADMIN && (
+            {activeTab === 'general' && user?.role !== UserRole.TEACHER && user?.role !== UserRole.SUPER_ADMIN && user?.role !== UserRole.CAMPUS_ADMIN && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
                     <div className="lg:col-span-2">
                         <RecentCommunications />
