@@ -593,11 +593,11 @@ const StudentManagementPage: React.FC = () => {
                 </div>
             )}
 
-            <Card className="flex flex-col h-full border-none shadow-none bg-transparent p-0">
-                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col">
+            <Card className="flex flex-col h-full border-none shadow-none bg-transparent p-0 overflow-hidden w-full min-w-0">
+                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col flex-1 w-full min-w-0 overflow-hidden">
                     
                     {/* Modern Header */}
-                    <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-900">
+                    <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col xl:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-900 shrink-0">
                         <div>
                             <h2 className="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-3">
                                 <div className="p-2 bg-blue-50 text-blue-600 rounded-lg dark:bg-blue-900/20 dark:text-blue-400">
@@ -644,22 +644,22 @@ const StudentManagementPage: React.FC = () => {
                                 {['A', 'B', 'C', '1', '2', '3'].map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                             {selectedStudents.length > 0 && (
-                                <button onClick={() => setIsBulkDeleting(true)} className="bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 px-4 rounded-lg hover:bg-red-100 transition-all text-sm flex items-center justify-center gap-2 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/40">
+                                <button onClick={() => setIsBulkDeleting(true)} className="bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 px-4 rounded-lg hover:bg-red-100 transition-all text-sm flex items-center justify-center gap-2 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/40 whitespace-nowrap">
                                     <TrashIcon className="w-4 h-4"/> Eliminar ({selectedStudents.length})
                                 </button>
                             )}
-                            <button onClick={() => setIsBulkOpen(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-sm flex items-center justify-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
+                            <button onClick={() => setIsBulkOpen(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-sm flex items-center justify-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 whitespace-nowrap">
                                 <UploadIcon className="w-4 h-4"/> Masiva
                             </button>
-                            <button onClick={() => { setEditingStudent(null); setIsModalOpen(true); }} className="bg-primary text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transition-all text-sm flex items-center justify-center gap-2">
+                            <button onClick={() => { setEditingStudent(null); setIsModalOpen(true); }} className="bg-primary text-white font-bold py-2.5 px-5 rounded-lg shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transition-all text-sm flex items-center justify-center gap-2 whitespace-nowrap">
                                 <PlusIcon className="w-4 h-4"/> Añadir
                             </button>
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto flex-1 w-full relative">
                         <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 font-semibold tracking-wider dark:bg-slate-800 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                            <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 font-semibold tracking-wider dark:bg-slate-800 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700 whitespace-nowrap">
                                 <tr>
                                     <th className="px-6 py-4 w-10">
                                         <input type="checkbox" className="rounded text-primary focus:ring-primary w-4 h-4 cursor-pointer" 
@@ -693,20 +693,20 @@ const StudentManagementPage: React.FC = () => {
                                                     {student.name}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-mono text-xs">{student.documentNumber}</td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-mono text-xs whitespace-nowrap">{student.documentNumber}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                                                     {student.class} <span className="mx-1 opacity-50">|</span> {student.section}
                                                 </span>
                                             </td>
-                                            {user?.role === UserRole.SUPER_ADMIN && <td className="px-6 py-4 text-slate-600">{student.campusName}</td>}
-                                            <td className="px-6 py-4">
+                                            {user?.role === UserRole.SUPER_ADMIN && <td className="px-6 py-4 text-slate-600 whitespace-nowrap">{student.campusName}</td>}
+                                            <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${student.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' : 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800'}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${student.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
                                                     {student.status === 'active' ? 'Activo' : 'Inactivo'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-6 py-4 text-right whitespace-nowrap">
                                                 <div className="flex justify-end items-center gap-2">
                                                     <button onClick={() => setViewingStudent(student)} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-blue-600 transition-all focus:outline-none shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white" title="Ver Detalles">
                                                         <EyeIcon className="w-4 h-4"/>

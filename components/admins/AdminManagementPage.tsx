@@ -228,10 +228,10 @@ const AdminManagementPage: React.FC = () => {
                     <span className="font-medium text-sm">{notification.message}</span>
                 </div>
             )}
-            <Card className="flex flex-col h-full border-none shadow-none bg-transparent p-0">
-                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col">
+            <Card className="flex flex-col h-full border-none shadow-none bg-transparent p-0 overflow-hidden w-full min-w-0">
+                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col flex-1 w-full min-w-0 overflow-hidden">
                     
-                    <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-900">
+                    <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-900 shrink-0">
                         <div>
                             <h2 className="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-3">
                                 <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg dark:bg-emerald-900/20 dark:text-emerald-400">
@@ -263,9 +263,9 @@ const AdminManagementPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto flex-1 w-full relative">
                         <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 font-semibold tracking-wider dark:bg-slate-800 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                            <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 font-semibold tracking-wider dark:bg-slate-800 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700 whitespace-nowrap">
                                 <tr>
                                     <th scope="col" className="px-6 py-4 w-10"></th>
                                     <th scope="col" className="px-6 py-4">Nombre</th>
