@@ -65,7 +65,7 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly }: { onClo
                     const hasNameCol = cols.length >= 6; 
                     // Remove BOM from first column if present
                     const docNum = cols[0].replace(/^\uFEFF/, '');
-                    const criterion = (hasNameCol ? cols[2] : cols[1]) || 'Actividad en clase';
+                    const criterion = (hasNameCol ? cols[2] : cols[1]) || 'Examen';
                     const scoreRaw = hasNameCol ? cols[3] : cols[2];
                     const observation = (hasNameCol ? cols[4] : cols[3]) || '';
                     const faultsRaw = hasNameCol ? cols[5] : cols[4];
@@ -695,7 +695,7 @@ const ClassAnnotationsPage: React.FC = () => {
         const headers = "documento_identidad,nombre_estudiante,criterio,nota,observacion,faltas\n";
         // Exportar TODOS los estudiantes filtrados de la clase actual
         const lines = classStudents.map(s => 
-            `${s.documentNumber},${s.name.replace(/,/g, '')},Actividad en clase,,,`
+            `${s.documentNumber},${s.name.replace(/,/g, '')},Examen,,,`
         ).join('\n');
         
         const blob = new Blob(["\uFEFF" + headers + lines], { type: 'text/csv;charset=utf-8;' });
