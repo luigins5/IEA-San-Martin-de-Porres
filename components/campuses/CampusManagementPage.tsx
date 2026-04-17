@@ -1,9 +1,69 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Campus, User, UserRole } from '../../types';
 import Card from '../ui/Card';
 import { BuildingOfficeIcon, EditIcon, TrashIcon, CloseIcon, ClipboardDocumentListIcon, UploadIcon, DownloadIcon, PlusIcon } from '../icons';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
+
+const UsersIcon = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+  </svg>
+);
+
+const ViewProfilesModal: React.FC<{ 
+    campus: Campus; 
+    onClose: () => void; 
+    admins: User[];
+    teachers: User[];
+    students: User[];
+    onImpersonate: (user: User) => void;
+}> = ({ campus, onClose, admins, teachers, students, onImpersonate }) => {
+    
+    const campusAdmins = admins.filter(a => a.name === campus.admin || a.campusId === campus.id); 
+    const campusTeachers = teachers.filter(t => t.campusId === campus.id);
+    const campusStudents = students.filter(s => s.campusId === campus.id);
+
+    const renderUserList = (title: string, list: User[]) => (
+        <div className="mb-6">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 uppercase tracking-wider">{title} ({list.length})</h3>
+            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                {list.length === 0 ? <p className="text-xs text-slate-500 italic">No hay usuarios en esta categoría.</p> : null}
+                {list.map(u => (
+                    <div key={u.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors dark:bg-slate-800 dark:border-slate-700">
+                        <div>
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{u.name}</p>
+                            <p className="text-xs text-slate-500">{u.email}</p>
+                        </div>
+                        <button onClick={() => onImpersonate(u)} className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-200 transition-colors shadow-sm dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50">
+                            Ingresar
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
+            <Card className="w-full max-w-2xl flex flex-col max-h-[90vh]">
+                <div className="flex justify-between items-center mb-6 pb-3 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-slate-900 z-10">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <UsersIcon className="w-6 h-6 text-primary"/>
+                        Perfiles - {campus.name}
+                    </h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-white"><CloseIcon className="w-6 h-6"/></button>
+                </div>
+                <div className="overflow-y-auto flex-1 pb-4">
+                    {renderUserList('Administradores de Sede', campusAdmins)}
+                    {renderUserList('Profesores', campusTeachers)}
+                    {renderUserList('Estudiantes', campusStudents)}
+                </div>
+            </Card>
+        </div>
+    );
+};
 
 const BulkUploadModal: React.FC<{
     onClose: () => void;
@@ -435,13 +495,15 @@ const BulkDeleteConfirmationModal: React.FC<{ count: number; onClose: () => void
 );
 
 const CampusManagementPage: React.FC = () => {
-    const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin, addAdmin, addTeacher, addStudent, addAssignment } = useData();
+    const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin, addAdmin, addTeacher, addStudent, addAssignment, teachers, students } = useData();
+    const { impersonateUser } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     const [selectedCampuses, setSelectedCampuses] = useState<string[]>([]);
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [editingCampus, setEditingCampus] = useState<Campus | null>(null);
     const [deletingCampus, setDeletingCampus] = useState<Campus | null>(null);
+    const [viewingProfilesCampus, setViewingProfilesCampus] = useState<Campus | null>(null);
     const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
 
     const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
@@ -697,10 +759,15 @@ const CampusManagementPage: React.FC = () => {
                                 </div>
                             </div>
                             
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-b-xl border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                                 <button onClick={() => openEditModal(campus)} className="text-sm font-bold text-primary hover:text-blue-700 flex items-center gap-1.5 transition-colors">
-                                    <ClipboardDocumentListIcon className="w-4 h-4" /> Detalles
-                                </button>
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-b-xl border-t border-slate-100 dark:border-slate-800 flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex gap-2">
+                                     <button onClick={() => openEditModal(campus)} className="text-sm font-bold text-primary hover:text-blue-700 flex items-center gap-1.5 transition-colors">
+                                        <ClipboardDocumentListIcon className="w-4 h-4" /> Detalles
+                                    </button>
+                                    <button onClick={() => setViewingProfilesCampus(campus)} className="text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 transition-colors">
+                                        <UsersIcon className="w-4 h-4" /> Observar
+                                    </button>
+                                </div>
                                 <div className="flex items-center space-x-2">
                                     <button onClick={() => openEditModal(campus)} className="p-2 rounded-full bg-white text-slate-500 border border-slate-200 hover:border-amber-300 hover:text-amber-600 hover:shadow-sm transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:text-amber-400" title="Editar"><EditIcon className="w-4 h-4"/></button>
                                      <button onClick={() => setDeletingCampus(campus)} className="p-2 rounded-full bg-white text-slate-500 border border-slate-200 hover:border-rose-300 hover:text-rose-600 hover:shadow-sm transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:text-rose-400" title="Eliminar"><TrashIcon className="w-4 h-4"/></button>
@@ -715,6 +782,16 @@ const CampusManagementPage: React.FC = () => {
             {isModalOpen && <CampusFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} campusToEdit={editingCampus} admins={admins} />}
             {deletingCampus && <DeleteConfirmationModal campus={deletingCampus} onClose={() => setDeletingCampus(null)} onConfirm={handleDelete} />}
             {isBulkDeleting && <BulkDeleteConfirmationModal count={selectedCampuses.length} onClose={() => setIsBulkDeleting(false)} onConfirm={handleBulkDelete} />}
+            {viewingProfilesCampus && (
+                <ViewProfilesModal 
+                    campus={viewingProfilesCampus} 
+                    onClose={() => setViewingProfilesCampus(null)} 
+                    admins={admins}
+                    teachers={teachers}
+                    students={students}
+                    onImpersonate={impersonateUser}
+                />
+            )}
         </>
     );
 };

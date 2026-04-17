@@ -22,6 +22,7 @@ interface AuthContextType {
   loginWithGoogle: (role: UserRole) => Promise<void>;
   logout: () => void;
   sendPasswordReset: (email: string) => Promise<void>;
+  impersonateUser: (targetUser: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -223,10 +224,14 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
     }
   };
 
+  const impersonateUser = (targetUser: User) => {
+    setUser(targetUser);
+  };
+
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, loginWithGoogle, logout, sendPasswordReset }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, loginWithGoogle, logout, sendPasswordReset, impersonateUser }}>
       {children}
     </AuthContext.Provider>
   );
