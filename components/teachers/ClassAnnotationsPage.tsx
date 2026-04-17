@@ -372,6 +372,33 @@ const ClassAnnotationsPage: React.FC = () => {
     // Validations State
     const [validationErrors, setValidationErrors] = useState<Record<string, Record<string, string>>>({});
     const [editingRecord, setEditingRecord] = useState<any | null>(null);
+    const [selectedHistoryRecords, setSelectedHistoryRecords] = useState<string[]>([]);
+
+    const handleSelectHistoryRecord = (id: string) => {
+        setSelectedHistoryRecords(prev => 
+            prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkDeleteHistory = async () => {
+        if (selectedHistoryRecords.length === 0) return;
+        if (!window.confirm(`¿Estás seguro de eliminar ${selectedHistoryRecords.length} registros seleccionados? Esta acción es irreversible.`)) return;
+        
+        try {
+            for (const id of selectedHistoryRecords) {
+                const isGrade = grades.some(g => g.id === id);
+                if (isGrade) {
+                    await deleteGrade(id);
+                } else {
+                    await deleteAttendance(id);
+                }
+            }
+            setSelectedHistoryRecords([]);
+        } catch (e) {
+            console.error(e);
+            alert('Error al eliminar registros.');
+        }
+    };
 
     // Cargar y combinar conceptos (CSV + Personalizados)
     const refreshConcepts = async () => {
@@ -593,17 +620,35 @@ const ClassAnnotationsPage: React.FC = () => {
                 const selectedConcept = concepts.find(c => c.text === item.observation);
                 
                 if (item.score !== undefined) {
-                    await addGrade({
-                        studentId: item.studentId,
-                        subject: selectedClass.subject,
-                        class: selectedClass.class,
-                        assignmentTitle: item.criterion,
-                        score: item.score,
-                        percentage: 10, // Porcentaje por defecto para notas rápidas
-                        date: today,
-                        comments: item.observation || 'Carga masiva',
-                        conceptCode: selectedConcept ? selectedConcept.code : ''
-                    });
+                    const existingGrade = grades.find(g => 
+                        g.studentId === item.studentId && 
+                        g.assignmentTitle === item.criterion &&
+                        getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod
+                    );
+
+                    if (existingGrade) {
+                        if (existingGrade.score !== item.score || existingGrade.comments !== (item.observation || 'Carga masiva')) {
+                            await updateGrade(existingGrade.id, {
+                                score: item.score,
+                                comments: item.observation || 'Carga masiva',
+                                conceptCode: selectedConcept ? selectedConcept.code : existingGrade.conceptCode
+                            });
+                            count++;
+                        }
+                    } else {
+                        await addGrade({
+                            studentId: item.studentId,
+                            subject: selectedClass.subject,
+                            class: selectedClass.class,
+                            assignmentTitle: item.criterion,
+                            score: item.score,
+                            percentage: 10,
+                            date: today,
+                            comments: item.observation || 'Carga masiva',
+                            conceptCode: selectedConcept ? selectedConcept.code : ''
+                        });
+                        count++;
+                    }
                 }
                 
                 if (item.faults !== undefined && item.faults > 0) {
@@ -838,10 +883,17 @@ const ClassAnnotationsPage: React.FC = () => {
                                             <tr className="bg-slate-50/50 dark:bg-slate-800/30">
                                                 <td colSpan={7} className="px-8 pb-8 pt-2">
                                                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm flex flex-col gap-4">
-                                                        <h4 className="font-bold text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                                                            <ClipboardCheckIcon className="w-5 h-5 text-blue-500"/>Historial Detallado
-                                                        </h4>
-                                                        <div className="overflow-x-auto">
+                                                        <div className="flex justify-between items-center">
+                                                            <h4 className="font-bold text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                                                                <ClipboardCheckIcon className="w-5 h-5 text-blue-500"/>Historial Detallado
+                                                            </h4>
+                                                            {selectedHistoryRecords.length > 0 && (
+                                                                <button onClick={handleBulkDeleteHistory} className="border border-red-500 text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 dark:bg-red-900/20 dark:text-red-400">
+                                                                    <TrashIcon className="w-4 h-4"/> Eliminar ({selectedHistoryRecords.length})
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <div className="overflow-x-auto border-2 border-red-500 rounded-lg">
                                                             <table className="w-full text-xs text-left">
                                                                 <thead className="text-slate-400 border-b border-slate-50 dark:border-slate-800">
                                                                     <tr>
@@ -851,11 +903,12 @@ const ClassAnnotationsPage: React.FC = () => {
                                                                         <th className="px-4 py-3 text-center">Nota</th>
                                                                         <th className="px-4 py-3">Observación</th>
                                                                         <th className="px-4 py-3 text-center">Acciones</th>
+                                                                        <th className="px-4 py-3 text-center text-red-500">Sel.</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                                                                     {getStudentHistory(student.id).map((item) => (
-                                                                        <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                                        <tr key={item.id} className={`transition-colors ${selectedHistoryRecords.includes(item.id) ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
                                                                             <td className="px-4 py-3 text-slate-500 font-mono">{new Date(item.date).toLocaleDateString()}</td>
                                                                             <td className="px-4 py-3">
                                                                                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${item.type === 'Nota' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600'}`}>{item.type}</span>
@@ -870,6 +923,14 @@ const ClassAnnotationsPage: React.FC = () => {
                                                                                     <button onClick={() => setEditingRecord(item)} className="p-1.5 text-amber-500 hover:bg-amber-50 rounded-lg"><EditIcon className="w-4 h-4" /></button>
                                                                                     <button onClick={() => handleDeleteHistoryItem(item)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg"><TrashIcon className="w-4 h-4" /></button>
                                                                                 </div>
+                                                                            </td>
+                                                                            <td className="px-4 py-3 text-center">
+                                                                                <input 
+                                                                                    type="checkbox" 
+                                                                                    className="w-4 h-4 rounded text-red-600 focus:ring-red-500 border-red-300 cursor-pointer" 
+                                                                                    checked={selectedHistoryRecords.includes(item.id)}
+                                                                                    onChange={() => handleSelectHistoryRecord(item.id)}
+                                                                                />
                                                                             </td>
                                                                         </tr>
                                                                     ))}
