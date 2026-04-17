@@ -77,6 +77,11 @@ const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
 
+  useEffect(() => {
+    // If the user changes (e.g. via impersonation), reset to the dashboard view
+    setCurrentPage('dashboard');
+  }, [user?.id]);
+
   const renderCurrentPage = () => {
     if (!user) return <LoginPage />; // Should not happen if layout is rendered, but for safety.
 

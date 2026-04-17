@@ -14,17 +14,17 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly }: { onClo
     const [isProcessing, setIsProcessing] = useState(false);
 
     const downloadTemplate = () => {
-        const headers = "documento_identidad,criterio,nota,observacion,faltas\n";
-        // Usar los primeros 3 estudiantes como ejemplo para la plantilla
-        const examples = classStudents.slice(0, 3).map(s => 
-            `${s.documentNumber},Examen,4.5,Excelente participación,`
+        const headers = "documento_identidad,nombre_estudiante,criterio,nota,observacion,faltas\n";
+        // Exportar TODOS los estudiantes de la clase
+        const lines = classStudents.map(s => 
+            `${s.documentNumber},${s.name.replace(/,/g, '')},Actividad en clase,,,`
         ).join('\n');
         
-        const blob = new Blob([headers + examples], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([headers + lines], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", "plantilla_carga_notas_faltas.csv");
+        link.setAttribute("download", `plantilla_notas_${new Date().getTime()}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -56,20 +56,26 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly }: { onClo
                 const newErrors: string[] = [];
 
                 dataRows.forEach((row, index) => {
-                    const cols = row.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+                    // Try to split by semicolon first, if not, use comma (European standard vs US)
+                    const separator = row.includes(';') ? ';' : ',';
+                    const cols = row.split(separator).map(c => c.trim().replace(/^"|"$/g, ''));
                     if (cols.length < 2) return;
 
-                    const docNum = cols[0];
-                    const criterion = cols[1] || 'Actividad en clase';
-                    const scoreRaw = cols[2];
-                    const observation = cols[3] || '';
-                    const faultsRaw = cols[4];
+                    // Support backwards compatibility or new format
+                    const hasNameCol = cols.length >= 6; 
+                    // Remove BOM from first column if present
+                    const docNum = cols[0].replace(/^\uFEFF/, '');
+                    const criterion = (hasNameCol ? cols[2] : cols[1]) || 'Actividad en clase';
+                    const scoreRaw = hasNameCol ? cols[3] : cols[2];
+                    const observation = (hasNameCol ? cols[4] : cols[3]) || '';
+                    const faultsRaw = hasNameCol ? cols[5] : cols[4];
 
                     const student = classStudents.find(s => s.documentNumber === docNum);
                     
                     let score: number | undefined = undefined;
                     if (scoreRaw !== undefined && scoreRaw !== '') {
-                         score = parseFloat(scoreRaw);
+                         // Parse score with comma or dot decimal separator
+                         score = parseFloat(scoreRaw.replace(',', '.'));
                     }
                     
                     let faults: number | undefined = undefined;
@@ -80,9 +86,9 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly }: { onClo
                     if (!student) {
                         newErrors.push(`Fila ${index + 2}: El estudiante con documento ${docNum} no pertenece a esta clase.`);
                     } else if (score !== undefined && (isNaN(score) || score < 0 || score > 5)) {
-                        newErrors.push(`Fila ${index + 2}: La nota (${scoreRaw}) debe ser un número entre 0.0 y 5.0.`);
+                        newErrors.push(`Fila ${index + 2}: La nota (${scoreRaw}) debe ser un número entre 0.0 y 5.0 para ${student.name}.`);
                     } else if (score === undefined && faults === undefined) {
-                        newErrors.push(`Fila ${index + 2}: Debe ingresar una nota o una cantidad de faltas para el documento ${docNum}.`);
+                        newErrors.push(`Fila ${index + 2}: Debe ingresar una nota o una cantidad de faltas para el estudiante ${student.name}.`);
                     } else {
                         results.push({
                             studentId: student.id,
@@ -680,6 +686,29 @@ const ClassAnnotationsPage: React.FC = () => {
         alert(`Se han importado ${count} registros exitosamente.`);
     };
 
+    const handleDownloadTemplate = () => {
+        if (!selectedClass) {
+            alert("Seleccione una asignatura primero.");
+            return;
+        }
+
+        const headers = "documento_identidad,nombre_estudiante,criterio,nota,observacion,faltas\n";
+        // Exportar TODOS los estudiantes filtrados de la clase actual
+        const lines = classStudents.map(s => 
+            `${s.documentNumber},${s.name.replace(/,/g, '')},Actividad en clase,,,`
+        ).join('\n');
+        
+        const blob = new Blob(["\uFEFF" + headers + lines], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `plantilla_notas_${selectedClass.subject.replace(/\s+/g,'_')}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const handleUpdateRecord = async (updatedRecord: any) => {
         try {
             if (updatedRecord.type === 'Nota') {
@@ -770,6 +799,11 @@ const ClassAnnotationsPage: React.FC = () => {
                         <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full sm:w-48 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-200 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
                     </div>
+                    {selectedClassId && (
+                        <button onClick={handleDownloadTemplate} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                            <DownloadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Plantilla</span>
+                        </button>
+                    )}
                     {!isReadOnly && (
                         <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-3 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
                             <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva</span>
