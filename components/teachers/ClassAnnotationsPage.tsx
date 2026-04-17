@@ -373,6 +373,7 @@ const ClassAnnotationsPage: React.FC = () => {
     const [validationErrors, setValidationErrors] = useState<Record<string, Record<string, string>>>({});
     const [editingRecord, setEditingRecord] = useState<any | null>(null);
     const [selectedHistoryRecords, setSelectedHistoryRecords] = useState<string[]>([]);
+    const [deleteTarget, setDeleteTarget] = useState<string[] | null>(null);
 
     const handleSelectHistoryRecord = (id: string) => {
         setSelectedHistoryRecords(prev => 
@@ -382,10 +383,13 @@ const ClassAnnotationsPage: React.FC = () => {
 
     const handleBulkDeleteHistory = async () => {
         if (selectedHistoryRecords.length === 0) return;
-        if (!window.confirm(`¿Estás seguro de eliminar ${selectedHistoryRecords.length} registros seleccionados? Esta acción es irreversible.`)) return;
-        
+        setDeleteTarget(selectedHistoryRecords);
+    };
+
+    const executeDeleteHistoryRecords = async () => {
+        if (!deleteTarget || deleteTarget.length === 0) return;
         try {
-            for (const id of selectedHistoryRecords) {
+            for (const id of deleteTarget) {
                 const isGrade = grades.some(g => g.id === id);
                 if (isGrade) {
                     await deleteGrade(id);
@@ -394,9 +398,10 @@ const ClassAnnotationsPage: React.FC = () => {
                 }
             }
             setSelectedHistoryRecords([]);
+            setDeleteTarget(null);
         } catch (e) {
             console.error(e);
-            alert('Error al eliminar registros.');
+            console.error('Error al eliminar registros.');
         }
     };
 
@@ -504,13 +509,16 @@ const ClassAnnotationsPage: React.FC = () => {
     };
 
     const handleInputChange = (studentId: string, field: string, value: string) => {
-        setInputs(prev => ({
-            ...prev,
-            [studentId]: {
-                ...prev[studentId],
-                [field]: value
-            }
-        }));
+        setInputs(prev => {
+            const defaultInputs = { score: '', faults: '', observation: '', criterion: '', customCriterion: '' };
+            return {
+                ...prev,
+                [studentId]: {
+                    ...(prev[studentId] || defaultInputs),
+                    [field]: value
+                }
+            };
+        });
         
         if (savedStatus[studentId]) {
             setSavedStatus(prev => ({ ...prev, [studentId]: false }));
@@ -693,20 +701,6 @@ const ClassAnnotationsPage: React.FC = () => {
         } catch (e) {
             console.error("Error updating", e);
             alert("Error al actualizar el registro.");
-        }
-    };
-
-    const handleDeleteHistoryItem = async (item: any) => {
-        if (!window.confirm(`¿Estás seguro de eliminar este registro de ${item.type}?`)) return;
-        try {
-            if (item.type === 'Nota') {
-                await deleteGrade(item.id);
-            } else {
-                await deleteAttendance(item.id);
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Error al eliminar');
         }
     };
 
@@ -893,7 +887,7 @@ const ClassAnnotationsPage: React.FC = () => {
                                                                 </button>
                                                             )}
                                                         </div>
-                                                        <div className="overflow-x-auto border-2 border-red-500 rounded-lg">
+                                                        <div className="overflow-x-auto rounded-lg">
                                                             <table className="w-full text-xs text-left">
                                                                 <thead className="text-slate-400 border-b border-slate-50 dark:border-slate-800">
                                                                     <tr>
@@ -921,7 +915,7 @@ const ClassAnnotationsPage: React.FC = () => {
                                                                             <td className="px-4 py-3 text-center">
                                                                                 <div className="flex justify-center gap-2">
                                                                                     <button onClick={() => setEditingRecord(item)} className="p-1.5 text-amber-500 hover:bg-amber-50 rounded-lg"><EditIcon className="w-4 h-4" /></button>
-                                                                                    <button onClick={() => handleDeleteHistoryItem(item)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg"><TrashIcon className="w-4 h-4" /></button>
+                                                                                    <button onClick={() => setDeleteTarget([item.id])} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg"><TrashIcon className="w-4 h-4" /></button>
                                                                                 </div>
                                                                             </td>
                                                                             <td className="px-4 py-3 text-center">
@@ -951,6 +945,22 @@ const ClassAnnotationsPage: React.FC = () => {
             {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} classStudents={classStudents} isReadOnly={isReadOnly} />}
             {isConceptModalOpen && <AddCustomConceptModal onClose={() => setIsConceptModalOpen(false)} onSave={handleSaveCustomConcept} />}
             {editingRecord && <EditRecordModal record={editingRecord} onClose={() => setEditingRecord(null)} onSave={handleUpdateRecord} concepts={concepts} />}
+            
+            {/* Delete Confirmation Modal */}
+            {deleteTarget && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-xl border border-slate-100 dark:border-slate-700 animate-fade-in-up">
+                        <h3 className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">Confirmar Eliminación</h3>
+                        <p className="text-slate-600 dark:text-slate-300 mb-6 font-medium">
+                            ¿Estás seguro de eliminar {deleteTarget.length === 1 ? 'este registro' : `los ${deleteTarget.length} registros seleccionados`}? Esta acción es irreversible.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancelar</button>
+                            <button onClick={executeDeleteHistoryRecords} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">Eliminar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

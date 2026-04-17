@@ -60,6 +60,8 @@ const rolePermissions: { [key in UserRole]: Action[] } = {
     Action.MANAGE_STUDENTS,
     Action.MANAGE_TEACHERS,
     Action.MANAGE_EXAMS,
+    Action.MANAGE_LIBRARY,
+    Action.MANAGE_TRANSPORT,
     Action.VIEW_CAMPUS_SETTINGS,
     Action.MANAGE_COMMUNICATIONS,
     Action.VIEW_REPORTS,
