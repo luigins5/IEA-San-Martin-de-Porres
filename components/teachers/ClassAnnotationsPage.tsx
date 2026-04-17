@@ -454,13 +454,17 @@ const ClassAnnotationsPage: React.FC = () => {
 
     const classStudents = useMemo(() => {
         if (!selectedClass) return [];
+        const assignedTeacher = teachers.find(t => t.id === selectedClass.teacherId);
+        const targetCampusId = assignedTeacher?.campusId;
+
         return allStudents.filter(s => 
             s.class === selectedClass.class && 
             s.section === selectedClass.section && 
             s.status === 'active' &&
-            (s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            (!targetCampusId || s.campusId === targetCampusId) &&
+            (s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.documentNumber?.includes(searchQuery))
         ).sort((a,b) => a.name.localeCompare(b.name));
-    }, [selectedClass, allStudents, searchQuery]);
+    }, [selectedClass, allStudents, searchQuery, teachers]);
 
     const getSavedAccumulatedFaults = (studentId: string) => {
         return attendanceRecords

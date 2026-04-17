@@ -125,8 +125,16 @@ const MyStudentsPage: React.FC = () => {
 
     const myStudents = useMemo(() => {
         if (!selectedClass) return [];
-        return allStudents.filter(s => s.class === selectedClass.class && s.section === selectedClass.section && (s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.documentNumber.includes(searchQuery))).sort((a,b) => a.name.localeCompare(b.name));
-    }, [selectedClass, allStudents, searchQuery]);
+        const assignedTeacher = teachers.find(t => t.id === selectedClass.teacherId);
+        const targetCampusId = assignedTeacher?.campusId;
+
+        return allStudents.filter(s => 
+            s.class === selectedClass.class && 
+            s.section === selectedClass.section && 
+            (!targetCampusId || s.campusId === targetCampusId) &&
+            (s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.documentNumber.includes(searchQuery))
+        ).sort((a,b) => a.name.localeCompare(b.name));
+    }, [selectedClass, allStudents, searchQuery, teachers]);
 
     const teacherSubjects = selectedClass ? [selectedClass.subject] : [];
     

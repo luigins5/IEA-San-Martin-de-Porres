@@ -23,7 +23,7 @@ interface ActivityLog {
 
 const ClassLogWidget: React.FC = () => {
     const { user } = useAuth();
-    const { assignments, students: allStudents, attendanceRecords, saveAttendance, addGrade, getUserSetting, setUserSetting, globalSettings, campusSettings } = useData();
+    const { assignments, students: allStudents, teachers, attendanceRecords, saveAttendance, addGrade, getUserSetting, setUserSetting, globalSettings, campusSettings } = useData();
     
     const [myClasses, setMyClasses] = useState<TeacherCourseAssignment[]>([]);
     const [selectedClassId, setSelectedClassId] = useState<string>('');
@@ -88,12 +88,16 @@ const ClassLogWidget: React.FC = () => {
 
     const classStudents = useMemo(() => {
         if (!selectedClass) return [];
+        const assignedTeacher = teachers.find(t => t.id === selectedClass.teacherId);
+        const targetCampusId = assignedTeacher?.campusId;
+
         return allStudents.filter(s => 
             s.class === selectedClass.class && 
             s.section === selectedClass.section &&
+            (!targetCampusId || s.campusId === targetCampusId) &&
             s.status === 'active'
         ).sort((a, b) => a.name.localeCompare(b.name));
-    }, [selectedClass, allStudents]);
+    }, [selectedClass, allStudents, teachers]);
 
     // Calcular faltas totales acumuladas en el periodo seleccionado (Base de datos)
     const getSavedAccumulatedFaults = (studentId: string) => {
