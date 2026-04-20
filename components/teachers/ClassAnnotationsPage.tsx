@@ -6,6 +6,7 @@ import { useData } from '../../context/DataContext';
 import { PlusIcon, SaveIcon, CheckIcon, ClipboardCheckIcon, TrashIcon, UploadIcon, DownloadIcon, ChevronRightIcon, ChevronDownIcon, EditIcon, ClipboardDocumentListIcon, AcademicCapIcon, CalendarIcon, CloseIcon, ExclamationTriangleIcon } from '../icons';
 import { getPeriodFromDate } from './GradesPage';
 import Card from '../ui/Card';
+import { SearchableConceptSelect } from '../ui/SearchableConceptSelect';
 
 const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean, concepts: {code: string, text: string}[] }) => {
     const [file, setFile] = useState<File | null>(null);
@@ -330,16 +331,12 @@ const EditRecordModal = ({ record, onClose, onSave, concepts }: { record: any, o
                             </div>
                             <div>
                                 <label className="block text-sm font-bold mb-1.5 text-slate-700 dark:text-slate-300">Observación</label>
-                                <select 
+                                <SearchableConceptSelect 
+                                    concepts={concepts}
                                     value={formData.observation}
-                                    onChange={(e) => setFormData({...formData, observation: e.target.value})}
-                                    title={formData.observation || "Seleccionar concepto..."}
-                                    className="w-full p-2.5 border border-slate-200 rounded-xl text-sm bg-white text-slate-700 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 cursor-pointer"
-                                    required
-                                >
-                                    <option value="">Seleccionar concepto...</option>
-                                    {concepts.map(c => <option key={c.code} value={c.text} title={`[${c.code}] ${c.text}`}>[{c.code}] {c.text}</option>)}
-                                </select>
+                                    onChange={(val) => setFormData({...formData, observation: val})}
+                                    placeholder="Seleccionar concepto..."
+                                />
                             </div>
                         </>
                     ) : (
@@ -883,13 +880,14 @@ const ClassAnnotationsPage: React.FC = () => {
                                             <td className="px-4 py-5 align-middle">
                                                 <div className="flex gap-2 items-center">
                                                     <div className="flex-1 min-w-0">
-                                                        <select value={input.observation} onChange={(e) => handleInputChange(student.id, 'observation', e.target.value)}
+                                                        <SearchableConceptSelect 
+                                                            concepts={concepts}
+                                                            value={input.observation}
+                                                            onChange={(val) => handleInputChange(student.id, 'observation', val)}
                                                             disabled={isReadOnly}
-                                                            title={input.observation || "Seleccionar concepto..."}
-                                                            className={`w-full py-2.5 px-3 rounded-xl text-xs bg-slate-50 text-slate-500 focus:bg-white outline-none transition-all dark:bg-slate-800 dark:text-slate-400 cursor-pointer ${studentErrors.observation ? 'border-2 border-red-400 bg-red-50' : 'border-none'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                                            <option value="">Seleccionar concepto...</option>
-                                                            {concepts.map(c => <option key={c.code} value={c.text} title={`[${c.code}] ${c.text}`}>[{c.code}] {c.text}</option>)}
-                                                        </select>
+                                                            hasError={!!studentErrors.observation}
+                                                            isSmall
+                                                        />
                                                     </div>
                                                     <button 
                                                         onClick={() => setIsConceptModalOpen(true)}

@@ -5,6 +5,7 @@ import { TeacherCourseAssignment, Student, Grade, AttendanceRecord } from '../..
 import { useData } from '../../context/DataContext';
 import { PlusIcon, SaveIcon, CheckIcon, ExclamationTriangleIcon, TrashIcon, ClipboardCheckIcon } from '../icons';
 import { getPeriodFromDate } from '../teachers/GradesPage';
+import { SearchableConceptSelect } from '../ui/SearchableConceptSelect';
 
 interface StudentInput {
     score: string;
@@ -331,19 +332,13 @@ const ClassLogWidget: React.FC = () => {
                                             />
                                         </td>
                                         <td className="px-2 py-2">
-                                            <select 
+                                            <SearchableConceptSelect 
+                                                concepts={concepts}
                                                 value={input.observation}
-                                                onChange={(e) => handleInputChange(student.id, 'observation', e.target.value)}
-                                                title={input.observation || "Seleccione concepto..."}
-                                                className="w-full p-1.5 border rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white truncate"
-                                            >
-                                                <option value="">Seleccione concepto...</option>
-                                                {concepts.map(c => (
-                                                    <option key={c.code} value={c.text} title={`[${c.code}] ${c.text}`}>
-                                                        [{c.code}] {c.text}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                onChange={(val) => handleInputChange(student.id, 'observation', val)}
+                                                placeholder="Seleccione concepto..."
+                                                isSmall
+                                            />
                                         </td>
                                         <td className="px-2 py-2 text-center">
                                             <button 
