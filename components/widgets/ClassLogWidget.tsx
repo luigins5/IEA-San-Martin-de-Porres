@@ -334,12 +334,13 @@ const ClassLogWidget: React.FC = () => {
                                             <select 
                                                 value={input.observation}
                                                 onChange={(e) => handleInputChange(student.id, 'observation', e.target.value)}
+                                                title={input.observation || "Seleccione concepto..."}
                                                 className="w-full p-1.5 border rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white truncate"
                                             >
                                                 <option value="">Seleccione concepto...</option>
                                                 {concepts.map(c => (
-                                                    <option key={c.code} value={c.text} title={c.text}>
-                                                        {c.text.length > 50 ? c.text.substring(0, 50) + '...' : c.text}
+                                                    <option key={c.code} value={c.text} title={`[${c.code}] ${c.text}`}>
+                                                        [{c.code}] {c.text}
                                                     </option>
                                                 ))}
                                             </select>

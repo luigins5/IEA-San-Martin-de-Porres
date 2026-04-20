@@ -333,11 +333,12 @@ const EditRecordModal = ({ record, onClose, onSave, concepts }: { record: any, o
                                 <select 
                                     value={formData.observation}
                                     onChange={(e) => setFormData({...formData, observation: e.target.value})}
+                                    title={formData.observation || "Seleccionar concepto..."}
                                     className="w-full p-2.5 border border-slate-200 rounded-xl text-sm bg-white text-slate-700 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 cursor-pointer"
                                     required
                                 >
                                     <option value="">Seleccionar concepto...</option>
-                                    {concepts.map(c => <option key={c.code} value={c.text}>{c.text.substring(0, 100)}...</option>)}
+                                    {concepts.map(c => <option key={c.code} value={c.text} title={`[${c.code}] ${c.text}`}>[{c.code}] {c.text}</option>)}
                                 </select>
                             </div>
                         </>
@@ -884,9 +885,10 @@ const ClassAnnotationsPage: React.FC = () => {
                                                     <div className="flex-1 min-w-0">
                                                         <select value={input.observation} onChange={(e) => handleInputChange(student.id, 'observation', e.target.value)}
                                                             disabled={isReadOnly}
+                                                            title={input.observation || "Seleccionar concepto..."}
                                                             className={`w-full py-2.5 px-3 rounded-xl text-xs bg-slate-50 text-slate-500 focus:bg-white outline-none transition-all dark:bg-slate-800 dark:text-slate-400 cursor-pointer ${studentErrors.observation ? 'border-2 border-red-400 bg-red-50' : 'border-none'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                             <option value="">Seleccionar concepto...</option>
-                                                            {concepts.map(c => <option key={c.code} value={c.text}>[{c.code}] {c.text.length > 55 ? c.text.substring(0,55)+'...' : c.text}</option>)}
+                                                            {concepts.map(c => <option key={c.code} value={c.text} title={`[${c.code}] ${c.text}`}>[{c.code}] {c.text}</option>)}
                                                         </select>
                                                     </div>
                                                     <button 
