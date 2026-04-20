@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { TeacherCourseAssignment, Student, Grade, AttendanceRecord } from '../../types';
 import { useData } from '../../context/DataContext';
 import { PlusIcon, SaveIcon, CheckIcon, ExclamationTriangleIcon, TrashIcon, ClipboardCheckIcon } from '../icons';
-import { getPeriodFromDate, conceptsCSV } from '../teachers/GradesPage';
+import { getPeriodFromDate } from '../teachers/GradesPage';
 
 interface StudentInput {
     score: string;
@@ -23,13 +23,12 @@ interface ActivityLog {
 
 const ClassLogWidget: React.FC = () => {
     const { user } = useAuth();
-    const { assignments, students: allStudents, teachers, attendanceRecords, saveAttendance, addGrade, getUserSetting, setUserSetting, globalSettings, campusSettings } = useData();
+    const { assignments, students: allStudents, teachers, attendanceRecords, saveAttendance, addGrade, getUserSetting, setUserSetting, globalSettings, campusSettings, concepts } = useData();
     
     const [myClasses, setMyClasses] = useState<TeacherCourseAssignment[]>([]);
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [selectedPeriod, setSelectedPeriod] = useState<number>(1);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
-    const [concepts, setConcepts] = useState<{ code: string; text: string }[]>([]);
     
     // Estado para manejar los inputs de cada estudiante
     const [inputs, setInputs] = useState<Record<string, StudentInput>>({});
@@ -70,18 +69,6 @@ const ClassLogWidget: React.FC = () => {
             };
             loadLogs();
         }
-
-        // Cargar Conceptos Predefinidos
-        const parsedConcepts = conceptsCSV
-            .split('\n').slice(1).filter(row => row.trim())
-            .map(row => {
-                const parts = row.split(';');
-                const code = parts[0]?.trim() || '';
-                const text = parts.slice(1).join(';').trim().replace(/^\uFEFF/, '');
-                return { code, text };
-            }).filter(c => c.code && c.text);
-        setConcepts(parsedConcepts);
-
     }, [user, assignments, globalSettings, campusSettings]);
 
     const selectedClass = myClasses.find(c => c.id === selectedClassId);

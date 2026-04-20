@@ -147,6 +147,9 @@ interface DataContextType {
     saveAttendance: (data: Omit<AttendanceRecord, 'id'>) => Promise<void>;
     deleteAttendance: (id: string) => Promise<void>;
 
+    concepts: { code: string; text: string }[];
+    addConcept: (data: { code: string; text: string }) => Promise<void>;
+
     updateUserAvatar: (userId: string, role: UserRole, avatar: string) => Promise<void>;
     updateUserName: (userId: string, role: UserRole, name: string) => Promise<void>;
     assignTemporaryPassword: (userId: string, role: UserRole, tempPass: string) => Promise<void>;
@@ -154,6 +157,8 @@ interface DataContextType {
     getUserSetting: (userId: string, key: string) => Promise<any>;
     setUserSetting: (userId: string, key: string, value: any) => Promise<void>;
 }
+
+import { seedConceptsIfEmpty } from '../utils/seedConcepts';
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
@@ -175,6 +180,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
     const [cancellations, setCancellations] = useState<{classScheduleId: string, date: string}[]>([]);
     const [homeroomAssignments, setHomeroomAssignments] = useState<Record<string, string>>({});
+    const [concepts, setConcepts] = useState<{code: string, text: string}[]>([]);
     
     const [globalSettings, setGlobalSettings] = useState<any>(null);
     const [campusSettings, setCampusSettings] = useState<any>(null);
@@ -199,6 +205,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             setIsLoading(false);
             return;
         }
+
+        seedConceptsIfEmpty(); // Execute the seeder once connection establishes and user is authenticated
 
         setIsLoading(true);
         const unsubscribes: (() => void)[] = [];
@@ -248,6 +256,25 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             handleFirestoreError(error, OperationType.LIST, 'messages');
         });
         unsubscribes.push(unsubMessages);
+
+        const unsubConcepts = onSnapshot(collection(db, 'concepts'), (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ code: doc.data().code, text: doc.data().text }));
+            data.sort((a, b) => {
+                const aNum = parseInt(a.code.replace('C', '')) || 0;
+                const bNum = parseInt(b.code.replace('C', '')) || 0;
+                return bNum - aNum; // Sort descending so newer ones are at top, or ascending? Usually ascending is better. Wait, descending keeps newly added ones on top if codes go up. Let's do ascending for consistency with C001, C002.
+            });
+            // Actually sort ascending:
+            data.sort((a, b) => {
+                const aNum = parseInt(a.code.replace('C', '')) || 0;
+                const bNum = parseInt(b.code.replace('C', '')) || 0;
+                return aNum - bNum; 
+            });
+            setConcepts(data);
+        }, (error) => {
+            handleFirestoreError(error, OperationType.LIST, 'concepts');
+        });
+        unsubscribes.push(unsubConcepts);
 
         // Global settings
         const unsubGlobal = onSnapshot(doc(db, 'user_settings', 'global'), (doc) => {
@@ -698,6 +725,15 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
     };
 
+    const addConcept = async (data: { code: string; text: string }) => {
+        try {
+            await setDoc(doc(db, 'concepts', data.code), sanitizeData(data));
+            logAction(AuditAction.CREATE, `Concepto agregado o actualizado: ${data.code}`);
+        } catch (error) {
+            handleFirestoreError(error, OperationType.CREATE, 'concepts');
+        }
+    };
+
     const assignTemporaryPassword = async (userId: string, role: UserRole, tempPass: string) => {
         // In Firebase, we don't store passwords in Firestore. 
         // We can store a flag or a temporary password field if needed for legacy compatibility,
@@ -753,6 +789,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         addEvent, updateEvent, deleteEvent,
         updateUserAvatar, updateUserName, saveAttendance, deleteAttendance,
         assignTemporaryPassword,
+        concepts, addConcept,
         getUserSetting, setUserSetting
     };
 

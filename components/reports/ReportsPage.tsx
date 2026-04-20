@@ -6,13 +6,12 @@ import Card from '../ui/Card';
 import { DocumentTextIcon, DownloadIcon, ClipboardDocumentListIcon, ChevronDownIcon } from '../icons';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { conceptsCSV, getPeriodFromDate } from '../teachers/GradesPage';
+import { getPeriodFromDate } from '../teachers/GradesPage';
 
 const ReportsPage: React.FC = () => {
     const { user } = useAuth();
-    const { students: allStudents, grades, attendanceRecords, teachers, assignments, globalSettings, campusSettings } = useData();
+    const { students: allStudents, grades, attendanceRecords, teachers, assignments, globalSettings, campusSettings, concepts } = useData();
     const [searchQuery, setSearchQuery] = useState('');
-    const [concepts, setConcepts] = useState<{ code: string; text: string }[]>([]);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
 
     // Form States
@@ -49,16 +48,6 @@ const ReportsPage: React.FC = () => {
     };
 
     useEffect(() => {
-        const parsed = conceptsCSV
-            .split('\n').slice(1).filter(row => row.trim())
-            .map(row => {
-                const parts = row.split(';');
-                const code = parts[0]?.trim() || '';
-                const text = parts.slice(1).join(';').trim().replace(/^\uFEFF/, '');
-                return { code, text };
-            }).filter(c => c.code && c.text);
-        setConcepts(parsed);
-
         // Load number of periods from settings
         const settings = getSettings();
         if (settings && settings.numberOfPeriods) {

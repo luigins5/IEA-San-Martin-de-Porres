@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { GoogleGenAI } from "@google/genai";
 import { EyeIcon, ClipboardDocumentListIcon, UploadIcon, ChevronRightIcon, ChevronDownIcon, ExclamationTriangleIcon, AcademicCapIcon } from '../icons';
 import { useData } from '../../context/DataContext';
-import { GradesManagementModal, BulkUploadGradesModal, conceptsCSV, getPeriodFromDate } from './GradesPage';
+import { GradesManagementModal, BulkUploadGradesModal, getPeriodFromDate } from './GradesPage';
 
 // Modal simplificado de asistencia para este archivo
 const AttendanceModal: React.FC<{
@@ -70,7 +70,7 @@ const AttendanceModal: React.FC<{
 
 const MyStudentsPage: React.FC = () => {
     const { user } = useAuth();
-    const { students: allStudents, grades, addGrade, updateGrade, deleteGrade, assignments, teachers, attendanceRecords, saveAttendance, deleteAttendance, globalSettings, campusSettings } = useData();
+    const { students: allStudents, grades, addGrade, updateGrade, deleteGrade, assignments, teachers, attendanceRecords, saveAttendance, deleteAttendance, globalSettings, campusSettings, concepts } = useData();
     
     const [myClasses, setMyClasses] = useState<TeacherCourseAssignment[]>([]);
     const [selectedClass, setSelectedClass] = useState<TeacherCourseAssignment | null>(null);
@@ -78,7 +78,6 @@ const MyStudentsPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
-    const [concepts, setConcepts] = useState<{code: string, text: string}[]>([]);
     
     // Modals
     const [managingStudent, setManagingStudent] = useState<Student | null>(null);
@@ -111,17 +110,7 @@ const MyStudentsPage: React.FC = () => {
             setActivePeriod(getPeriodFromDate(today, settings.numberOfPeriods));
         }
 
-        const parsed = conceptsCSV
-            .split('\n').slice(1).filter(row => row.trim())
-            .map(row => {
-                const parts = row.split(';');
-                const code = parts[0]?.trim() || '';
-                const text = parts.slice(1).join(';').trim().replace(/^\uFEFF/, '');
-                return { code, text };
-            }).filter(c => c.code && c.text);
-        setConcepts(parsed);
-
-    }, [user, assignments]);
+    }, [user, assignments, globalSettings, campusSettings]);
 
     const myStudents = useMemo(() => {
         if (!selectedClass) return [];

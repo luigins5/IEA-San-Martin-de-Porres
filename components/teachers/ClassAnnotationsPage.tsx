@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { TeacherCourseAssignment, Student, Grade, AttendanceRecord, UserRole } from '../../types';
 import { useData } from '../../context/DataContext';
 import { PlusIcon, SaveIcon, CheckIcon, ClipboardCheckIcon, TrashIcon, UploadIcon, DownloadIcon, ChevronRightIcon, ChevronDownIcon, EditIcon, ClipboardDocumentListIcon, AcademicCapIcon, CalendarIcon, CloseIcon, ExclamationTriangleIcon } from '../icons';
-import { getPeriodFromDate, conceptsCSV } from './GradesPage';
+import { getPeriodFromDate } from './GradesPage';
 import Card from '../ui/Card';
 
 const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean }) => {
@@ -362,12 +362,11 @@ const CRITERIA_OPTIONS = [
 
 const ClassAnnotationsPage: React.FC = () => {
     const { user } = useAuth();
-    const { assignments, teachers, students: allStudents, attendanceRecords, saveAttendance, addGrade, updateGrade, grades, deleteGrade, deleteAttendance, exams, getUserSetting, setUserSetting, globalSettings, campusSettings } = useData();
+    const { assignments, teachers, students: allStudents, attendanceRecords, saveAttendance, addGrade, updateGrade, grades, deleteGrade, deleteAttendance, exams, getUserSetting, setUserSetting, globalSettings, campusSettings, concepts, addConcept } = useData();
     const [myClasses, setMyClasses] = useState<TeacherCourseAssignment[]>([]);
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [selectedPeriod, setSelectedPeriod] = useState<number>(1);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
-    const [concepts, setConcepts] = useState<{ code: string; text: string }[]>([]);
     const [inputs, setInputs] = useState<Record<string, any>>({});
     const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({});
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -411,24 +410,6 @@ const ClassAnnotationsPage: React.FC = () => {
         }
     };
 
-    // Cargar y combinar conceptos (CSV + Personalizados)
-    const refreshConcepts = async () => {
-        const parsedBase = conceptsCSV
-            .split('\n').slice(1).filter(row => row.trim())
-            .map(row => {
-                const parts = row.split(';');
-                const code = parts[0]?.trim() || '';
-                const text = parts.slice(1).join(';').trim().replace(/^\uFEFF/, '');
-                return { code, text };
-            }).filter(c => c.code && c.text);
-
-        let custom = [];
-        if (user) {
-            custom = await getUserSetting(user.id, 'custom_concepts') || [];
-        }
-        setConcepts([...custom, ...parsedBase]);
-    };
-
     useEffect(() => {
         let settings: any = null;
         if (globalSettings) settings = { ...globalSettings };
@@ -461,20 +442,20 @@ const ClassAnnotationsPage: React.FC = () => {
                 return prev;
             });
         }
-
-        refreshConcepts();
     }, [user, assignments, teachers, globalSettings, campusSettings]);
 
     const isPeriodLocked = globalSettings?.lockedPeriods?.includes(selectedPeriod) || false;
     const isReadOnly = isPeriodLocked && user?.role !== UserRole.SUPER_ADMIN && user?.role !== UserRole.CAMPUS_ADMIN;
 
     const handleSaveCustomConcept = async (text: string) => {
-        let custom = [];
-        if (user) {
-            custom = await getUserSetting(user.id, 'custom_concepts') || [];
-            const newConcept = { code: `P${Date.now().toString().slice(-4)}`, text };
-            await setUserSetting(user.id, 'custom_concepts', [newConcept, ...custom]);
-            refreshConcepts();
+        if (user && text.trim() !== '') {
+            const nextCodeNumber = concepts.length > 0 ? 
+                Math.max(...concepts.map(c => parseInt(c.code.replace(/[^\d]/g, '')) || 0)) + 1 
+                : 530;
+                
+            const paddedNum = nextCodeNumber.toString().padStart(3, '0');
+            const newConcept = { code: `C${paddedNum}`, text };
+            await addConcept(newConcept);
         }
         setIsConceptModalOpen(false);
     };

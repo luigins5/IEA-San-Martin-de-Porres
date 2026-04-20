@@ -22,14 +22,6 @@ export const getPeriodFromDate = (dateString: string, numberOfPeriods: number): 
     return 1;
 };
 
-export const conceptsCSV = `codigo;texto
-C001;Excelente desempeño académico
-C002;Buen trabajo en clase
-C003;Debe mejorar su participación
-C004;No presentó la tarea
-C005;Falta de atención en clase
-`;
-
 export const GradesManagementModal: React.FC<any> = ({ student, grades, onClose, onSaveGrade, onDeleteGrade, teacherSubjects, concepts, activePeriod, numberOfPeriods, isPeriodLocked }) => {
     const [score, setScore] = useState<number | ''>('');
     const [assignmentTitle, setAssignmentTitle] = useState('');
