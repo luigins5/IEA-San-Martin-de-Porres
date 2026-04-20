@@ -7,7 +7,7 @@ import { PlusIcon, SaveIcon, CheckIcon, ClipboardCheckIcon, TrashIcon, UploadIco
 import { getPeriodFromDate } from './GradesPage';
 import Card from '../ui/Card';
 
-const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean }) => {
+const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean, concepts: {code: string, text: string}[] }) => {
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [errors, setErrors] = useState<string[]>([]);
@@ -20,11 +20,28 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly }: { onClo
             `${s.documentNumber},${s.name.replace(/,/g, '')},Actividad en clase,,,`
         ).join('\n');
         
-        const blob = new Blob([headers + lines], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(["\ufeff" + headers + lines], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
         link.setAttribute("download", `plantilla_notas_${new Date().getTime()}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const downloadConcepts = () => {
+        const headers = "codigo,concepto\n";
+        const lines = concepts.map(c => 
+            `${c.code},"${c.text.replace(/"/g, '""')}"`
+        ).join('\n');
+        
+        const blob = new Blob(["\ufeff" + headers + lines], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `plantilla_conceptos.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -138,12 +155,21 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly }: { onClo
                                 <p className="text-xs text-blue-700 dark:text-blue-400">Descarga la plantilla con los estudiantes de este grupo.</p>
                             </div>
                         </div>
-                        <button 
-                            onClick={downloadTemplate}
-                            className="w-full sm:w-auto px-4 py-2 bg-white text-blue-600 font-bold rounded-lg text-xs border border-blue-200 hover:bg-blue-100 transition-colors shadow-sm"
-                        >
-                            Descargar Plantilla
-                        </button>
+                        <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                            <button 
+                                onClick={downloadTemplate}
+                                className="flex-1 sm:w-auto px-4 py-2 bg-white text-blue-600 font-bold rounded-lg text-xs border border-blue-200 hover:bg-blue-100 transition-colors shadow-sm"
+                            >
+                                Descargar Plantilla
+                            </button>
+                            <button 
+                                onClick={downloadConcepts}
+                                title="Descargar listado de conceptos con sus códigos"
+                                className="flex-1 sm:w-auto px-4 py-2 bg-white text-indigo-600 font-bold rounded-lg text-xs border border-indigo-200 hover:bg-indigo-100 transition-colors shadow-sm whitespace-nowrap"
+                            >
+                                Descargar Conceptos
+                            </button>
+                        </div>
                     </div>
 
                     {/* File Dropzone */}
@@ -957,7 +983,7 @@ const ClassAnnotationsPage: React.FC = () => {
                     </table>
                 </div>
             </div>
-            {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} classStudents={classStudents} isReadOnly={isReadOnly} />}
+            {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} classStudents={classStudents} isReadOnly={isReadOnly} concepts={concepts} />}
             {isConceptModalOpen && <AddCustomConceptModal onClose={() => setIsConceptModalOpen(false)} onSave={handleSaveCustomConcept} />}
             {editingRecord && <EditRecordModal record={editingRecord} onClose={() => setEditingRecord(null)} onSave={handleUpdateRecord} concepts={concepts} />}
             
