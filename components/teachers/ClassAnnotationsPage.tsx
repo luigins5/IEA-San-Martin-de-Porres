@@ -761,18 +761,18 @@ const ClassAnnotationsPage: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-10">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-600 rounded-2xl p-6 lg:p-8 shadow-xl text-white flex flex-col lg:flex-row justify-between items-center gap-6 relative overflow-hidden">
-                <div className="relative z-10">
-                    <h2 className="font-bold text-3xl flex items-center gap-4">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-600 rounded-2xl p-6 lg:p-8 shadow-xl text-white flex flex-col items-center justify-center gap-6 relative overflow-hidden">
+                <div className="relative z-10 text-center">
+                    <h2 className="font-bold text-3xl flex items-center justify-center gap-4">
                         <div className="p-3 bg-white/10 rounded-xl backdrop-blur-md">
                             <ClipboardDocumentListIcon className="w-8 h-8 text-white" />
                         </div>
                         <span className="tracking-tight">Gestión de Notas</span>
                     </h2>
-                    <p className="text-blue-100 mt-2 font-medium ml-16 text-lg opacity-90">Registro rápido de calificaciones y asistencia.</p>
+                    <p className="text-blue-100 mt-2 font-medium text-lg opacity-90">Registro rápido de calificaciones y asistencia.</p>
                 </div>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none"></div>
-                <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch sm:items-center relative z-10">
+                <div className="flex flex-wrap gap-3 justify-center items-center w-full relative z-10">
                      <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-lg border border-white/20">
                         <div className="relative group">
                             <select 
@@ -800,10 +800,9 @@ const ClassAnnotationsPage: React.FC = () => {
                             <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-none"/>
                         </div>
                     </div>
-                    <div className="relative">
-                        <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full sm:w-48 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-200 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
-                    </div>
+                    <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full sm:w-48 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-200 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
+                    
                     {selectedClassId && (
                         <button onClick={handleDownloadTemplate} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
                             <DownloadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Plantilla</span>
