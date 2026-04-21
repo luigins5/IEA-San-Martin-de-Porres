@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Student, AttendanceRecord, TeacherCourseAssignment, Grade } from '../../types';
+import { Student, AttendanceRecord, TeacherCourseAssignment, Grade, UserRole } from '../../types';
 import Card from '../ui/Card';
 import { useAuth } from '../../context/AuthContext';
 import { GoogleGenAI } from "@google/genai";
@@ -117,13 +117,30 @@ const MyStudentsPage: React.FC = () => {
         const assignedTeacher = teachers.find(t => t.id === selectedClass.teacherId);
         const targetCampusId = assignedTeacher?.campusId;
 
-        return allStudents.filter(s => 
-            s.class === selectedClass.class && 
-            s.section === selectedClass.section && 
-            (!targetCampusId || s.campusId === targetCampusId) &&
-            (s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.documentNumber.includes(searchQuery))
-        ).sort((a,b) => a.name.localeCompare(b.name));
-    }, [selectedClass, allStudents, searchQuery, teachers]);
+        return allStudents.filter(s => {
+            const normalize = (str: string | undefined | null) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+            const replaceEncodingErrors = (str: string) => str.replace('transicin', 'transicion').replace('dimesion', 'dimension');
+            
+            const teacherClass = replaceEncodingErrors(normalize(selectedClass.class));
+            const teacherSection = normalize(selectedClass.section);
+            const studentClass = replaceEncodingErrors(normalize(s.class));
+            const studentSection = normalize(s.section);
+
+            const isClassMatch = studentClass === teacherClass || 
+                               studentClass === `${teacherClass}-${teacherSection}` ||
+                               studentClass === `${teacherClass} ${teacherSection}` ||
+                               studentClass.includes(teacherClass) || teacherClass.includes(studentClass);
+            
+            const isSectionMatch = studentSection === teacherSection || 
+                                 (!studentSection && studentClass.includes(teacherSection));
+
+            const campusMatch = !targetCampusId || !s.campusId || s.campusId === targetCampusId || user?.role === UserRole.SUPER_ADMIN;
+            const searchMatch = !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || Boolean(s.documentNumber?.includes(searchQuery));
+            const statusMatch = s.status !== 'inactive';
+            
+            return isClassMatch && isSectionMatch && campusMatch && searchMatch && statusMatch;
+        }).sort((a,b) => a.name.localeCompare(b.name));
+    }, [selectedClass, allStudents, searchQuery, teachers, user]);
 
     const teacherSubjects = selectedClass ? [selectedClass.subject] : [];
     

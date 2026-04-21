@@ -102,8 +102,17 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts 
                     const docNum = cols[0].replace(/^\uFEFF/, '');
                     const criterion = (hasNameCol ? cols[2] : cols[1]) || 'Examen';
                     const scoreRaw = hasNameCol ? cols[3] : cols[2];
-                    const observation = (hasNameCol ? cols[4] : cols[3]) || '';
+                    let observation = (hasNameCol ? cols[4] : cols[3]) || '';
                     const faultsRaw = hasNameCol ? cols[5] : cols[4];
+
+                    // Interpretar código de concepto si el usuario digitó un código en lugar del texto
+                    if (observation && concepts && concepts.length > 0) {
+                        const trimmedCode = observation.trim();
+                        const matchedConcept = concepts.find(c => c.code.toLowerCase() === trimmedCode.toLowerCase());
+                        if (matchedConcept) {
+                            observation = matchedConcept.text;
+                        }
+                    }
 
                     const student = classStudents.find(s => s.documentNumber === docNum);
                     
@@ -148,20 +157,20 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center backdrop-blur-sm p-4">
-            <Card className="bg-white dark:bg-slate-900 p-0 rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="flex justify-between items-center p-6 border-b dark:border-slate-800">
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center backdrop-blur-sm p-4 sm:p-6">
+            <Card className="bg-white dark:bg-slate-900 p-0 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="flex justify-between items-center p-6 border-b dark:border-slate-800 shrink-0">
                     <div>
                         <h2 className="text-xl font-bold text-slate-800 dark:text-white">Importar Calificaciones y Faltas</h2>
-                        <p className="text-sm text-slate-500">Carga notas y faltas para múltiples estudiantes mediante un archivo CSV.</p>
+                        <p className="text-sm text-slate-500">Carga notas y faltas para múltiples estudiantes mediante un CSV.</p>
                         {isReadOnly && <p className="text-sm text-red-500 font-bold mt-1">El periodo está cerrado (Solo lectura).</p>}
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0">
                         <CloseIcon className="w-6 h-6 text-slate-400"/>
                     </button>
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
                     {/* Template download and info */}
                     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
                         <div className="flex items-center gap-3">
@@ -241,7 +250,7 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts 
                     </div>
                 </div>
 
-                <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t dark:border-slate-800 flex gap-3">
+                <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t dark:border-slate-800 flex gap-3 shrink-0">
                     <button onClick={onClose} className="flex-1 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors">
                         Cancelar
                     </button>
@@ -529,14 +538,35 @@ const ClassAnnotationsPage: React.FC = () => {
         const assignedTeacher = teachers.find(t => t.id === selectedClass.teacherId);
         const targetCampusId = assignedTeacher?.campusId;
 
-        return allStudents.filter(s => 
-            s.class === selectedClass.class && 
-            s.section === selectedClass.section && 
-            s.status === 'active' &&
-            (!targetCampusId || s.campusId === targetCampusId) &&
-            (s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.documentNumber?.includes(searchQuery))
-        ).sort((a,b) => a.name.localeCompare(b.name));
-    }, [selectedClass, allStudents, searchQuery, teachers]);
+        return allStudents.filter(s => {
+            const normalize = (str: string | undefined | null) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+            
+            const teacherClass = normalize(selectedClass.class);
+            const teacherSection = normalize(selectedClass.section);
+            const studentClass = normalize(s.class);
+            const studentSection = normalize(s.section);
+
+            // Levenshtein / Fallback checks for common encoding errors mapping (e.g., Transicin vs Transicion)
+            const replaceEncodingErrors = (str: string) => str.replace('transicin', 'transicion').replace('dimesion', 'dimension');
+            
+            const tC = replaceEncodingErrors(teacherClass);
+            const sC = replaceEncodingErrors(studentClass);
+
+            const isClassMatch = sC === tC || 
+                               sC === `${tC}-${teacherSection}` ||
+                               sC === `${tC} ${teacherSection}` ||
+                               sC.includes(tC) || tC.includes(sC);
+            
+            const isSectionMatch = studentSection === teacherSection || 
+                                 (!studentSection && sC.includes(teacherSection));
+
+            const statusMatch = s.status !== 'inactive';
+            const campusMatch = !targetCampusId || !s.campusId || String(s.campusId) === String(targetCampusId) || user?.role === UserRole.SUPER_ADMIN;
+            const searchMatch = !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || Boolean(s.documentNumber?.includes(searchQuery));
+            
+            return isClassMatch && isSectionMatch && statusMatch && campusMatch && searchMatch;
+        }).sort((a,b) => a.name.localeCompare(b.name));
+    }, [selectedClass, allStudents, searchQuery, teachers, user]);
 
     const getSavedAccumulatedFaults = (studentId: string) => {
         return attendanceRecords

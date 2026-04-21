@@ -90,13 +90,28 @@ const RankingPage: React.FC = () => {
     const rankingData = useMemo(() => {
         if (!selectedClass) return [];
 
-        let groupStudents = students.filter(s => s.status === 'active');
+        let groupStudents = students.filter(s => s.status !== 'inactive');
 
         if (selectedClass) {
-            groupStudents = groupStudents.filter(s => 
-                s.class === selectedClass.class && 
-                s.section === selectedClass.section
-            );
+            groupStudents = groupStudents.filter(s => {
+                const normalize = (str: string | undefined | null) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+                const replaceEncodingErrors = (str: string) => str.replace('transicin', 'transicion').replace('dimesion', 'dimension');
+                
+                const teacherClass = replaceEncodingErrors(normalize(selectedClass.class));
+                const teacherSection = normalize(selectedClass.section);
+                const studentClass = replaceEncodingErrors(normalize(s.class));
+                const studentSection = normalize(s.section);
+
+                const isClassMatch = studentClass === teacherClass || 
+                                   studentClass === `${teacherClass}-${teacherSection}` ||
+                                   studentClass === `${teacherClass} ${teacherSection}` ||
+                                   studentClass.includes(teacherClass) || teacherClass.includes(studentClass);
+                
+                const isSectionMatch = studentSection === teacherSection || 
+                                     (!studentSection && studentClass.includes(teacherSection));
+
+                return isClassMatch && isSectionMatch;
+            });
         }
 
         const currentSubject = (user?.role === UserRole.TEACHER || isAdmin)

@@ -164,14 +164,14 @@ const BulkUploadTeachersModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
-            <Card className="w-full max-w-2xl flex flex-col">
-                <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-gray-700">
+        <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 sm:p-6 backdrop-blur-sm">
+            <Card className="w-full max-w-2xl bg-white dark:bg-slate-900 p-0 rounded-2xl flex flex-col max-h-[95vh] overflow-hidden">
+                <div className="flex justify-between items-center p-6 border-b dark:border-gray-700 shrink-0">
                     <h2 className="text-xl font-bold text-gray-800 dark:text-white">Carga Masiva de Profesores</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><CloseIcon className="w-6 h-6"/></button>
                 </div>
                 
-                <div className="space-y-4 mb-6">
+                <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex justify-between items-center">
                         <div>
                             <p className="text-sm font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2 mb-1">
@@ -216,12 +216,12 @@ const BulkUploadTeachersModal: React.FC<{
                     )}
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700">
-                    <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200">Cancelar</button>
+                <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t dark:border-gray-700 flex justify-end space-x-3 shrink-0">
+                    <button onClick={onClose} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
                     <button 
                         onClick={() => onSave(parsedData)} 
                         disabled={parsedData.length === 0 || isProcessing}
-                        className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/20 transition-all"
+                        className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl text-sm hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/30 transition-all"
                     >
                         Procesar Importación
                     </button>

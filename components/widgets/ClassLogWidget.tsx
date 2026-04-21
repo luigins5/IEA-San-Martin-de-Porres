@@ -79,12 +79,28 @@ const ClassLogWidget: React.FC = () => {
         const assignedTeacher = teachers.find(t => t.id === selectedClass.teacherId);
         const targetCampusId = assignedTeacher?.campusId;
 
-        return allStudents.filter(s => 
-            s.class === selectedClass.class && 
-            s.section === selectedClass.section &&
-            (!targetCampusId || s.campusId === targetCampusId) &&
-            s.status === 'active'
-        ).sort((a, b) => a.name.localeCompare(b.name));
+        return allStudents.filter(s => {
+            const normalize = (str: string | undefined | null) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+            const replaceEncodingErrors = (str: string) => str.replace('transicin', 'transicion').replace('dimesion', 'dimension');
+            
+            const teacherClass = replaceEncodingErrors(normalize(selectedClass.class));
+            const teacherSection = normalize(selectedClass.section);
+            const studentClass = replaceEncodingErrors(normalize(s.class));
+            const studentSection = normalize(s.section);
+
+            const isClassMatch = studentClass === teacherClass || 
+                               studentClass === `${teacherClass}-${teacherSection}` ||
+                               studentClass === `${teacherClass} ${teacherSection}` ||
+                               studentClass.includes(teacherClass) || teacherClass.includes(studentClass);
+            
+            const isSectionMatch = studentSection === teacherSection || 
+                                 (!studentSection && studentClass.includes(teacherSection));
+
+            const campusMatch = !targetCampusId || !s.campusId || s.campusId === targetCampusId;
+            const statusMatch = s.status !== 'inactive';
+            
+            return isClassMatch && isSectionMatch && campusMatch && statusMatch;
+        }).sort((a, b) => a.name.localeCompare(b.name));
     }, [selectedClass, allStudents, teachers]);
 
     // Calcular faltas totales acumuladas en el periodo seleccionado (Base de datos)
