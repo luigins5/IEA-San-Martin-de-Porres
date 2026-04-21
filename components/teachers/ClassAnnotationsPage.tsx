@@ -403,7 +403,7 @@ const CRITERIA_OPTIONS = [
 
 const ClassAnnotationsPage: React.FC = () => {
     const { user } = useAuth();
-    const { assignments, teachers, students: allStudents, attendanceRecords, saveAttendance, addGrade, updateGrade, grades, deleteGrade, deleteAttendance, exams, getUserSetting, setUserSetting, globalSettings, campusSettings, concepts, addConcept } = useData();
+    const { assignments, teachers, campuses, students: allStudents, attendanceRecords, saveAttendance, addGrade, updateGrade, grades, deleteGrade, deleteAttendance, exams, getUserSetting, setUserSetting, globalSettings, campusSettings, concepts, addConcept } = useData();
     const [myClasses, setMyClasses] = useState<TeacherCourseAssignment[]>([]);
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [selectedPeriod, setSelectedPeriod] = useState<number>(1);
@@ -476,10 +476,22 @@ const ClassAnnotationsPage: React.FC = () => {
                 const teacherId = currentTeacher?.id || user.id;
                 teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
             }
-            setMyClasses(teacherAssignments);
+            
+            const uniqueAssignmentsMap = new Map();
+            teacherAssignments.forEach(a => {
+                const teacher = teachers.find(t => t.id === a.teacherId);
+                const campusId = teacher?.campusId || 'no-campus';
+                const key = `${campusId}-${a.teacherId}-${a.subject}-${a.class}-${a.section}`;
+                if (!uniqueAssignmentsMap.has(key)) {
+                    uniqueAssignmentsMap.set(key, a);
+                }
+            });
+            const uniqueAssignments = Array.from(uniqueAssignmentsMap.values());
+
+            setMyClasses(uniqueAssignments);
             setSelectedClassId(prev => {
-                if (!prev && teacherAssignments.length > 0) return teacherAssignments[0].id;
-                if (prev && !teacherAssignments.find(a => a.id === prev) && teacherAssignments.length > 0) return teacherAssignments[0].id;
+                if (!prev && uniqueAssignments.length > 0) return uniqueAssignments[0].id;
+                if (prev && !uniqueAssignments.find(a => a.id === prev) && uniqueAssignments.length > 0) return uniqueAssignments[0].id;
                 return prev;
             });
         }
@@ -795,12 +807,28 @@ const ClassAnnotationsPage: React.FC = () => {
                             <select 
                                 value={selectedClassId || ''} 
                                 onChange={(e) => setSelectedClassId(e.target.value)}
-                                className="appearance-none pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 focus:outline-none focus:bg-slate-50 min-w-[180px] cursor-pointer transition-colors"
+                                className="appearance-none pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 focus:outline-none focus:bg-slate-50 min-w-[180px] max-w-full cursor-pointer transition-colors"
                             >
                                 {myClasses.length === 0 && <option value="">Sin asignaturas asignadas</option>}
                                 {myClasses.map(c => {
-                                    const totalHours = c.schedule?.reduce((acc, curr) => acc + curr.hours, 0) || c.intensidadHoraria || 4;
-                                    return <option key={c.id} value={c.id}>{c.subject} ({c.class}-{c.section}) - {totalHours} hrs/sem</option>
+                                    const teacher = teachers.find(t => t.id === c.teacherId);
+                                    let campusName = '';
+                                    if (teacher?.campusId) {
+                                        const campus = campuses?.find(cmp => cmp.id === teacher.campusId);
+                                        if (campus) campusName = campus.name;
+                                    }
+                                    const teacherName = teacher ? teacher.name.split(' ')[0] + ' ' + (teacher.name.split(' ')[1] || '') : 'Desconocido';
+                                    
+                                    let labelParts = [];
+                                    if (user?.role === UserRole.SUPER_ADMIN && campusName) {
+                                        labelParts.push(campusName);
+                                    }
+                                    if ((user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && teacherName) {
+                                        labelParts.push(teacherName);
+                                    }
+                                    labelParts.push(`${c.subject} (${c.class}-${c.section})`);
+                                    
+                                    return <option key={c.id} value={c.id}>{labelParts.join(' | ')}</option>
                                 })}
                             </select>
                             <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-none"/>
