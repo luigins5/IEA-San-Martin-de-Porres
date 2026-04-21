@@ -724,18 +724,18 @@ const CampusManagementPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {campuses.map(campus => (
                         <div key={campus.id} className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-100 dark:border-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow duration-300 relative">
-                            <div className="absolute top-4 right-4 z-10">
-                                <input type="checkbox" className="rounded text-primary focus:ring-primary w-5 h-5 cursor-pointer"
-                                    checked={selectedCampuses.includes(campus.id)}
-                                    onChange={() => handleSelectCampus(campus.id)}
-                                />
-                            </div>
                             <div className="p-6">
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="p-3 bg-blue-50 text-blue-600 rounded-xl dark:bg-blue-900/20 dark:text-blue-400">
                                         <BuildingOfficeIcon className="w-6 h-6"/>
                                     </div>
-                                    <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded dark:bg-slate-800">{campus.teachers + campus.students} Usuarios</span>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded dark:bg-slate-800">{campus.teachers + campus.students} Usuarios</span>
+                                        <input type="checkbox" className="rounded text-primary focus:ring-primary w-5 h-5 cursor-pointer"
+                                            checked={selectedCampuses.includes(campus.id)}
+                                            onChange={() => handleSelectCampus(campus.id)}
+                                        />
+                                    </div>
                                 </div>
                                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{campus.name}</h3>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
