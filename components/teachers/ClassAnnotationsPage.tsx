@@ -7,6 +7,8 @@ import { PlusIcon, SaveIcon, CheckIcon, ClipboardCheckIcon, TrashIcon, UploadIco
 import { getPeriodFromDate } from './GradesPage';
 import Card from '../ui/Card';
 import { SearchableConceptSelect } from '../ui/SearchableConceptSelect';
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean, concepts: {code: string, text: string}[] }) => {
     const [file, setFile] = useState<File | null>(null);
@@ -33,20 +35,35 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts 
     };
 
     const downloadConcepts = () => {
-        const headers = "codigo,concepto\n";
-        const lines = concepts.map(c => 
-            `${c.code},"${c.text.replace(/"/g, '""')}"`
-        ).join('\n');
+        const doc = new jsPDF();
         
-        const blob = new Blob(["\ufeff" + headers + lines], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `plantilla_conceptos.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text("Listado de Conceptos Cualitativos", 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 28);
+
+        const tableBody = concepts.map(c => [
+            c.code,
+            c.text
+        ]);
+
+        autoTable(doc, {
+            startY: 35,
+            head: [['Código', 'Concepto']],
+            body: tableBody,
+            theme: 'grid',
+            headStyles: { fillColor: [63, 81, 181], textColor: [255, 255, 255], fontStyle: 'bold' },
+            styles: { fontSize: 9, cellPadding: 3, overflow: 'linebreak' },
+            columnStyles: {
+                0: { cellWidth: 30, halign: 'center' },
+                1: { cellWidth: 'auto' }
+            }
+        });
+
+        doc.save('conceptos_cualitativos.pdf');
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
