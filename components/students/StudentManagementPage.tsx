@@ -263,7 +263,6 @@ const StudentFormModal: React.FC<{
         const { name, value } = e.target;
         
         // Validations
-        if (name === 'name' && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(value)) return;
         if ((name === 'documentNumber' || name === 'phone') && !/^\d*$/.test(value)) return;
         if (name === 'phone' && value.length > 10) return;
 
