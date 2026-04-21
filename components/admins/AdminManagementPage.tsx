@@ -8,9 +8,11 @@ import { useAuth } from '../../context/AuthContext';
 
 const AdminFormModal: React.FC<{
     onClose: () => void;
-    onSave: (admin: Omit<AdminUser, 'id' | 'role' | 'avatar' | 'campusId' | 'campusName'>) => void;
+    onSave: (admin: Omit<AdminUser, 'id' | 'role' | 'avatar' | 'campusId' | 'campusName'>, selectedCampusIds: string[]) => void;
+    onDelete?: () => void;
     adminToEdit: AdminUser | null;
-}> = ({ onClose, onSave, adminToEdit }) => {
+    campuses: Campus[];
+}> = ({ onClose, onSave, onDelete, adminToEdit, campuses }) => {
     const isEditing = !!adminToEdit;
     const [formData, setFormData] = useState({
         name: adminToEdit?.name || '',
@@ -18,19 +20,29 @@ const AdminFormModal: React.FC<{
         status: adminToEdit?.status || 'active',
     });
 
+    const [selectedCampuses, setSelectedCampuses] = useState<string[]>(
+        () => adminToEdit ? campuses.filter(c => c.admin === adminToEdit.name).map(c => c.id) : []
+    );
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleCampusToggle = (campusId: string) => {
+        setSelectedCampuses(prev => 
+            prev.includes(campusId) ? prev.filter(c => c !== campusId) : [...prev, campusId]
+        );
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData);
+        onSave(formData, selectedCampuses);
     };
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
-            <Card className="w-full max-w-lg">
+            <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-6 pb-3 border-b dark:border-gray-700">
                     <h2 className="text-lg font-bold text-gray-800 dark:text-white">{isEditing ? 'Editar Administrador' : 'Nuevo Administrador'}</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-white"><CloseIcon className="w-6 h-6"/></button>
@@ -51,11 +63,42 @@ const AdminFormModal: React.FC<{
                             <option value="inactive">Inactivo</option>
                         </select>
                     </div>
-                    <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700 mt-6">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
-                        <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-blue-700 shadow-sm transition-colors">
-                            {isEditing ? 'Guardar Cambios' : 'Crear Administrador'}
-                        </button>
+
+                    <div className="pt-2">
+                        <label className="block text-sm font-bold mb-2 dark:text-gray-300">Sedes Asignadas</label>
+                        {campuses.length > 0 ? (
+                            <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                {campuses.map(campus => (
+                                    <label key={campus.id} className="flex items-center p-3 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={selectedCampuses.includes(campus.id)}
+                                            onChange={() => handleCampusToggle(campus.id)}
+                                            className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary dark:border-slate-600 dark:bg-slate-800"
+                                        />
+                                        <span className="ml-3 text-sm text-slate-700 dark:text-slate-300 font-medium">
+                                            {campus.name}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500 italic">No hay sedes registradas en el sistema.</p>
+                        )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t dark:border-gray-700 mt-6 gap-3">
+                        {isEditing && onDelete ? (
+                            <button type="button" onClick={() => { onClose(); onDelete(); }} className="px-4 py-2 bg-rose-100 text-rose-700 hover:bg-rose-200 hover:text-rose-800 rounded-lg font-bold transition-colors flex items-center gap-2 text-sm dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50">
+                                <TrashIcon className="w-4 h-4"/> Eliminar
+                            </button>
+                        ) : <div></div>}
+                        <div className="flex gap-2">
+                            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600">Cancelar</button>
+                            <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-blue-700 shadow-sm transition-colors">
+                                {isEditing ? 'Guardar Cambios' : 'Crear Administrador'}
+                            </button>
+                        </div>
                     </div>
                 </form>
             </Card>
@@ -140,7 +183,7 @@ const ResetPasswordConfirmationModal: React.FC<{ user: User; onClose: () => void
 );
 
 const AdminManagementPage: React.FC = () => {
-    const { admins, addAdmin, updateAdmin, deleteAdmin, campuses, assignTemporaryPassword } = useData();
+    const { admins, addAdmin, updateAdmin, deleteAdmin, campuses, updateCampus, assignTemporaryPassword } = useData();
     const { sendPasswordReset, user } = useAuth();
     
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -157,15 +200,32 @@ const AdminManagementPage: React.FC = () => {
         setTimeout(() => setNotification(null), 5000);
     };
 
-    const handleSave = async (data: any) => {
+    const handleSave = async (data: any, selectedCampusIds: string[]) => {
         try {
             const adminData = { ...data };
 
             if (editingAdmin) {
                 await updateAdmin(editingAdmin.id, adminData);
+                
+                const previousCampuses = campuses.filter(c => c.admin === editingAdmin.name);
+                for (const pc of previousCampuses) {
+                    if (!selectedCampusIds.includes(pc.id)) {
+                        await updateCampus(pc.id, { admin: '' });
+                    }
+                }
+                
+                for (const campusId of selectedCampusIds) {
+                    await updateCampus(campusId, { admin: data.name });
+                }
+
                 showNotification('Administrador actualizado', 'success');
             } else {
                 await addAdmin(adminData);
+                
+                for (const campusId of selectedCampusIds) {
+                    await updateCampus(campusId, { admin: data.name });
+                }
+
                 showNotification('Administrador creado', 'success');
             }
             setIsModalOpen(false);
@@ -350,7 +410,7 @@ const AdminManagementPage: React.FC = () => {
                 </div>
             </Card>
             
-            {isModalOpen && <AdminFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} adminToEdit={editingAdmin} />}
+            {isModalOpen && <AdminFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} onDelete={() => editingAdmin && setDeletingAdmin(editingAdmin)} adminToEdit={editingAdmin} campuses={campuses} />}
             {deletingAdmin && <DeleteConfirmationModal admin={deletingAdmin} onClose={() => setDeletingAdmin(null)} onConfirm={handleDelete} />}
             {resettingPasswordAdmin && <ResetPasswordConfirmationModal user={resettingPasswordAdmin} onClose={() => setResettingPasswordAdmin(null)} onConfirm={handleSendResetLink} />}
             {assigningPassAdmin && <TempPasswordModal user={assigningPassAdmin} onClose={() => setAssigningPassAdmin(null)} onSave={handleAssignTempPass} />}
