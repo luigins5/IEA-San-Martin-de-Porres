@@ -290,39 +290,52 @@ export const MetricsDashboard: React.FC = () => {
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-2">
-                    <h3 className="text-lg font-bold mb-4 dark:text-white">Promedio por Asignatura</h3>
+                <Card className="lg:col-span-2 shadow-sm border border-slate-100 dark:border-slate-800">
+                    <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-white">Promedio por Asignatura</h3>
                     <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={metricsData.subjArray}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                                <XAxis dataKey="subject" tick={{fontSize: 12}} />
-                                <YAxis domain={[0, 5]} tick={{fontSize: 12}} />
-                                <RechartsTooltip formatter={(value) => [`${value}`, 'Promedio']} />
-                                <Bar dataKey="avg" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Promedio" />
+                            <BarChart data={metricsData.subjArray} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorAvg" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.2}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                                <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} dy={10} />
+                                <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
+                                <RechartsTooltip 
+                                    formatter={(value) => [`${value}`, 'Promedio']} 
+                                    contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    cursor={{fill: '#f8fafc'}}
+                                />
+                                <Bar dataKey="avg" fill="url(#colorAvg)" radius={[6, 6, 0, 0]} name="Promedio" barSize={35} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </Card>
 
-                <Card>
-                    <h3 className="text-lg font-bold mb-4 dark:text-white">Estado de Aprobación</h3>
+                <Card className="shadow-sm border border-slate-100 dark:border-slate-800">
+                    <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-white">Estado de Aprobación</h3>
                     <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie 
                                     data={pieData} 
                                     cx="50%" cy="50%" 
-                                    innerRadius={60} outerRadius={80} 
+                                    innerRadius={70} outerRadius={90} 
                                     paddingAngle={5} 
                                     dataKey="value"
+                                    stroke="none"
                                 >
                                     {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} opacity={0.85} />
                                     ))}
                                 </Pie>
-                                <RechartsTooltip />
-                                <Legend verticalAlign="bottom" height={36} />
+                                <RechartsTooltip 
+                                    contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '13px', color: '#64748b' }} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
@@ -331,11 +344,11 @@ export const MetricsDashboard: React.FC = () => {
 
             {/* Table and Trends Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                    <h3 className="text-lg font-bold mb-4 dark:text-white">Detalle por Asignatura</h3>
+                <Card className="shadow-sm border border-slate-100 dark:border-slate-800">
+                    <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-white">Detalle por Asignatura</h3>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 uppercase text-xs">
+                            <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 uppercase text-[11px] font-semibold tracking-wider">
                                 <tr>
                                     <th className="px-4 py-3 rounded-tl-lg">Asignatura</th>
                                     <th className="px-4 py-3 text-center">Promedio</th>
@@ -343,33 +356,44 @@ export const MetricsDashboard: React.FC = () => {
                                     <th className="px-4 py-3 text-center rounded-tr-lg">Reprobados</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
                                 {metricsData.subjArray.map(subj => (
-                                    <tr key={subj.subject} className="border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900">
-                                        <td className="px-4 py-3 font-semibold dark:text-white">{subj.subject}</td>
-                                        <td className="px-4 py-3 text-center font-bold text-blue-600 dark:text-blue-400">{subj.avg.toFixed(2)}</td>
-                                        <td className="px-4 py-3 text-center text-emerald-600">{subj.pass}</td>
-                                        <td className="px-4 py-3 text-center text-red-600">{subj.fail}</td>
+                                    <tr key={subj.subject} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+                                        <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-200">{subj.subject}</td>
+                                        <td className="px-4 py-3 text-center font-semibold text-blue-500">{subj.avg.toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-center font-medium text-emerald-500">{subj.pass}</td>
+                                        <td className="px-4 py-3 text-center font-medium text-red-400">{subj.fail}</td>
                                     </tr>
                                 ))}
                                 {metricsData.subjArray.length === 0 && (
-                                    <tr><td colSpan={4} className="text-center py-6 text-slate-400">Sin datos</td></tr>
+                                    <tr><td colSpan={4} className="text-center py-6 text-slate-400 font-medium tracking-wide">Sin datos</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
                 </Card>
 
-                <Card>
-                    <h3 className="text-lg font-bold mb-4 dark:text-white">Tendencia de Promedio Escolar por Periodo</h3>
-                    <div className="h-64">
+                <Card className="shadow-sm border border-slate-100 dark:border-slate-800">
+                    <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-white">Tendencia de Promedio Escolar por Periodo</h3>
+                    <div className="h-64 mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={metricsData.periodArray}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                                <XAxis dataKey="period" />
-                                <YAxis domain={[0, 5]} />
-                                <RechartsTooltip formatter={(value) => [`${value}`, 'Promedio']} />
-                                <Line type="monotone" dataKey="avg" stroke="#8B5CF6" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} name="Promedio" />
+                            <LineChart data={metricsData.periodArray} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                                <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} dy={10} />
+                                <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
+                                <RechartsTooltip 
+                                    formatter={(value) => [`${value}`, 'Promedio']} 
+                                    contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="avg" 
+                                    stroke="#8B5CF6" 
+                                    strokeWidth={3} 
+                                    dot={{r: 4, strokeWidth: 2, fill: '#fff'}} 
+                                    activeDot={{r: 6, strokeWidth: 0, fill: '#8B5CF6'}} 
+                                    name="Promedio" 
+                                />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
