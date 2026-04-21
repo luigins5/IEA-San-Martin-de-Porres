@@ -415,8 +415,8 @@ const ReportsPage: React.FC = () => {
             const { lastName, firstName } = splitName(student.name);
             return {
                 code: student.documentNumber,
-                lastName: lastName.toUpperCase(),
-                firstName: firstName.toUpperCase(),
+                lastName: firstName.toUpperCase(),
+                firstName: lastName.toUpperCase(),
                 pAvg: periodAverage,
                 val: getQualitativeScore(periodAverage)
             };
@@ -491,8 +491,8 @@ const ReportsPage: React.FC = () => {
             const { lastName, firstName } = splitName(student.name);
             return {
                 code: student.documentNumber,
-                lastName: lastName.toUpperCase(),
-                firstName: firstName.toUpperCase(),
+                lastName: firstName.toUpperCase(),
+                firstName: lastName.toUpperCase(),
                 pAvg: periodAverage,
             };
         });
@@ -560,8 +560,8 @@ const ReportsPage: React.FC = () => {
                 return [
                     (sIndex + 1).toString(),
                     student.documentNumber,
-                    lastName.toUpperCase(),
                     firstName.toUpperCase(),
+                    lastName.toUpperCase(),
                     '', '', '', '', ''
                 ];
             });
@@ -630,8 +630,8 @@ const ReportsPage: React.FC = () => {
                 body: [[
                     student.documentNumber.slice(-3) || '000', // Mocking short ID from screenshot
                     student.documentNumber,
-                    lastName.toUpperCase(),
-                    firstName.toUpperCase()
+                    firstName.toUpperCase(),
+                    lastName.toUpperCase()
                 ]],
                 theme: 'plain',
                 styles: { fontSize: 9, cellPadding: 1, lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },

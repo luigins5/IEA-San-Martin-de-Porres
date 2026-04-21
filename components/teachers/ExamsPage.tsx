@@ -262,12 +262,8 @@ const TeacherExamsPage: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 flex items-center space-x-2">
-                                        {exam.teacherId === user?.id && (
-                                            <>
-                                                <button onClick={() => { setEditingExam(exam); setIsModalOpen(true); }} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-yellow-600 dark:text-yellow-400 transition-colors focus:outline-none shadow-sm" title="Editar"><EditIcon className="w-5 h-5"/></button>
-                                                <button onClick={() => setDeletingExam(exam)} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-red-600 dark:text-red-400 transition-colors focus:outline-none shadow-sm" title="Eliminar"><TrashIcon className="w-5 h-5"/></button>
-                                            </>
-                                        )}
+                                        <button onClick={() => { setEditingExam(exam); setIsModalOpen(true); }} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-yellow-600 dark:text-yellow-400 transition-colors focus:outline-none shadow-sm" title="Editar"><EditIcon className="w-5 h-5"/></button>
+                                        <button onClick={() => setDeletingExam(exam)} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-red-600 dark:text-red-400 transition-colors focus:outline-none shadow-sm" title="Eliminar"><TrashIcon className="w-5 h-5"/></button>
                                     </td>
                                 </tr>
                             ))}
