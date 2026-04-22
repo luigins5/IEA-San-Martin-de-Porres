@@ -1062,9 +1062,18 @@ const ClassAnnotationsPage: React.FC = () => {
         if (!scoreStr) return 'border-transparent bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500';
         const s = parseFloat(String(scoreStr));
         if (isNaN(s)) return 'border-slate-200';
-        if (s < 3.0) return 'bg-red-50 text-red-600 focus:ring-2 focus:ring-red-500';
-        if (s < 4.0) return 'bg-amber-50 text-amber-600 focus:ring-2 focus:ring-amber-500';
-        return 'bg-emerald-50 text-emerald-600 focus:ring-2 focus:ring-emerald-500';
+        if (s <= 2.9) return 'bg-red-50 text-red-600 focus:ring-2 focus:ring-red-500 border-red-200';
+        if (s <= 3.9) return 'bg-amber-50 text-amber-600 focus:ring-2 focus:ring-amber-500 border-amber-200';
+        return 'bg-emerald-50 text-emerald-600 focus:ring-2 focus:ring-emerald-500 border-emerald-200';
+    };
+
+    const getRowColorClass = (scoreStr: string) => {
+        if (!scoreStr) return '';
+        const s = parseFloat(String(scoreStr));
+        if (isNaN(s)) return '';
+        if (s <= 2.9) return 'bg-red-50/40 dark:bg-red-900/10 hover:bg-red-100/50 dark:hover:bg-red-900/20'; // Reprobado
+        if (s <= 3.9) return 'bg-amber-50/40 dark:bg-amber-900/10 hover:bg-amber-100/50 dark:hover:bg-amber-900/20'; // Básico
+        return 'bg-emerald-50/40 dark:bg-emerald-900/10 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20'; // Alto
     };
 
     return (
@@ -1080,53 +1089,56 @@ const ClassAnnotationsPage: React.FC = () => {
                     <p className="text-blue-100 mt-2 font-medium text-lg opacity-90">Registro rápido de calificaciones y asistencia.</p>
                 </div>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none"></div>
-                <div className="flex flex-wrap gap-3 justify-center items-center w-full relative z-10">
-                     <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-lg border border-white/20">
-                        <div className="relative group">
-                            <button
-                                onClick={() => setIsClassSearchModalOpen(true)}
-                                className="pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 hover:bg-slate-50 min-w-[200px] max-w-[300px] text-left truncate transition-colors relative flex items-center"
-                            >
-                                {selectedClassId ? (() => {
-                                    const c = myClasses.find(cls => cls.id === selectedClassId);
-                                    if (!c) return "Seleccionar Asignatura...";
-                                    return `${c.subject} (${c.class}${c.section ? `-${c.section}` : ''})`;
-                                })() : "Buscar Asignatura..."}
-                                <SearchIcon className="w-4 h-4 text-slate-400 absolute right-3 pointer-none"/>
+                <div className="flex flex-col gap-4 w-full relative z-10 mt-2">
+                    <div className="flex flex-wrap gap-3 justify-center items-center w-full">
+                         <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-lg border border-white/20">
+                            <div className="relative group">
+                                <button
+                                    onClick={() => setIsClassSearchModalOpen(true)}
+                                    className="pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 hover:bg-slate-50 min-w-[200px] max-w-[300px] text-left truncate transition-colors relative flex items-center"
+                                >
+                                    {selectedClassId ? (() => {
+                                        const c = myClasses.find(cls => cls.id === selectedClassId);
+                                        if (!c) return "Seleccionar Asignatura...";
+                                        return `${c.subject} (${c.class}${c.section ? `-${c.section}` : ''})`;
+                                    })() : "Buscar Asignatura..."}
+                                    <SearchIcon className="w-4 h-4 text-slate-400 absolute right-3 pointer-none"/>
+                                </button>
+                            </div>
+                            <div className="h-8 w-px bg-slate-200 mx-1"></div>
+                            <div className="relative group">
+                                <select 
+                                    value={selectedPeriod} 
+                                    onChange={(e) => setSelectedPeriod(Number(e.target.value))}
+                                    className="appearance-none pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 focus:outline-none focus:bg-slate-50 cursor-pointer transition-colors"
+                                >
+                                    {Array.from({ length: numberOfPeriods }, (_, i) => i + 1).map(p => <option key={p} value={p}>P{p}</option>)}
+                                </select>
+                                <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-none"/>
+                            </div>
+                        </div>
+                        <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full md:w-64 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-100 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
+                        
+                        {selectedClassId && (
+                            <button onClick={handleDownloadTemplate} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                                <DownloadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Plantilla</span>
                             </button>
-                        </div>
-                        <div className="h-8 w-px bg-slate-200 mx-1"></div>
-                        <div className="relative group">
-                            <select 
-                                value={selectedPeriod} 
-                                onChange={(e) => setSelectedPeriod(Number(e.target.value))}
-                                className="appearance-none pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 focus:outline-none focus:bg-slate-50 cursor-pointer transition-colors"
-                            >
-                                {Array.from({ length: numberOfPeriods }, (_, i) => i + 1).map(p => <option key={p} value={p}>P{p}</option>)}
-                            </select>
-                            <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-none"/>
-                        </div>
+                        )}
                     </div>
-                    <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full sm:w-48 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-200 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
-                    
-                    {selectedClassId && (
-                        <button onClick={handleDownloadTemplate} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
-                            <DownloadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Plantilla</span>
-                        </button>
-                    )}
-                    {!isReadOnly && (
-                        <>
-                            <button onClick={() => handleSelectAllClassRecords(classStudents)} title="Seleccionar y limpiar todas las notas" className="bg-red-50 hover:bg-red-100/80 text-rose-600 border border-red-200/50 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
-                                <TrashIcon className="w-5 h-5"/> <span className="hidden sm:inline">Limpiar Todo</span>
+                    {/* Action Buttons Row */}
+                    {!isReadOnly && selectedClassId && (
+                        <div className="flex flex-wrap gap-3 justify-center items-center w-full pt-2 border-t border-white/10">
+                            <button onClick={() => handleSelectAllClassRecords(classStudents)} title="Seleccionar y limpiar todas las notas" className="bg-rose-500/20 hover:bg-rose-500/40 text-white border border-rose-400/30 font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md backdrop-blur-sm">
+                                <TrashIcon className="w-5 h-5"/> <span className="inline">Limpiar Todo</span>
                             </button>
-                            <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-3 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
-                                <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Notas</span>
+                            <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-2.5 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                                <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Notas</span>
                             </button>
-                            <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Carga Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 sm:px-6 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
-                                <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
+                            <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Carga Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
+                                <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Conceptos</span>
                             </button>
-                        </>
+                        </div>
                     )}
                 </div>
             </div>
@@ -1154,9 +1166,13 @@ const ClassAnnotationsPage: React.FC = () => {
                                 const hasPendingChanges = input.score || input.faults || input.observation;
                                 const studentErrors = validationErrors[student.id] || {};
 
+                                const latestSavedGrade = getStudentHistory(student.id).find(h => h.type === 'Nota');
+                                const effectiveScore = input.score || (isSaved ? latestSavedGrade?.value : null);
+                                const rowBg = getRowColorClass(effectiveScore as string) || (isExpanded ? 'bg-slate-50/80 dark:bg-slate-800/50' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30');
+
                                 return (
                                     <React.Fragment key={student.id}>
-                                        <tr className={`group transition-all duration-300 ${isExpanded ? 'bg-slate-50/80 dark:bg-slate-800/50' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30'}`}>
+                                        <tr className={`group transition-all duration-300 border-b border-slate-50 dark:border-slate-800/50 ${rowBg}`}>
                                             <td className="px-8 py-5 align-middle">
                                                 <div className="flex items-center gap-4">
                                                     <button onClick={() => setExpandedStudentId(isExpanded ? null : student.id)} className={`p-1.5 rounded-lg transition-all ${isExpanded ? 'bg-blue-100 text-blue-600 rotate-90' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}>
