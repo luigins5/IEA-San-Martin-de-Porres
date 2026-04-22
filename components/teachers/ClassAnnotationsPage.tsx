@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { TeacherCourseAssignment, Student, Grade, AttendanceRecord, UserRole } from '../../types';
 import { useData } from '../../context/DataContext';
-import { PlusIcon, SaveIcon, CheckIcon, ClipboardCheckIcon, TrashIcon, UploadIcon, DownloadIcon, ChevronRightIcon, ChevronDownIcon, EditIcon, ClipboardDocumentListIcon, AcademicCapIcon, CalendarIcon, CloseIcon, ExclamationTriangleIcon } from '../icons';
+import { PlusIcon, SaveIcon, CheckIcon, ClipboardCheckIcon, TrashIcon, UploadIcon, DownloadIcon, ChevronRightIcon, ChevronDownIcon, EditIcon, ClipboardDocumentListIcon, AcademicCapIcon, CalendarIcon, CloseIcon, ExclamationTriangleIcon, SearchIcon } from '../icons';
 import { getPeriodFromDate } from './GradesPage';
 import Card from '../ui/Card';
 import { SearchableConceptSelect } from '../ui/SearchableConceptSelect';
@@ -188,13 +188,6 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts 
                                 className="flex-1 sm:w-auto px-4 py-2 bg-white text-blue-600 font-bold rounded-lg text-xs border border-blue-200 hover:bg-blue-100 transition-colors shadow-sm"
                             >
                                 Descargar Plantilla
-                            </button>
-                            <button 
-                                onClick={downloadConcepts}
-                                title="Descargar listado de conceptos con sus códigos"
-                                className="flex-1 sm:w-auto px-4 py-2 bg-white text-indigo-600 font-bold rounded-lg text-xs border border-indigo-200 hover:bg-indigo-100 transition-colors shadow-sm whitespace-nowrap"
-                            >
-                                Descargar Conceptos
                             </button>
                         </div>
                     </div>
@@ -410,11 +403,258 @@ const CRITERIA_OPTIONS = [
     'Otro'
 ];
 
+const BulkUploadConceptsModal = ({ onClose, onSave }: { onClose: () => void, onSave: (data: any[]) => void }) => {
+    const [file, setFile] = useState<File | null>(null);
+    const [parsedData, setParsedData] = useState<any[]>([]);
+    const [errors, setErrors] = useState<string[]>([]);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const downloadTemplate = () => {
+        const headers = "concepto\n";
+        const lines = "Escribe el texto del concepto aquí\nParticipación activa\nPuntualidad\n";
+        const blob = new Blob(["\ufeff" + headers + lines], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `plantilla_nuevos_conceptos.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        
+        setFile(f);
+        setIsProcessing(true);
+        setErrors([]);
+        setParsedData([]);
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const text = ev.target?.result as string;
+                const rows = text.split('\n').filter(r => r.trim());
+                if (rows.length <= 1) {
+                    setErrors(["El archivo está vacío o solo contiene encabezados."]);
+                    setIsProcessing(false);
+                    return;
+                }
+
+                const dataRows = rows.slice(1);
+                const results: any[] = [];
+                const newErrors: string[] = [];
+
+                dataRows.forEach((row, index) => {
+                    const separator = row.includes(';') ? ';' : ',';
+                    const cols = row.split(separator).map(c => c.trim().replace(/^"|"$/g, ''));
+                    if (cols.length < 1) return;
+
+                    const textStr = cols[0].replace(/^\uFEFF/, '');
+
+                    if (!textStr) {
+                         newErrors.push(`Fila ${index + 2}: El concepto no puede estar vacío.`);
+                    } else if (textStr.toLowerCase().includes('escribe el texto')) {
+                        // Ignorar fila de ejemplo
+                        return;
+                    } else {
+                        results.push({ text: textStr });
+                    }
+                });
+
+                if (results.length === 0 && newErrors.length === 0) {
+                     newErrors.push("No se encontraron conceptos válidos para importar.");
+                }
+
+                setParsedData(results);
+                setErrors(newErrors);
+            } catch (err) {
+                setErrors(["Error al procesar el archivo. Asegúrese de que sea un CSV válido."]);
+            } finally {
+                setIsProcessing(false);
+            }
+        };
+        reader.readAsText(f);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center backdrop-blur-sm p-4 sm:p-6 pb-20">
+            <Card className="bg-white dark:bg-slate-900 p-0 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="flex justify-between items-center p-6 border-b dark:border-slate-800 shrink-0">
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Cargar Nuevos Conceptos</h2>
+                        <p className="text-sm text-slate-500">Añade conceptos rápidamente a tu repositorio. El sistema asignará los códigos de forma automática.</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0">
+                        <CloseIcon className="w-6 h-6 text-slate-400"/>
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+                    
+                    <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50 p-4 rounded-xl">
+                        <h4 className="font-bold text-blue-800 dark:text-blue-300 mb-2">Instrucciones de carga:</h4>
+                        <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-blue-700 dark:text-blue-400">
+                            <li>1. Descarga la plantilla CSV a continuación.</li>
+                            <li>2. Abre el archivo en Excel o Google Sheets.</li>
+                            <li>3. En la columna <strong>"concepto"</strong>, escribe cada uno de tus conceptos en una fila nueva.</li>
+                            <li>4. <strong>No agregues códigos.</strong> El sistema generará y asignará el siguiente código a cada uno de forma automática.</li>
+                            <li>5. Guarda como CSV y súbelo aquí.</li>
+                        </ul>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl border border-teal-100 dark:border-teal-800">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-teal-600 text-white rounded-lg">
+                                <DownloadIcon className="w-5 h-5"/>
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-teal-900 dark:text-teal-300">¿No tienes el formato?</p>
+                                <p className="text-xs text-teal-700 dark:text-teal-400">Descarga la plantilla .CSV de conceptos.</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={downloadTemplate}
+                            className="px-4 py-2 bg-white text-teal-600 font-bold rounded-lg text-xs border border-teal-200 hover:bg-teal-100 transition-colors shadow-sm whitespace-nowrap"
+                        >
+                            Descargar Plantilla
+                        </button>
+                    </div>
+
+                    <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group">
+                        <input type="file" accept=".csv" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                        <div className="pointer-events-none">
+                            <UploadIcon className="w-12 h-12 mx-auto text-slate-300 group-hover:text-teal-500 transition-colors mb-4"/>
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{file ? file.name : 'Haz clic o arrastra tu archivo CSV aquí'}</p>
+                            <p className="text-xs text-slate-400 mt-2">Tamaño máximo: 5MB</p>
+                        </div>
+                    </div>
+
+                    {errors.length > 0 && (
+                        <div className="p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 rounded-xl">
+                            <h4 className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase mb-2 flex items-center gap-2">
+                                <ExclamationTriangleIcon className="w-4 h-4"/> Errores en el archivo:
+                            </h4>
+                            <ul className="text-xs text-rose-600 dark:text-rose-300 list-disc list-inside space-y-1">
+                                {errors.map((err, i) => <li key={i}>{err}</li>)}
+                            </ul>
+                        </div>
+                    )}
+                    {parsedData.length > 0 && (
+                        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl">
+                            <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase mb-2">Registros listos para auto-asignar código ({parsedData.length}):</h4>
+                            <div className="grid grid-cols-1 gap-2">
+                                {parsedData.slice(0, 5).map((item, i) => (
+                                    <div key={i} className="flex gap-2 text-xs bg-white/50 dark:bg-slate-800 p-2 rounded">
+                                        <span className="font-bold text-teal-600 dark:text-teal-400">[Auto]</span>
+                                        <span className="text-slate-700 dark:text-slate-300 truncate">{item.text}</span>
+                                    </div>
+                                ))}
+                                {parsedData.length > 5 && <p className="text-[10px] text-slate-400 italic">Y {parsedData.length - 5} más...</p>}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t dark:border-slate-800 flex gap-3 shrink-0">
+                    <button onClick={onClose} className="flex-1 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors">
+                        Cancelar
+                    </button>
+                    <button 
+                        disabled={parsedData.length === 0 || isProcessing}
+                        onClick={() => onSave(parsedData)}
+                        className="flex-1 py-3 bg-teal-600 text-white font-bold rounded-xl shadow-lg shadow-teal-500/30 hover:bg-teal-700 disabled:opacity-50 disabled:shadow-none transition-all"
+                    >
+                        Importar {parsedData.length} Nuevos Conceptos
+                    </button>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+const ClassSearchModal = ({ onClose, onSelect, myClasses, teachers, campuses }: any) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    const filteredClasses = myClasses.filter((c: any) => {
+        const teacher = teachers.find((t: any) => t.id === c.teacherId);
+        const campus = campuses?.find((cmp: any) => cmp.id === teacher?.campusId);
+        const searchString = `${c.subject} ${c.class} ${c.section || ''} ${teacher?.name || ''} ${campus?.name || ''}`.toLowerCase();
+        return searchString.includes(searchTerm.toLowerCase());
+    });
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center backdrop-blur-sm p-4 sm:p-6 pb-20">
+            <Card className="bg-white dark:bg-slate-900 p-0 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="flex justify-between items-center p-6 border-b dark:border-slate-800 shrink-0">
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Buscar Asignatura</h2>
+                        <p className="text-sm text-slate-500">Busca por materia, grado, docente o sede.</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0">
+                        <CloseIcon className="w-6 h-6 text-slate-400"/>
+                    </button>
+                </div>
+                
+                <div className="p-4 border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <div className="relative">
+                        <SearchIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Ej. Matemáticas, Sede Principal, Transición..." 
+                            autoFocus
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+                    {filteredClasses.length === 0 ? (
+                        <div className="p-8 text-center text-slate-500 font-medium">No se encontraron asignaturas.</div>
+                    ) : (
+                        <div className="grid gap-2">
+                            {filteredClasses.map((c: any) => {
+                                const teacher = teachers.find((t: any) => t.id === c.teacherId);
+                                const campus = campuses?.find((cmp: any) => cmp.id === teacher?.campusId);
+                                
+                                return (
+                                    <button 
+                                        key={c.id}
+                                        onClick={() => { onSelect(c.id); onClose(); }}
+                                        className="text-left w-full p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-transparent hover:border-blue-100 dark:hover:border-blue-800 transition-all flex items-center justify-between group"
+                                    >
+                                        <div>
+                                            <p className="font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                {c.subject} <span className="text-slate-400 font-normal ml-2">({c.class} {c.section && `- ${c.section}`})</span>
+                                            </p>
+                                            <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                                {campus && <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-slate-600 dark:text-slate-400 rounded flex items-center gap-1 font-medium border border-slate-200 dark:border-slate-700"><AcademicCapIcon className="w-3 h-3"/> {campus.name}</span>}
+                                                {teacher && <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">🏫 {teacher.name}</span>}
+                                            </div>
+                                        </div>
+                                        <ChevronRightIcon className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </Card>
+        </div>
+    );
+};
+
 const ClassAnnotationsPage: React.FC = () => {
     const { user } = useAuth();
     const { assignments, teachers, campuses, students: allStudents, attendanceRecords, saveAttendance, addGrade, updateGrade, grades, deleteGrade, deleteAttendance, exams, getUserSetting, setUserSetting, globalSettings, campusSettings, concepts, addConcept } = useData();
     const [myClasses, setMyClasses] = useState<TeacherCourseAssignment[]>([]);
     const [selectedClassId, setSelectedClassId] = useState<string>('');
+    const [isClassSearchModalOpen, setIsClassSearchModalOpen] = useState(false);
+    const [isConceptsBulkModalOpen, setIsConceptsBulkModalOpen] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState<number>(1);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
     const [inputs, setInputs] = useState<Record<string, any>>({});
@@ -439,6 +679,15 @@ const ClassAnnotationsPage: React.FC = () => {
     const handleBulkDeleteHistory = async () => {
         if (selectedHistoryRecords.length === 0) return;
         setDeleteTarget(selectedHistoryRecords);
+    };
+
+    const handleSelectAllClassRecords = (classStudents: Student[]) => {
+        const allHistIds = classStudents.flatMap(s => getStudentHistory(s.id).map(h => h.id));
+        if (allHistIds.length === 0) {
+            alert("No hay notas ni faltas registradas en este periodo para esta asignatura.");
+            return;
+        }
+        setSelectedHistoryRecords(allHistIds);
     };
 
     const executeDeleteHistoryRecords = async () => {
@@ -834,34 +1083,17 @@ const ClassAnnotationsPage: React.FC = () => {
                 <div className="flex flex-wrap gap-3 justify-center items-center w-full relative z-10">
                      <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-lg border border-white/20">
                         <div className="relative group">
-                            <select 
-                                value={selectedClassId || ''} 
-                                onChange={(e) => setSelectedClassId(e.target.value)}
-                                className="appearance-none pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 focus:outline-none focus:bg-slate-50 min-w-[180px] max-w-full cursor-pointer transition-colors"
+                            <button
+                                onClick={() => setIsClassSearchModalOpen(true)}
+                                className="pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 hover:bg-slate-50 min-w-[200px] max-w-[300px] text-left truncate transition-colors relative flex items-center"
                             >
-                                {myClasses.length === 0 && <option value="">Sin asignaturas asignadas</option>}
-                                {myClasses.map(c => {
-                                    const teacher = teachers.find(t => t.id === c.teacherId);
-                                    let campusName = '';
-                                    if (teacher?.campusId) {
-                                        const campus = campuses?.find(cmp => cmp.id === teacher.campusId);
-                                        if (campus) campusName = campus.name;
-                                    }
-                                    const teacherName = teacher ? teacher.name.split(' ')[0] + ' ' + (teacher.name.split(' ')[1] || '') : 'Desconocido';
-                                    
-                                    let labelParts = [];
-                                    if (user?.role === UserRole.SUPER_ADMIN && campusName) {
-                                        labelParts.push(campusName);
-                                    }
-                                    if ((user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && teacherName) {
-                                        labelParts.push(teacherName);
-                                    }
-                                    labelParts.push(`${c.subject} (${c.class}-${c.section})`);
-                                    
-                                    return <option key={c.id} value={c.id}>{labelParts.join(' | ')}</option>
-                                })}
-                            </select>
-                            <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-none"/>
+                                {selectedClassId ? (() => {
+                                    const c = myClasses.find(cls => cls.id === selectedClassId);
+                                    if (!c) return "Seleccionar Asignatura...";
+                                    return `${c.subject} (${c.class}${c.section ? `-${c.section}` : ''})`;
+                                })() : "Buscar Asignatura..."}
+                                <SearchIcon className="w-4 h-4 text-slate-400 absolute right-3 pointer-none"/>
+                            </button>
                         </div>
                         <div className="h-8 w-px bg-slate-200 mx-1"></div>
                         <div className="relative group">
@@ -884,9 +1116,17 @@ const ClassAnnotationsPage: React.FC = () => {
                         </button>
                     )}
                     {!isReadOnly && (
-                        <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-3 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
-                            <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva</span>
-                        </button>
+                        <>
+                            <button onClick={() => handleSelectAllClassRecords(classStudents)} title="Seleccionar y limpiar todas las notas" className="bg-red-50 hover:bg-red-100/80 text-rose-600 border border-red-200/50 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                                <TrashIcon className="w-5 h-5"/> <span className="hidden sm:inline">Limpiar Todo</span>
+                            </button>
+                            <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-3 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                                <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Notas</span>
+                            </button>
+                            <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Carga Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 sm:px-6 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
+                                <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -1012,7 +1252,21 @@ const ClassAnnotationsPage: React.FC = () => {
                                                                         <th className="px-4 py-3 text-center">Nota</th>
                                                                         <th className="px-4 py-3">Observación</th>
                                                                         <th className="px-4 py-3 text-center">Acciones</th>
-                                                                        <th className="px-4 py-3 text-center text-red-500">Sel.</th>
+                                                                        <th className="px-4 py-3 text-center text-red-500" title="Seleccionar todas">
+                                                                            <input 
+                                                                                type="checkbox"
+                                                                                className="w-4 h-4 rounded text-red-600 focus:ring-red-500 border-red-300 cursor-pointer"
+                                                                                checked={getStudentHistory(student.id).length > 0 && getStudentHistory(student.id).every(item => selectedHistoryRecords.includes(item.id))}
+                                                                                onChange={(e) => {
+                                                                                    const histIds = getStudentHistory(student.id).map(h => h.id);
+                                                                                    if (e.target.checked) {
+                                                                                        setSelectedHistoryRecords(prev => Array.from(new Set([...prev, ...histIds])));
+                                                                                    } else {
+                                                                                        setSelectedHistoryRecords(prev => prev.filter(id => !histIds.includes(id)));
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                        </th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -1057,6 +1311,41 @@ const ClassAnnotationsPage: React.FC = () => {
                     </table>
                 </div>
             </div>
+            {isClassSearchModalOpen && (
+                <ClassSearchModal 
+                    onClose={() => setIsClassSearchModalOpen(false)} 
+                    onSelect={(id: string) => setSelectedClassId(id)}
+                    myClasses={myClasses}
+                    teachers={teachers}
+                    campuses={campuses}
+                />
+            )}
+            {isConceptsBulkModalOpen && (
+                <BulkUploadConceptsModal
+                    onClose={() => setIsConceptsBulkModalOpen(false)}
+                    onSave={async (data) => {
+                        let count = 0;
+                        let nextCodeNumber = concepts.length > 0 ? 
+                            Math.max(...concepts.map(c => parseInt(c.code.replace(/[^\d]/g, '')) || 0)) + 1 
+                            : 1;
+
+                        for(const item of data) {
+                            if (!concepts.find(c => c.text.toLowerCase() === item.text.toLowerCase())) {
+                                try {
+                                    const codeStr = nextCodeNumber.toString().padStart(2, '0');
+                                    await addConcept({ code: codeStr, text: item.text });
+                                    nextCodeNumber++;
+                                    count++;
+                                } catch(e) {
+                                    console.error("Error added concept", e);
+                                }
+                            }
+                        }
+                        setIsConceptsBulkModalOpen(false);
+                        alert(`Se importaron ${count} conceptos nuevos exitosamente.`);
+                    }}
+                />
+            )}
             {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} classStudents={classStudents} isReadOnly={isReadOnly} concepts={concepts} />}
             {isConceptModalOpen && <AddCustomConceptModal onClose={() => setIsConceptModalOpen(false)} onSave={handleSaveCustomConcept} />}
             {editingRecord && <EditRecordModal record={editingRecord} onClose={() => setEditingRecord(null)} onSave={handleUpdateRecord} concepts={concepts} />}
