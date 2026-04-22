@@ -1067,13 +1067,48 @@ const ClassAnnotationsPage: React.FC = () => {
         return 'bg-emerald-50 text-emerald-600 focus:ring-2 focus:ring-emerald-500 border-emerald-200';
     };
 
-    const getRowColorClass = (scoreStr: string) => {
-        if (!scoreStr) return '';
+    const getRowColorClass = (scoreStr: string | null | undefined) => {
+        if (!scoreStr) return 'bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-100/60 dark:hover:bg-slate-800/60';
         const s = parseFloat(String(scoreStr));
-        if (isNaN(s)) return '';
-        if (s <= 2.9) return 'bg-red-50/40 dark:bg-red-900/10 hover:bg-red-100/50 dark:hover:bg-red-900/20'; // Reprobado
-        if (s <= 3.9) return 'bg-amber-50/40 dark:bg-amber-900/10 hover:bg-amber-100/50 dark:hover:bg-amber-900/20'; // Básico
-        return 'bg-emerald-50/40 dark:bg-emerald-900/10 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20'; // Alto
+        if (isNaN(s)) return 'bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-100/60 dark:hover:bg-slate-800/60';
+        if (s <= 2.9) return 'bg-red-50/60 dark:bg-red-900/20 hover:bg-red-100/70 dark:hover:bg-red-900/30'; // Reprobado
+        if (s <= 3.9) return 'bg-amber-50/50 dark:bg-amber-900/20 hover:bg-amber-100/60 dark:hover:bg-amber-900/30'; // Básico
+        return 'bg-emerald-50/50 dark:bg-emerald-900/20 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/30'; // Alto
+    };
+
+    const allStudentsGraded = classStudents.length > 0 && classStudents.every(s => 
+        getStudentHistory(s.id).some(h => h.type === 'Nota')
+    );
+
+    const handleDownloadGrades = () => {
+        const selectedClass = myClasses.find(c => c.id === selectedClassId);
+        if (!selectedClass) return;
+        
+        const headers = ["Documento", "Nombre Estudiante", "Nota Final", "Faltas", "Observación"];
+        const rows = classStudents.map(s => {
+            const history = getStudentHistory(s.id);
+            const nota = history.find(h => h.type === 'Nota');
+            const faltas = history.filter(h => h.type === 'Falla').reduce((acc, curr) => acc + (curr.value as number), 0);
+            const observation = nota ? ((nota.raw as any).comments || '').replace(/,/g, ' ') : '-';
+            return [
+                s.documentNumber,
+                `"${s.name}"`,
+                nota ? nota.value : '-',
+                faltas,
+                `"${observation}"`
+            ].join(',');
+        });
+        
+        const csvContent = "\uFEFF" + headers.join(',') + '\n' + rows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Notas_${selectedClass.subject.replace(/\s+/g,'_')}_P${selectedPeriod}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -1127,17 +1162,26 @@ const ClassAnnotationsPage: React.FC = () => {
                         )}
                     </div>
                     {/* Action Buttons Row */}
-                    {!isReadOnly && selectedClassId && (
+                    {selectedClassId && (
                         <div className="flex flex-wrap gap-3 justify-center items-center w-full pt-2 border-t border-white/10">
-                            <button onClick={() => handleSelectAllClassRecords(classStudents)} title="Seleccionar y limpiar todas las notas" className="bg-rose-500/20 hover:bg-rose-500/40 text-white border border-rose-400/30 font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md backdrop-blur-sm">
-                                <TrashIcon className="w-5 h-5"/> <span className="inline">Limpiar Todo</span>
-                            </button>
-                            <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-2.5 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
-                                <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Notas</span>
-                            </button>
-                            <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Carga Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
-                                <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Conceptos</span>
-                            </button>
+                            {allStudentsGraded && (
+                                <button onClick={handleDownloadGrades} className="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-emerald-400/50">
+                                    <DownloadIcon className="w-5 h-5" /> <span className="inline">Descargar Notas</span>
+                                </button>
+                            )}
+                            {!isReadOnly && (
+                                <>
+                                    <button onClick={() => handleSelectAllClassRecords(classStudents)} title="Seleccionar y limpiar todas las notas" className="bg-rose-500/20 hover:bg-rose-500/40 text-white border border-rose-400/30 font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md backdrop-blur-sm">
+                                        <TrashIcon className="w-5 h-5"/> <span className="inline">Limpiar Todo</span>
+                                    </button>
+                                    <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-2.5 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                                        <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Notas</span>
+                                    </button>
+                                    <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Carga Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
+                                        <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Conceptos</span>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>
@@ -1167,8 +1211,8 @@ const ClassAnnotationsPage: React.FC = () => {
                                 const studentErrors = validationErrors[student.id] || {};
 
                                 const latestSavedGrade = getStudentHistory(student.id).find(h => h.type === 'Nota');
-                                const effectiveScore = input.score || (isSaved ? latestSavedGrade?.value : null);
-                                const rowBg = getRowColorClass(effectiveScore as string) || (isExpanded ? 'bg-slate-50/80 dark:bg-slate-800/50' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30');
+                                const effectiveScore = input.score || latestSavedGrade?.value;
+                                const rowBg = getRowColorClass(effectiveScore as string);
 
                                 return (
                                     <React.Fragment key={student.id}>
