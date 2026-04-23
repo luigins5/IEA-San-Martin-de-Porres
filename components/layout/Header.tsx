@@ -334,8 +334,8 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const [hasUnread, setHasUnread] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  const [schoolName, setSchoolName] = useState('Gestión Escolar');
-  const [schoolLogo, setSchoolLogo] = useState<string>('');
+  const schoolName = 'Instituciones Educativas';
+  const schoolLogo = 'https://i.ibb.co/kV9jYF31/Logo-CEIE.png';
 
   // Get the correct campusId for the current user
   const userCampusId = React.useMemo(() => {
@@ -352,24 +352,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
       return undefined;
   }, [user, admins, teachers, students]);
 
-  useEffect(() => {
-        const loadBranding = () => {
-            let settings: any = {};
-            
-            if (globalSettings) {
-                settings = { ...globalSettings };
-            }
-
-            if (userCampusId && campusSettings) {
-                if (campusSettings.schoolName) settings.schoolName = campusSettings.schoolName;
-                if (campusSettings.schoolLogo) settings.schoolLogo = campusSettings.schoolLogo;
-            }
-
-            if (settings.schoolName) setSchoolName(settings.schoolName);
-            if (settings.schoolLogo) setSchoolLogo(settings.schoolLogo);
-        };
-        loadBranding();
-  }, [userCampusId, globalSettings, campusSettings]);
+  // Branding effect removed since values are hardcoded
 
   useEffect(() => {
     if (!user) return;
@@ -473,7 +456,9 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                 {/* Branding */}
                 <div className="flex items-center gap-3">
                     {schoolLogo ? (
-                        <img src={schoolLogo} alt="School Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-sm" />
+                        <a href="https://ibb.co/qLWKbw05" target="_blank" rel="noopener noreferrer">
+                            <img src={schoolLogo} alt="Logo-CEIE" border={0} className="w-8 h-8 sm:w-12 sm:h-12 object-contain drop-shadow-[0_2px_6px_rgba(148,163,184,0.7)] dark:drop-shadow-[0_2px_6px_rgba(148,163,184,0.3)] transition-transform hover:scale-105" />
+                        </a>
                     ) : (
                         <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center shadow-sm text-white">
                             <span className="font-bold text-lg">{schoolName.charAt(0)}</span>

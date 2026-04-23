@@ -64,9 +64,9 @@ const Footer: React.FC = () => {
         </p>
         <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <span>Desarrollado por</span>
-          <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200 dark:border-slate-700">
+          <a href="https://wa.link/0wfefb" target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors font-semibold border border-slate-200 dark:border-slate-700">
             Somos NS-5
-          </span>
+          </a>
         </div>
       </div>
     </footer>

@@ -15,15 +15,8 @@ const LoginPage: React.FC = () => {
   const { globalSettings } = useData();
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [schoolName, setSchoolName] = useState('Gestión Escolar');
-  const [schoolLogo, setSchoolLogo] = useState<string>('https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHBsMGdhaWJpamQ0OGxuYm85N2pyZ2F3YWdycjR2Ymtza2s2dzJhYyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/m7t3XLkAB0fX7WEFs0/giphy.gif');
-
-  useEffect(() => {
-      if (globalSettings) {
-          if (globalSettings.schoolName) setSchoolName(globalSettings.schoolName);
-          if (globalSettings.schoolLogo) setSchoolLogo(globalSettings.schoolLogo);
-      }
-  }, [globalSettings]);
+  const schoolName = 'Instituciones Educativas';
+  const schoolLogo = 'https://i.ibb.co/kV9jYF31/Logo-CEIE.png';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,16 +81,19 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col relative">
       <main className="flex-grow flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md animate-fade-in-up">
-          <div className="text-center mb-8">
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 inline-flex items-center justify-center mb-6 dark:bg-slate-800 dark:border-slate-700">
-                <img 
-                    src={schoolLogo} 
-                    alt="School Logo" 
-                    className="w-20 h-20 object-contain" 
-                />
+          <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center -mb-2">
+                <a href="https://ibb.co/qLWKbw05" target="_blank" rel="noopener noreferrer">
+                    <img 
+                        src={schoolLogo} 
+                        alt="Logo-CEIE" 
+                        border={0}
+                        className="w-[320px] sm:w-[400px] h-auto object-contain drop-shadow-[0_6px_12px_rgba(148,163,184,0.7)] dark:drop-shadow-[0_6px_12px_rgba(148,163,184,0.3)] transition-transform hover:scale-105 duration-300" 
+                    />
+                </a>
               </div>
               <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{schoolName}</h1>
-              <p className="text-slate-500 text-sm mt-2 dark:text-slate-400 font-medium tracking-wide uppercase">Portal Académico</p>
+              <p className="text-slate-500 text-sm dark:text-slate-400 font-medium tracking-wide uppercase -mt-1">Portal Académico</p>
           </div>
           <Card className="shadow-xl border border-slate-200/60 dark:border-slate-800/60 rounded-2xl overflow-hidden">
             <form onSubmit={handleLogin} className="p-2">
