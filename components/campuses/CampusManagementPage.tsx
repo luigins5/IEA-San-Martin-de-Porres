@@ -5,6 +5,7 @@ import Card from '../ui/Card';
 import { BuildingOfficeIcon, EditIcon, TrashIcon, CloseIcon, ClipboardDocumentListIcon, UploadIcon, DownloadIcon, PlusIcon } from '../icons';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import EmergencyNukeButton from './EmergencyNukeButton';
 
 const UsersIcon = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
@@ -499,8 +500,6 @@ const CampusManagementPage: React.FC = () => {
     const { impersonateUser } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-    const [selectedCampuses, setSelectedCampuses] = useState<string[]>([]);
-    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
     const [editingCampus, setEditingCampus] = useState<Campus | null>(null);
     const [deletingCampus, setDeletingCampus] = useState<Campus | null>(null);
     const [viewingProfilesCampus, setViewingProfilesCampus] = useState<Campus | null>(null);
@@ -509,25 +508,6 @@ const CampusManagementPage: React.FC = () => {
     const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
         setNotification({ message, type });
         setTimeout(() => setNotification(null), 5000);
-    };
-
-    const handleSelectCampus = (id: string) => {
-        setSelectedCampuses(prev => 
-            prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
-        );
-    };
-
-    const handleBulkDelete = async () => {
-        try {
-            for (const id of selectedCampuses) {
-                await deleteCampus(id);
-            }
-            showNotification(`Se eliminaron ${selectedCampuses.length} sedes`, 'success');
-            setSelectedCampuses([]);
-            setIsBulkDeleting(false);
-        } catch (error) {
-            showNotification('Error al eliminar sedes', 'error');
-        }
     };
 
     const handleBulkSave = async (parsedData: any[]) => {
@@ -707,11 +687,6 @@ const CampusManagementPage: React.FC = () => {
                         <p className="text-sm text-slate-500 mt-1 ml-10">Administra los campus y su personal.</p>
                     </div>
                     <div className="flex gap-3">
-                        {selectedCampuses.length > 0 && (
-                            <button onClick={() => setIsBulkDeleting(true)} className="bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 px-4 rounded-lg hover:bg-red-100 transition-all text-sm flex items-center justify-center gap-2 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/40">
-                                <TrashIcon className="w-4 h-4"/> Eliminar ({selectedCampuses.length})
-                            </button>
-                        )}
                         <button onClick={() => setIsBulkModalOpen(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-sm flex items-center justify-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700">
                             <UploadIcon className="w-4 h-4"/> Masiva
                         </button>
@@ -730,11 +705,8 @@ const CampusManagementPage: React.FC = () => {
                                         <BuildingOfficeIcon className="w-6 h-6"/>
                                     </div>
                                     <div className="flex items-center gap-3">
+                                        <EmergencyNukeButton campusId={campus.id} campusName={campus.name} onSuccess={() => {}} />
                                         <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded dark:bg-slate-800">{campus.teachers + campus.students} Usuarios</span>
-                                        <input type="checkbox" className="rounded text-primary focus:ring-primary w-5 h-5 cursor-pointer"
-                                            checked={selectedCampuses.includes(campus.id)}
-                                            onChange={() => handleSelectCampus(campus.id)}
-                                        />
                                     </div>
                                 </div>
                                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{campus.name}</h3>
@@ -768,9 +740,8 @@ const CampusManagementPage: React.FC = () => {
                                         <UsersIcon className="w-4 h-4" /> Observar
                                     </button>
                                 </div>
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center gap-2 mt-2 sm:mt-0">
                                     <button onClick={() => openEditModal(campus)} className="p-2 rounded-full bg-white text-slate-500 border border-slate-200 hover:border-amber-300 hover:text-amber-600 hover:shadow-sm transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:text-amber-400" title="Editar"><EditIcon className="w-4 h-4"/></button>
-                                     <button onClick={() => setDeletingCampus(campus)} className="p-2 rounded-full bg-white text-slate-500 border border-slate-200 hover:border-rose-300 hover:text-rose-600 hover:shadow-sm transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:text-rose-400" title="Eliminar"><TrashIcon className="w-4 h-4"/></button>
                                 </div>
                             </div>
                         </div>
@@ -781,7 +752,6 @@ const CampusManagementPage: React.FC = () => {
             {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} />}
             {isModalOpen && <CampusFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} campusToEdit={editingCampus} admins={admins} />}
             {deletingCampus && <DeleteConfirmationModal campus={deletingCampus} onClose={() => setDeletingCampus(null)} onConfirm={handleDelete} />}
-            {isBulkDeleting && <BulkDeleteConfirmationModal count={selectedCampuses.length} onClose={() => setIsBulkDeleting(false)} onConfirm={handleBulkDelete} />}
             {viewingProfilesCampus && (
                 <ViewProfilesModal 
                     campus={viewingProfilesCampus} 
