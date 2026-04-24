@@ -1155,9 +1155,9 @@ const ClassAnnotationsPage: React.FC = () => {
                         <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full md:w-64 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-100 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
                         
-                        {selectedClassId && (
-                            <button onClick={handleDownloadTemplate} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
-                                <DownloadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Plantilla</span>
+                        {selectedClassId && !isReadOnly && (
+                            <button onClick={() => setIsBulkModalOpen(true)} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                                <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Notas</span>
                             </button>
                         )}
                     </div>
@@ -1173,9 +1173,6 @@ const ClassAnnotationsPage: React.FC = () => {
                                 <>
                                     <button onClick={() => handleSelectAllClassRecords(classStudents)} title="Seleccionar y limpiar todas las notas" className="bg-rose-500/20 hover:bg-rose-500/40 text-white border border-rose-400/30 font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md backdrop-blur-sm">
                                         <TrashIcon className="w-5 h-5"/> <span className="inline">Limpiar Todo</span>
-                                    </button>
-                                    <button onClick={() => setIsBulkModalOpen(true)} className="bg-white text-blue-600 font-bold py-2.5 px-6 rounded-2xl hover:bg-blue-50 transition-all text-sm flex items-center justify-center gap-2 shadow-md">
-                                        <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Notas</span>
                                     </button>
                                     <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Carga Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
                                         <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Conceptos</span>
