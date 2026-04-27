@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { TeacherCourseAssignment, Student, Grade, AttendanceRecord, UserRole } from '../../types';
 import { useData } from '../../context/DataContext';
-import { PlusIcon, SaveIcon, CheckIcon, ClipboardCheckIcon, TrashIcon, UploadIcon, DownloadIcon, ChevronRightIcon, ChevronDownIcon, EditIcon, ClipboardDocumentListIcon, AcademicCapIcon, CalendarIcon, CloseIcon, ExclamationTriangleIcon, SearchIcon } from '../icons';
+import { PlusIcon, SaveIcon, CheckIcon, ClipboardCheckIcon, TrashIcon, UploadIcon, DownloadIcon, ChevronRightIcon, ChevronDownIcon, EditIcon, ClipboardDocumentListIcon, AcademicCapIcon, CalendarIcon, CloseIcon, ExclamationTriangleIcon, SearchIcon, DocumentTextIcon } from '../icons';
 import { getPeriodFromDate } from './GradesPage';
 import Card from '../ui/Card';
 import { SearchableConceptSelect } from '../ui/SearchableConceptSelect';
@@ -403,7 +403,7 @@ const CRITERIA_OPTIONS = [
     'Otro'
 ];
 
-const BulkUploadConceptsModal = ({ onClose, onSave }: { onClose: () => void, onSave: (data: any[]) => void }) => {
+const BulkUploadConceptsModal = ({ onClose, onSave, concepts }: { onClose: () => void, onSave: (data: any[]) => void, concepts: {code: string, text: string}[] }) => {
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [errors, setErrors] = useState<string[]>([]);
@@ -421,6 +421,23 @@ const BulkUploadConceptsModal = ({ onClose, onSave }: { onClose: () => void, onS
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const downloadConceptsPDF = () => {
+        const doc = new jsPDF('landscape');
+        
+        doc.setFontSize(16);
+        doc.text("Listado de Conceptos", 14, 15);
+        
+        autoTable(doc, {
+            head: [['Código', 'Texto del Concepto']],
+            body: concepts.map(c => [c.code, c.text]),
+            startY: 20,
+            styles: { fontSize: 10 },
+            headStyles: { fillColor: [13, 148, 136] } // teal-600
+        });
+        
+        doc.save('listado_conceptos.pdf');
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -520,6 +537,24 @@ const BulkUploadConceptsModal = ({ onClose, onSave }: { onClose: () => void, onS
                             className="px-4 py-2 bg-white text-teal-600 font-bold rounded-lg text-xs border border-teal-200 hover:bg-teal-100 transition-colors shadow-sm whitespace-nowrap"
                         >
                             Descargar Plantilla
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-4 bg-rose-50 dark:bg-rose-900/20 rounded-xl border border-rose-100 dark:border-rose-800">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-rose-600 text-white rounded-lg">
+                                <DocumentTextIcon className="w-5 h-5"/>
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-rose-900 dark:text-rose-300">Descargar Conceptos</p>
+                                <p className="text-xs text-rose-700 dark:text-rose-400">Descarga un PDF de todos los conceptos.</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={downloadConceptsPDF}
+                            className="px-4 py-2 bg-white text-rose-600 font-bold rounded-lg text-xs border border-rose-200 hover:bg-rose-100 transition-colors shadow-sm whitespace-nowrap"
+                        >
+                            Descargar PDF
                         </button>
                     </div>
 
@@ -1380,6 +1415,7 @@ const ClassAnnotationsPage: React.FC = () => {
             {isConceptsBulkModalOpen && (
                 <BulkUploadConceptsModal
                     onClose={() => setIsConceptsBulkModalOpen(false)}
+                    concepts={concepts}
                     onSave={async (data) => {
                         let count = 0;
                         let nextCodeNumber = concepts.length > 0 ? 
