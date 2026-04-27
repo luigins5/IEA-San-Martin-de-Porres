@@ -638,6 +638,7 @@ const TeacherManagementPage: React.FC = () => {
     const [assigningPassTeacher, setAssigningPassTeacher] = useState<Teacher | null>(null);
     const [assigningTeacher, setAssigningTeacher] = useState<Teacher | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCampus, setSelectedCampus] = useState<string>('');
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
     
     const [expandedTeacherId, setExpandedTeacherId] = useState<string | null>(null);
@@ -651,7 +652,8 @@ const TeacherManagementPage: React.FC = () => {
 
     const teachersForView = teachers.filter(t => {
         const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.documentNumber.includes(searchQuery);
-        if (user?.role === UserRole.SUPER_ADMIN) return matchesSearch;
+        const matchesCampusSearch = selectedCampus ? t.campusId === selectedCampus : true;
+        if (user?.role === UserRole.SUPER_ADMIN) return matchesSearch && matchesCampusSearch;
         return matchesSearch && t.campusId === user?.campusId;
     });
 
@@ -884,7 +886,19 @@ const TeacherManagementPage: React.FC = () => {
                         <p className="text-sm text-slate-500 mt-1 dark:text-slate-400 ml-11">Administración del cuerpo docente.</p>
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
+                        {isSuperAdmin && (
+                            <select
+                                value={selectedCampus}
+                                onChange={(e) => setSelectedCampus(e.target.value)}
+                                className="w-full md:w-auto px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                            >
+                                <option value="">Todas las sedes</option>
+                                {campuses.map(campus => (
+                                    <option key={campus.id} value={campus.id}>{campus.name}</option>
+                                ))}
+                            </select>
+                        )}
                         <div className="relative group">
                             <input 
                                 type="text" 
