@@ -613,7 +613,7 @@ const BulkUploadConceptsModal = ({ onClose, onSave, concepts }: { onClose: () =>
 const ClassSearchModal = ({ onClose, onSelect, myClasses, teachers, campuses }: any) => {
     const [searchTerm, setSearchTerm] = useState('');
     
-    const filteredClasses = myClasses.filter((c: any) => {
+    const filteredClasses = searchTerm.trim() === '' ? [] : myClasses.filter((c: any) => {
         const teacher = teachers.find((t: any) => t.id === c.teacherId);
         const campus = campuses?.find((cmp: any) => cmp.id === teacher?.campusId);
         const searchString = `${c.subject} ${c.class} ${c.section || ''} ${teacher?.name || ''} ${campus?.name || ''}`.toLowerCase();
@@ -648,7 +648,9 @@ const ClassSearchModal = ({ onClose, onSelect, myClasses, teachers, campuses }: 
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                    {filteredClasses.length === 0 ? (
+                    {searchTerm.trim() === '' ? (
+                        <div className="p-8 text-center text-slate-500 font-medium">Empieza a escribir para buscar asignaturas...</div>
+                    ) : filteredClasses.length === 0 ? (
                         <div className="p-8 text-center text-slate-500 font-medium">No se encontraron asignaturas.</div>
                     ) : (
                         <div className="grid gap-2">
