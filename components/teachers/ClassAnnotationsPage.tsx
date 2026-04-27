@@ -10,24 +10,33 @@ import { SearchableConceptSelect } from '../ui/SearchableConceptSelect';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean, concepts: {code: string, text: string}[] }) => {
+const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts, selectedClass, selectedPeriod }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean, concepts: {code: string, text: string}[], selectedClass?: any, selectedPeriod?: string }) => {
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [errors, setErrors] = useState<string[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
 
     const downloadTemplate = () => {
-        const headers = "documento_identidad,nombre_estudiante,criterio,nota,observacion,faltas\n";
+        const headers = ["documento_identidad", "nombre_estudiante", "criterio", "nota", "observacion", "faltas"];
         // Exportar TODOS los estudiantes de la clase
         const lines = classStudents.map(s => 
-            `${s.documentNumber},${s.name.replace(/,/g, '')},Actividad en clase,,,`
+            `${s.documentNumber};${s.name.replace(/;/g, '')};Examen;;;`
         ).join('\n');
         
-        const blob = new Blob(["\ufeff" + headers + lines], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(["\ufeff" + headers.join(';') + '\n' + lines], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", `plantilla_notas_${new Date().getTime()}.csv`);
+        
+        let filename = `plantilla_notas_${new Date().getTime()}.csv`;
+        if (selectedClass && selectedPeriod) {
+            const cleanSubject = selectedClass.subject.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const cleanGrade = selectedClass.class.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const cleanSection = (selectedClass.section || '').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            filename = `Plantilla_Notas_${cleanSubject}_${cleanGrade}_${cleanSection}_${selectedPeriod}.csv`;
+        }
+        
+        link.setAttribute("download", filename);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -1441,7 +1450,7 @@ const ClassAnnotationsPage: React.FC = () => {
                     }}
                 />
             )}
-            {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} classStudents={classStudents} isReadOnly={isReadOnly} concepts={concepts} />}
+            {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} classStudents={classStudents} isReadOnly={isReadOnly} concepts={concepts} selectedClass={myClasses.find(c => c.id === selectedClassId)} selectedPeriod={selectedPeriod} />}
             {isConceptModalOpen && <AddCustomConceptModal onClose={() => setIsConceptModalOpen(false)} onSave={handleSaveCustomConcept} />}
             {editingRecord && <EditRecordModal record={editingRecord} onClose={() => setEditingRecord(null)} onSave={handleUpdateRecord} concepts={concepts} />}
             
