@@ -37,11 +37,13 @@ export const MetricsDashboard: React.FC = () => {
                      return t?.campusId === filterCampus;
                  });
              }
-        } else if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
+        } else if (user?.role === UserRole.CAMPUS_ADMIN) {
             filtered = filtered.filter(a => {
                 const t = teachers.find(teacher => teacher.id === a.teacherId);
                 return t?.campusId === user.campusId;
             });
+        } else if (user?.role === UserRole.TEACHER) {
+            filtered = filtered.filter(a => a.teacherId === user.id);
         }
         if (filterTeacher) filtered = filtered.filter(a => a.teacherId === filterTeacher);
         if (filterSubject) filtered = filtered.filter(a => a.subject === filterSubject);
@@ -69,11 +71,13 @@ export const MetricsDashboard: React.FC = () => {
                      return t?.campusId === filterCampus;
                  });
              }
-        } else if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
+        } else if (user?.role === UserRole.CAMPUS_ADMIN) {
             filtered = filtered.filter(a => {
                 const t = teachers.find(teacher => teacher.id === a.teacherId);
                 return t?.campusId === user.campusId;
             });
+        } else if (user?.role === UserRole.TEACHER) {
+            filtered = filtered.filter(a => a.teacherId === user.id);
         }
         if (filterTeacher) filtered = filtered.filter(a => a.teacherId === filterTeacher);
         if (filterClass) filtered = filtered.filter(a => a.class === filterClass);
@@ -86,8 +90,13 @@ export const MetricsDashboard: React.FC = () => {
         let filtered = allStudents;
         if (user.role === UserRole.SUPER_ADMIN) {
             if (filterCampus) filtered = filtered.filter(s => s.campusId === filterCampus);
-        } else if (user.role === UserRole.CAMPUS_ADMIN || user.role === UserRole.TEACHER) {
+        } else if (user.role === UserRole.CAMPUS_ADMIN) {
             filtered = filtered.filter(s => s.campusId === user.campusId);
+        } else if (user.role === UserRole.TEACHER) {
+            filtered = filtered.filter(s => s.campusId === user.campusId);
+            // Further restrict students for teachers to only those in their assigned classes
+            const validClasses = new Set(assignments.filter(a => a.teacherId === user.id).map(a => `${a.class}-${a.section}`));
+            filtered = filtered.filter(s => validClasses.has(`${s.class}-${s.section}`));
         }
         if (filterClass) filtered = filtered.filter(s => s.class === filterClass);
         if (filterSection) filtered = filtered.filter(s => s.section === filterSection);
@@ -96,7 +105,7 @@ export const MetricsDashboard: React.FC = () => {
             filtered = filtered.filter(s => validClasses.has(`${s.class}-${s.section}`));
         }
         return filtered;
-    }, [user, allStudents, filterCampus, filterClass, filterSection, filterTeacher, filterSubject, availableAssignments]);
+    }, [user, allStudents, filterCampus, filterClass, filterSection, filterTeacher, filterSubject, availableAssignments, assignments]);
 
     const filteredGrades = useMemo(() => {
         const studentIds = new Set(studentsForContext.map(s => s.id));
@@ -214,26 +223,28 @@ export const MetricsDashboard: React.FC = () => {
                         </select>
                     </div>
 
-                    <div className="flex-1 min-w-[150px]">
-                        <label className="block text-xs font-bold mb-1 text-slate-500 uppercase">Profesor</label>
-                        <select 
-                            value={filterTeacher} 
-                            onChange={e => setFilterTeacher(e.target.value)} 
-                            className="w-full p-2 border rounded bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-primary"
-                        >
-                            <option value="">Todos los Profesores...</option>
-                            {teachers
-                                .filter(t => {
-                                    if (user?.role === UserRole.SUPER_ADMIN) {
-                                        return filterCampus ? t.campusId === filterCampus : true;
-                                    }
-                                    return t.campusId === user?.campusId;
-                                })
-                                .map(t => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {user?.role !== UserRole.TEACHER && (
+                        <div className="flex-1 min-w-[150px]">
+                            <label className="block text-xs font-bold mb-1 text-slate-500 uppercase">Profesor</label>
+                            <select 
+                                value={filterTeacher} 
+                                onChange={e => setFilterTeacher(e.target.value)} 
+                                className="w-full p-2 border rounded bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-primary"
+                            >
+                                <option value="">Todos los Profesores...</option>
+                                {teachers
+                                    .filter(t => {
+                                        if (user?.role === UserRole.SUPER_ADMIN) {
+                                            return filterCampus ? t.campusId === filterCampus : true;
+                                        }
+                                        return t.campusId === user?.campusId;
+                                    })
+                                    .map(t => (
+                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div className="flex-1 min-w-[150px]">
                         <label className="block text-xs font-bold mb-1 text-slate-500 uppercase">Asignatura</label>
