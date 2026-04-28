@@ -1176,24 +1176,25 @@ const ClassAnnotationsPage: React.FC = () => {
                             <div className="relative group">
                                 <button
                                     onClick={() => setIsClassSearchModalOpen(true)}
-                                    className="pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 hover:bg-slate-50 min-w-[200px] max-w-[300px] text-left truncate transition-colors relative flex items-center"
+                                    className="pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 hover:bg-slate-50 min-w-[300px] max-w-[450px] text-left truncate transition-colors relative flex items-center"
                                 >
                                     {selectedClassId ? (() => {
                                         const c = myClasses.find(cls => cls.id === selectedClassId);
-                                        if (!c) return "Seleccionar Asignatura...";
+                                        if (!c) return "Buscar o seleccionar asignatura...";
                                         return `${c.subject} (${c.class}${c.section ? `-${c.section}` : ''})`;
-                                    })() : "Buscar Asignatura..."}
+                                    })() : "Buscar o seleccionar asignatura..."}
                                     <SearchIcon className="w-4 h-4 text-slate-400 absolute right-3 pointer-none"/>
                                 </button>
                             </div>
                             <div className="h-8 w-px bg-slate-200 mx-1"></div>
-                            <div className="relative group">
+                            <div className="relative group flex items-center">
+                                <span className="pl-4 pr-1 text-sm text-slate-500 font-medium whitespace-nowrap">Periodo:</span>
                                 <select 
                                     value={selectedPeriod} 
                                     onChange={(e) => setSelectedPeriod(Number(e.target.value))}
-                                    className="appearance-none pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 focus:outline-none focus:bg-slate-50 cursor-pointer transition-colors"
+                                    className="appearance-none pl-1 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 focus:outline-none focus:bg-slate-50 cursor-pointer transition-colors"
                                 >
-                                    {Array.from({ length: numberOfPeriods }, (_, i) => i + 1).map(p => <option key={p} value={p}>P{p}</option>)}
+                                    {Array.from({ length: numberOfPeriods }, (_, i) => i + 1).map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
                                 <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-none"/>
                             </div>
