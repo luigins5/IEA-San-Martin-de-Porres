@@ -6,22 +6,42 @@ import { UserRole } from '../../types';
 import Card from '../ui/Card';
 import { EyeIcon, EyeSlashIcon } from '../icons';
 import Footer from '../layout/Footer';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>(UserRole.SUPER_ADMIN);
+  const [selectedCampus, setSelectedCampus] = useState('');
   const { login, loginWithGoogle, sendPasswordReset } = useAuth();
   const { globalSettings } = useData();
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const schoolName = 'Instituciones Educativas';
   const schoolLogo = 'https://i.ibb.co/kV9jYF31/Logo-CEIE.png';
+  const [availableCampuses, setAvailableCampuses] = useState<{id: string, name: string}[]>([]);
+
+  useEffect(() => {
+    const fetchCampuses = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'campuses'));
+        const campusList = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name
+        }));
+        setAvailableCampuses(campusList);
+      } catch (err) {
+        console.error("Error fetching campuses:", err);
+      }
+    };
+    fetchCampuses();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError('Por favor, ingrese el correo electrónico y la contraseña.');
+    if (!email || !password || !role || (!selectedCampus && role !== UserRole.SUPER_ADMIN)) {
+      setError('Por favor, diligencie todos los campos requeridos (correo, contraseña, rol y sede).');
       return;
     }
     setError('');
@@ -35,7 +55,7 @@ const LoginPage: React.FC = () => {
     }
     
     try {
-        await login(email, password, role);
+        await login(email, password, role, selectedCampus);
     } catch (err: any) {
         setError(err.message || 'Ocurrió un error al iniciar sesión.');
     }
@@ -87,7 +107,6 @@ const LoginPage: React.FC = () => {
                     <img 
                         src={schoolLogo} 
                         alt="Logo-CEIE" 
-                        border={0}
                         className="w-[320px] sm:w-[400px] h-auto object-contain drop-shadow-[0_6px_12px_rgba(148,163,184,0.7)] dark:drop-shadow-[0_6px_12px_rgba(148,163,184,0.3)] transition-transform hover:scale-105 duration-300" 
                     />
                 </a>
@@ -154,7 +173,10 @@ const LoginPage: React.FC = () => {
                     <select
                     id="role"
                     value={role}
-                    onChange={(e) => setRole(e.target.value as UserRole)}
+                    onChange={(e) => { 
+                      setRole(e.target.value as UserRole); 
+                      setError(''); 
+                    }}
                     className="appearance-none border border-slate-200 rounded-xl w-full py-3 px-4 text-sm text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer"
                     >
                     {Object.values(UserRole).map((r) => (
@@ -166,6 +188,34 @@ const LoginPage: React.FC = () => {
                     </div>
                 </div>
               </div>
+
+              {role !== UserRole.SUPER_ADMIN && (
+                <div className="mb-8">
+                  <label className="block text-slate-700 text-xs font-bold mb-2 uppercase tracking-wider dark:text-slate-300" htmlFor="campus">
+                    Sede
+                  </label>
+                  <div className="relative">
+                      <select
+                      id="campus"
+                      value={selectedCampus}
+                      onChange={(e) => {
+                        setSelectedCampus(e.target.value);
+                        setError('');
+                      }}
+                      className="appearance-none border border-slate-200 rounded-xl w-full py-3 px-4 text-sm text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer"
+                      >
+                      <option value="">-- Seleccione una Sede --</option>
+                      {availableCampuses.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
+                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                      </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col gap-4">
                 <button
                   className="w-full bg-primary text-white font-bold py-3 px-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/20 hover:bg-primary/90 transition-all duration-200 text-sm shadow-sm"
@@ -176,9 +226,13 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={async () => {
+                    if (role !== UserRole.SUPER_ADMIN && !selectedCampus) {
+                      setError('Por favor, seleccione una sede antes de continuar con Google.');
+                      return;
+                    }
                     setError('');
                     try {
-                      await loginWithGoogle(role);
+                      await loginWithGoogle(role, selectedCampus);
                     } catch (err: any) {
                       setError(err.message || 'Error al iniciar sesión con Google.');
                     }

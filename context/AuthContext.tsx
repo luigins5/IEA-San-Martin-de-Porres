@@ -18,8 +18,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string, role: UserRole) => Promise<void>;
-  loginWithGoogle: (role: UserRole) => Promise<void>;
+  login: (email: string, password: string, role: UserRole, campusId: string) => Promise<void>;
+  loginWithGoogle: (role: UserRole, campusId: string) => Promise<void>;
   logout: () => void;
   sendPasswordReset: (email: string) => Promise<void>;
   impersonateUser: (targetUser: User) => void;
@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  const loginWithGoogle = async (role: UserRole): Promise<void> => {
+  const loginWithGoogle = async (role: UserRole, campusId: string): Promise<void> => {
     try {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
@@ -113,6 +113,14 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       
       if (userDoc.exists()) {
         const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
+        
+        if (userData.role !== role && userData.role !== UserRole.SUPER_ADMIN) {
+           throw new Error('El rol seleccionado no coincide con su cuenta.');
+        }
+        if (userData.role !== UserRole.SUPER_ADMIN && userData.campusId !== campusId) {
+            throw new Error('La sede seleccionada no coincide con su cuenta.');
+        }
+
         userData.lastLogin = new Date().toISOString();
         await setDoc(userDocRef, { lastLogin: userData.lastLogin }, { merge: true });
         setUser(userData);
@@ -123,6 +131,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
           email: firebaseUser.email || '',
           role: role,
+          campusId: role !== UserRole.SUPER_ADMIN ? campusId : undefined,
           avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
         };
@@ -133,11 +142,14 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       }
     } catch (error: any) {
       console.error("Error en login con Google:", error);
+      if (error.message === 'La sede seleccionada no coincide con su cuenta.' || error.message === 'El rol seleccionado no coincide con su cuenta.') {
+        throw error;
+      }
       throw new Error('Error al iniciar sesión con Google.');
     }
   };
 
-  const login = async (email: string, password: string, role: UserRole): Promise<void> => {
+  const login = async (email: string, password: string, role: UserRole, campusId: string): Promise<void> => {
     try {
       let firebaseUser;
       try {
@@ -166,9 +178,14 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       if (userDoc.exists()) {
         const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
         
-        // Check if role matches (optional, but requested in original code)
+        // Check if role matches
         if (userData.role !== role && userData.role !== UserRole.SUPER_ADMIN) {
-           // throw new Error('El rol seleccionado no coincide con su cuenta.');
+           throw new Error('El rol seleccionado no coincide con su cuenta.');
+        }
+        
+        // Check if campus matches
+        if (userData.role !== UserRole.SUPER_ADMIN && userData.campusId !== campusId) {
+            throw new Error('La sede seleccionada no coincide con su cuenta.');
         }
 
         userData.lastLogin = new Date().toISOString();
@@ -183,6 +200,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           name: firebaseUser.displayName || email.split('@')[0],
           email: email,
           role: role,
+          campusId: role !== UserRole.SUPER_ADMIN ? campusId : undefined,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
         };
@@ -195,6 +213,8 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       console.error("Error en login:", error);
       let message = 'Credenciales incorrectas o error de conexión.';
       if (error.message === 'Contraseña incorrecta.') {
+        message = error.message;
+      } else if (error.message === 'La sede seleccionada no coincide con su cuenta.' || error.message === 'El rol seleccionado no coincide con su cuenta.') {
         message = error.message;
       } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         message = 'Credenciales incorrectas.';

@@ -10,7 +10,7 @@ import { SearchableConceptSelect } from '../ui/SearchableConceptSelect';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts, selectedClass, selectedPeriod }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean, concepts: {code: string, text: string}[], selectedClass?: any, selectedPeriod?: string }) => {
+const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts, selectedClass, selectedPeriod }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean, concepts: {code: string, text: string}[], selectedClass?: any, selectedPeriod?: string | number }) => {
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [errors, setErrors] = useState<string[]>([]);

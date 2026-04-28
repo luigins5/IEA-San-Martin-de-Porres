@@ -457,7 +457,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                 <div className="flex items-center gap-3">
                     {schoolLogo ? (
                         <a href="https://ibb.co/qLWKbw05" target="_blank" rel="noopener noreferrer">
-                            <img src={schoolLogo} alt="Logo-CEIE" border={0} className="w-8 h-8 sm:w-12 sm:h-12 object-contain drop-shadow-[0_2px_6px_rgba(148,163,184,0.7)] dark:drop-shadow-[0_2px_6px_rgba(148,163,184,0.3)] transition-transform hover:scale-105" />
+                            <img src={schoolLogo} alt="Logo-CEIE" className="w-8 h-8 sm:w-12 sm:h-12 object-contain drop-shadow-[0_2px_6px_rgba(148,163,184,0.7)] dark:drop-shadow-[0_2px_6px_rgba(148,163,184,0.3)] transition-transform hover:scale-105" />
                         </a>
                     ) : (
                         <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center shadow-sm text-white">
