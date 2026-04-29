@@ -53,13 +53,13 @@ service cloud.firestore {
     }
 
     match /admins/{adminId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create, delete: if isSuperAdmin();
       allow update: if isSuperAdmin() || (isOwnerByEmail() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['avatar', 'tempPassword']));
     }
 
     match /teachers/{teacherId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create, delete: if isAdmin();
       allow update: if isAdmin() || (isOwnerByEmail() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['avatar', 'tempPassword']));
     }
