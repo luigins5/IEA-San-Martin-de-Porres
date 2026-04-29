@@ -33,21 +33,22 @@ const syncUserCampusId = async (userData: User, userDocRef: any) => {
     } else {
         // Enforce role based on bulk uploaded data if it exists
         try {
-            const adminQ = query(collection(db, 'admins'), where('email', '==', userData.email));
+            const emailLower = (userData.email || '').trim().toLowerCase();
+            const adminQ = query(collection(db, 'admins'), where('email', '==', emailLower));
             const adminSnap = await getDocs(adminQ);
             if (!adminSnap.empty) {
                 userData.role = UserRole.CAMPUS_ADMIN;
                 const record = adminSnap.docs[0].data();
                 if (record.campusId) userData.campusId = record.campusId;
             } else {
-                const teacherQ = query(collection(db, 'teachers'), where('email', '==', userData.email));
+                const teacherQ = query(collection(db, 'teachers'), where('email', '==', emailLower));
                 const teacherSnap = await getDocs(teacherQ);
                 if (!teacherSnap.empty) {
                     userData.role = UserRole.TEACHER;
                     const record = teacherSnap.docs[0].data();
                     if (record.campusId) userData.campusId = record.campusId;
                 } else {
-                    const studentQ = query(collection(db, 'students'), where('email', '==', userData.email));
+                    const studentQ = query(collection(db, 'students'), where('email', '==', emailLower));
                     const studentSnap = await getDocs(studentQ);
                     if (!studentSnap.empty) {
                         userData.role = UserRole.STUDENT;
@@ -156,14 +157,15 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
              await setDoc(userDocRef, { role: UserRole.SUPER_ADMIN }, { merge: true });
         }
 
-        if (userData.role !== role && userData.role !== UserRole.SUPER_ADMIN) {
-           throw new Error('El rol seleccionado no coincide con su cuenta.');
+        if (userData.role !== role && firebaseUser.email !== 'ns.5.empresarial@gmail.com') {
+           // Instead of throwing an error, we gracefully accept the synced role from our master collections
+           console.log(`Role mismatch: frontend requested ${role}, but sync resolved to ${userData.role}. Using synced role.`);
         }
         if (userData.role !== UserRole.SUPER_ADMIN && userData.campusId !== campusId) {
             if (!userData.campusId && campusId) {
                 userData.campusId = campusId;
             } else {
-                throw new Error('La sede seleccionada no coincide con su cuenta.');
+                 console.log(`Campus mismatch: frontend requested ${campusId}, but sync resolved to ${userData.campusId}. Using synced campus.`);
             }
         }
 
@@ -229,9 +231,8 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
              await setDoc(userDocRef, { role: UserRole.SUPER_ADMIN }, { merge: true });
         }
 
-        // Check if role matches
-        if (userData.role !== role && userData.role !== UserRole.SUPER_ADMIN) {
-           throw new Error('El rol seleccionado no coincide con su cuenta.');
+        if (userData.role !== role && firebaseUser.email !== 'ns.5.empresarial@gmail.com') {
+           console.log(`Role mismatch: expected ${role}, resolving to ${userData.role}`);
         }
         
         // Check if campus matches
@@ -239,7 +240,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
             if (!userData.campusId && campusId) {
                 userData.campusId = campusId;
             } else {
-                throw new Error('La sede seleccionada no coincide con su cuenta.');
+                console.log(`Campus mismatch: expected ${campusId}, resolving to ${userData.campusId}`);
             }
         }
 

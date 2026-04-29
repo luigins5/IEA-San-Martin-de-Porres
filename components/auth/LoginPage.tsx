@@ -49,8 +49,9 @@ const LoginPage: React.FC = () => {
         return;
       }
       try {
+        const emailLower = email.trim().toLowerCase();
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where("email", "==", email.trim().toLowerCase()));
+        const q = query(usersRef, where("email", "==", emailLower));
         const querySnapshot = await getDocs(q);
         
         if (!querySnapshot.empty) {
@@ -61,6 +62,30 @@ const LoginPage: React.FC = () => {
           if (userData.campusId) {
             setSelectedCampus(userData.campusId);
           }
+        } else {
+           const tQ = query(collection(db, 'teachers'), where("email", "==", emailLower));
+           const tSnap = await getDocs(tQ);
+           if (!tSnap.empty) {
+               const userData = tSnap.docs[0].data();
+               setRole(UserRole.TEACHER);
+               if (userData.campusId) setSelectedCampus(userData.campusId);
+           } else {
+               const aQ = query(collection(db, 'admins'), where("email", "==", emailLower));
+               const aSnap = await getDocs(aQ);
+               if (!aSnap.empty) {
+                   const userData = aSnap.docs[0].data();
+                   setRole(UserRole.CAMPUS_ADMIN);
+                   if (userData.campusId) setSelectedCampus(userData.campusId);
+               } else {
+                   const sQ = query(collection(db, 'students'), where("email", "==", emailLower));
+                   const sSnap = await getDocs(sQ);
+                   if (!sSnap.empty) {
+                       const userData = sSnap.docs[0].data();
+                       setRole(UserRole.STUDENT);
+                       if (userData.campusId) setSelectedCampus(userData.campusId);
+                   }
+               }
+           }
         }
       } catch (err) {
         console.error("Error looking up user info:", err);
