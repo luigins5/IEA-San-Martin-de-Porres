@@ -53,6 +53,8 @@ const syncUserCampusId = async (userData: User, userDocRef: any) => {
                         userData.role = UserRole.STUDENT;
                         const record = studentSnap.docs[0].data();
                         if (record.campusId) userData.campusId = record.campusId;
+                    } else if (userData.role === UserRole.SUPER_ADMIN) {
+                        userData.role = UserRole.TEACHER; // Fallback to avoid unauthorized super admins
                     }
                 }
             }

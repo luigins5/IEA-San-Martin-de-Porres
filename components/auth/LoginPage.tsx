@@ -12,7 +12,7 @@ import { db } from '../../firebase';
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>(UserRole.SUPER_ADMIN);
+  const [role, setRole] = useState<UserRole | ''>('');
   const [selectedCampus, setSelectedCampus] = useState('');
   const { login, loginWithGoogle, sendPasswordReset } = useAuth();
   const { globalSettings } = useData();
@@ -88,7 +88,7 @@ const LoginPage: React.FC = () => {
     }
     
     try {
-        await login(email, password, role, selectedCampus);
+        await login(email, password, role as UserRole, selectedCampus);
     } catch (err: any) {
         setError(err.message || 'Ocurrió un error al iniciar sesión.');
     }
@@ -207,13 +207,14 @@ const LoginPage: React.FC = () => {
                     id="role"
                     value={role}
                     onChange={(e) => { 
-                      setRole(e.target.value as UserRole); 
+                      setRole(e.target.value as UserRole | ''); 
                       setError(''); 
                     }}
-                    className="appearance-none border border-slate-200 rounded-xl w-full py-3 px-4 text-sm text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer"
+                    className={`appearance-none border border-slate-200 rounded-xl w-full py-3 px-4 text-sm leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 cursor-pointer ${!role ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-white'}`}
                     >
+                    <option value="" disabled hidden>Ej: Profesor, Estudiante...</option>
                     {Object.values(UserRole).map((r) => (
-                        <option key={r} value={r}>{r}</option>
+                        <option key={r} value={r} className="text-slate-700 dark:text-white">{r}</option>
                     ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
@@ -260,13 +261,17 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={async () => {
+                    if (!role) {
+                        setError('Por favor, seleccione un rol antes de continuar con Google.');
+                        return;
+                    }
                     if (role !== UserRole.SUPER_ADMIN && !selectedCampus) {
                       setError('Por favor, seleccione una sede antes de continuar con Google.');
                       return;
                     }
                     setError('');
                     try {
-                      await loginWithGoogle(role, selectedCampus);
+                      await loginWithGoogle(role as UserRole, selectedCampus);
                     } catch (err: any) {
                       setError(err.message || 'Error al iniciar sesión con Google.');
                     }

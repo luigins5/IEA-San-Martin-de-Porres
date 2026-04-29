@@ -9,8 +9,8 @@ service cloud.firestore {
     }
 
     function getUserData() {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return userDoc == null ? null : userDoc.data;
+      let docPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(docPath) ? get(docPath).data : null;
     }
 
     function isSuperAdmin() {
