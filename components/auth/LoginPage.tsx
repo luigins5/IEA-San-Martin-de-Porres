@@ -6,7 +6,7 @@ import { UserRole } from '../../types';
 import Card from '../ui/Card';
 import { EyeIcon, EyeSlashIcon } from '../icons';
 import Footer from '../layout/Footer';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 const LoginPage: React.FC = () => {
@@ -21,9 +21,11 @@ const LoginPage: React.FC = () => {
   const schoolName = 'Instituciones Educativas';
   const schoolLogo = 'https://i.ibb.co/kV9jYF31/Logo-CEIE.png';
   const [availableCampuses, setAvailableCampuses] = useState<{id: string, name: string}[]>([]);
+  const [campusesLoading, setCampusesLoading] = useState(true);
 
   useEffect(() => {
     const fetchCampuses = async () => {
+      setCampusesLoading(true);
       try {
         const querySnapshot = await getDocs(collection(db, 'campuses'));
         const campusList = querySnapshot.docs.map(doc => ({
@@ -31,12 +33,43 @@ const LoginPage: React.FC = () => {
           name: doc.data().name
         }));
         setAvailableCampuses(campusList);
-      } catch (err) {
+        setCampusesLoading(false);
+      } catch (err: any) {
         console.error("Error fetching campuses:", err);
+        setError("Error al cargar sedes: " + (err.message || 'Desconocido'));
+        setCampusesLoading(false);
       }
     };
     fetchCampuses();
   }, []);
+
+  useEffect(() => {
+    const checkUserRoleAndCampus = async () => {
+      if (!email || !email.includes('@')) {
+        return;
+      }
+      try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where("email", "==", email.trim().toLowerCase()));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          if (userData.role) {
+            setRole(userData.role);
+          }
+          if (userData.campusId) {
+            setSelectedCampus(userData.campusId);
+          }
+        }
+      } catch (err) {
+        console.error("Error looking up user info:", err);
+      }
+    };
+
+    const timeoutId = setTimeout(checkUserRoleAndCampus, 800);
+    return () => clearTimeout(timeoutId);
+  }, [email]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,9 +235,10 @@ const LoginPage: React.FC = () => {
                         setSelectedCampus(e.target.value);
                         setError('');
                       }}
-                      className="appearance-none border border-slate-200 rounded-xl w-full py-3 px-4 text-sm text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer"
+                      disabled={campusesLoading}
+                      className="appearance-none border border-slate-200 rounded-xl w-full py-3 px-4 text-sm text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer disabled:opacity-50"
                       >
-                      <option value="">-- Seleccione una Sede --</option>
+                      <option value="">{campusesLoading ? '-- Cargando Sedes... --' : '-- Seleccione una Sede --'}</option>
                       {availableCampuses.map((c) => (
                           <option key={c.id} value={c.id}>{c.name}</option>
                       ))}

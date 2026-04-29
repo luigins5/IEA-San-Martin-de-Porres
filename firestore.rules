@@ -125,7 +125,7 @@ service cloud.firestore {
 
     // User profiles for role checking
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow write: if isSuperAdmin() || isOwner(userId);
     }
   }
