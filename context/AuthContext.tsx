@@ -150,7 +150,11 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
-        const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
+        const userDataRaw = userDoc.data() as User;
+        if (userDataRaw.email && typeof userDataRaw.email === 'string') {
+           userDataRaw.email = userDataRaw.email.trim().toLowerCase();
+        }
+        const userData = await syncUserCampusId(userDataRaw, userDocRef);
         
         if (firebaseUser.email === 'ns.5.empresarial@gmail.com' && userData.role !== UserRole.SUPER_ADMIN) {
              userData.role = UserRole.SUPER_ADMIN;
@@ -174,11 +178,12 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         setUser(userData);
         logAuditAction(userData, AuditAction.LOGIN, 'Inicio de sesión con Google');
       } else {
+        const safeEmail = (firebaseUser.email || '').trim().toLowerCase();
         let defaultUser: User = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
-          email: firebaseUser.email || '',
-          role: firebaseUser.email === 'ns.5.empresarial@gmail.com' ? UserRole.SUPER_ADMIN : role,
+          email: safeEmail,
+          role: safeEmail === 'ns.5.empresarial@gmail.com' ? UserRole.SUPER_ADMIN : role,
           campusId: role !== UserRole.SUPER_ADMIN ? campusId : undefined,
           avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
@@ -224,7 +229,11 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
-        const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
+        const userDataRaw = userDoc.data() as User;
+        if (userDataRaw.email && typeof userDataRaw.email === 'string') {
+           userDataRaw.email = userDataRaw.email.trim().toLowerCase();
+        }
+        const userData = await syncUserCampusId(userDataRaw, userDocRef);
         
         if (firebaseUser.email === 'ns.5.empresarial@gmail.com' && userData.role !== UserRole.SUPER_ADMIN) {
              userData.role = UserRole.SUPER_ADMIN;
@@ -251,11 +260,12 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       } else {
         // If user doesn't exist in Firestore, create a default profile (for testing/initial setup)
         // In a real app, users would be created by an admin
+        const safeEmail = (firebaseUser.email || email).trim().toLowerCase();
         let defaultUser: User = {
           id: firebaseUser.uid,
-          name: firebaseUser.displayName || email.split('@')[0],
-          email: email,
-          role: email === 'ns.5.empresarial@gmail.com' ? UserRole.SUPER_ADMIN : role,
+          name: firebaseUser.displayName || safeEmail.split('@')[0],
+          email: safeEmail,
+          role: safeEmail === 'ns.5.empresarial@gmail.com' ? UserRole.SUPER_ADMIN : role,
           campusId: role !== UserRole.SUPER_ADMIN ? campusId : undefined,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()

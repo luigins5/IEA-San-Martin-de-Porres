@@ -334,6 +334,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         Object.keys(sanitized).forEach(key => {
             if (sanitized[key] === undefined) {
                 delete sanitized[key];
+            } else if (key === 'email' && typeof sanitized[key] === 'string') {
+                sanitized[key] = sanitized[key].trim().toLowerCase();
             }
         });
         return sanitized;
