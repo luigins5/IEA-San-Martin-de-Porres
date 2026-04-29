@@ -28,7 +28,7 @@ const ClassLogWidget: React.FC = () => {
     
     const [myClasses, setMyClasses] = useState<TeacherCourseAssignment[]>([]);
     const [selectedClassId, setSelectedClassId] = useState<string>('');
-    const [selectedPeriod, setSelectedPeriod] = useState<number>(1);
+    const [selectedPeriod, setSelectedPeriod] = useState<number>(0);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
     
     // Estado para manejar los inputs de cada estudiante
@@ -51,7 +51,7 @@ const ClassLogWidget: React.FC = () => {
         // Calcular periodo actual basado en la fecha
         const today = new Date().toISOString().split('T')[0];
         const currentPeriod = getPeriodFromDate(today, settings?.numberOfPeriods || 4);
-        setSelectedPeriod(currentPeriod);
+        setSelectedPeriod(prev => prev === 0 ? currentPeriod : prev);
 
         // Cargar clases del profesor
         if (user) {

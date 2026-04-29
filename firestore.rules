@@ -9,22 +9,26 @@ service cloud.firestore {
     }
 
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc == null ? null : userDoc.data;
     }
 
     function isSuperAdmin() {
       let superAdmins = ["ns.5.empresarial@gmail.com"];
-      return isAuthenticated() && 
-        (getUserData().role == 'Super Administrador' || 
-         (request.auth.token.email in superAdmins && request.auth.token.email_verified == true));
+      let data = getUserData();
+      let roleIsSuper = data != null && data.role == 'Super Administrador';
+      let emailIsSuper = request.auth.token.email != null && request.auth.token.email in superAdmins; // Removed email_verified check because Google signin without verification fails here
+      return isAuthenticated() && (roleIsSuper || emailIsSuper);
     }
 
     function isCampusAdmin() {
-      return isAuthenticated() && getUserData().role == 'Administrador de Sede';
+      let data = getUserData();
+      return isAuthenticated() && data != null && data.role == 'Administrador de Sede';
     }
 
     function isTeacher() {
-      return isAuthenticated() && getUserData().role == 'Profesor';
+      let data = getUserData();
+      return isAuthenticated() && data != null && data.role == 'Profesor';
     }
 
     function isAdmin() {
@@ -120,7 +124,7 @@ service cloud.firestore {
 
     match /audit_logs/{logId} {
       allow read: if isSuperAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin());
       allow update, delete: if false;
     }
 

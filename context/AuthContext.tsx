@@ -28,6 +28,39 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const syncUserCampusId = async (userData: User, userDocRef: any) => {
+    if (userData.email === 'ns.5.empresarial@gmail.com') {
+        userData.role = UserRole.SUPER_ADMIN;
+    } else {
+        // Enforce role based on bulk uploaded data if it exists
+        try {
+            const adminQ = query(collection(db, 'admins'), where('email', '==', userData.email));
+            const adminSnap = await getDocs(adminQ);
+            if (!adminSnap.empty) {
+                userData.role = UserRole.CAMPUS_ADMIN;
+                const record = adminSnap.docs[0].data();
+                if (record.campusId) userData.campusId = record.campusId;
+            } else {
+                const teacherQ = query(collection(db, 'teachers'), where('email', '==', userData.email));
+                const teacherSnap = await getDocs(teacherQ);
+                if (!teacherSnap.empty) {
+                    userData.role = UserRole.TEACHER;
+                    const record = teacherSnap.docs[0].data();
+                    if (record.campusId) userData.campusId = record.campusId;
+                } else {
+                    const studentQ = query(collection(db, 'students'), where('email', '==', userData.email));
+                    const studentSnap = await getDocs(studentQ);
+                    if (!studentSnap.empty) {
+                        userData.role = UserRole.STUDENT;
+                        const record = studentSnap.docs[0].data();
+                        if (record.campusId) userData.campusId = record.campusId;
+                    }
+                }
+            }
+        } catch(e) {
+            console.error("Error syncing role from collections:", e);
+        }
+    }
+
     if (!userData.campusId && userData.role !== UserRole.SUPER_ADMIN) {
         let collectionName = '';
         if (userData.role === UserRole.CAMPUS_ADMIN) collectionName = 'admins';
@@ -42,7 +75,6 @@ const syncUserCampusId = async (userData: User, userDocRef: any) => {
                     const record = querySnapshot.docs[0].data();
                     if (record.campusId) {
                         userData.campusId = record.campusId;
-                        await setDoc(userDocRef, { campusId: record.campusId }, { merge: true });
                     }
                 }
             } catch (error) {
@@ -50,6 +82,9 @@ const syncUserCampusId = async (userData: User, userDocRef: any) => {
             }
         }
     }
+    
+    // Always persist standard claims
+    await setDoc(userDocRef, { role: userData.role, campusId: userData.campusId }, { merge: true });
     return userData;
 };
 
@@ -114,11 +149,20 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       if (userDoc.exists()) {
         const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
         
+        if (firebaseUser.email === 'ns.5.empresarial@gmail.com' && userData.role !== UserRole.SUPER_ADMIN) {
+             userData.role = UserRole.SUPER_ADMIN;
+             await setDoc(userDocRef, { role: UserRole.SUPER_ADMIN }, { merge: true });
+        }
+
         if (userData.role !== role && userData.role !== UserRole.SUPER_ADMIN) {
            throw new Error('El rol seleccionado no coincide con su cuenta.');
         }
         if (userData.role !== UserRole.SUPER_ADMIN && userData.campusId !== campusId) {
-            throw new Error('La sede seleccionada no coincide con su cuenta.');
+            if (!userData.campusId && campusId) {
+                userData.campusId = campusId;
+            } else {
+                throw new Error('La sede seleccionada no coincide con su cuenta.');
+            }
         }
 
         userData.lastLogin = new Date().toISOString();
@@ -130,7 +174,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
           email: firebaseUser.email || '',
-          role: role,
+          role: firebaseUser.email === 'ns.5.empresarial@gmail.com' ? UserRole.SUPER_ADMIN : role,
           campusId: role !== UserRole.SUPER_ADMIN ? campusId : undefined,
           avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
@@ -178,6 +222,11 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       if (userDoc.exists()) {
         const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
         
+        if (firebaseUser.email === 'ns.5.empresarial@gmail.com' && userData.role !== UserRole.SUPER_ADMIN) {
+             userData.role = UserRole.SUPER_ADMIN;
+             await setDoc(userDocRef, { role: UserRole.SUPER_ADMIN }, { merge: true });
+        }
+
         // Check if role matches
         if (userData.role !== role && userData.role !== UserRole.SUPER_ADMIN) {
            throw new Error('El rol seleccionado no coincide con su cuenta.');
@@ -185,7 +234,11 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         
         // Check if campus matches
         if (userData.role !== UserRole.SUPER_ADMIN && userData.campusId !== campusId) {
-            throw new Error('La sede seleccionada no coincide con su cuenta.');
+            if (!userData.campusId && campusId) {
+                userData.campusId = campusId;
+            } else {
+                throw new Error('La sede seleccionada no coincide con su cuenta.');
+            }
         }
 
         userData.lastLogin = new Date().toISOString();
@@ -199,7 +252,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || email.split('@')[0],
           email: email,
-          role: role,
+          role: email === 'ns.5.empresarial@gmail.com' ? UserRole.SUPER_ADMIN : role,
           campusId: role !== UserRole.SUPER_ADMIN ? campusId : undefined,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()

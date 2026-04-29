@@ -5,14 +5,90 @@ import { useData } from '../../context/DataContext';
 import { TeacherCourseAssignment, Student, Grade, UserRole } from '../../types';
 import Card from '../ui/Card';
 import { getPeriodFromDate } from './GradesPage';
-import { ChevronDownIcon, CalendarIcon } from '../icons';
+import { ChevronDownIcon, CalendarIcon, SearchIcon, CloseIcon, ChevronRightIcon, AcademicCapIcon } from '../icons';
+
+const ClassSearchModal = ({ onClose, onSelect, myClasses, teachers, campuses }: any) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    const filteredClasses = searchTerm.trim() === '' ? [] : myClasses.filter((c: any) => {
+        const teacher = teachers.find((t: any) => t.id === c.teacherId);
+        const campus = campuses?.find((cmp: any) => cmp.id === teacher?.campusId);
+        const searchString = `${c.subject} ${c.class} ${c.section || ''} ${teacher?.name || ''} ${campus?.name || ''}`.toLowerCase();
+        return searchString.includes(searchTerm.toLowerCase());
+    });
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center backdrop-blur-sm p-4 sm:p-6 pb-20">
+            <Card className="bg-white dark:bg-slate-900 p-0 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="flex justify-between items-center p-6 border-b dark:border-slate-800 shrink-0">
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Buscar Asignatura</h2>
+                        <p className="text-sm text-slate-500">Busca por materia, grado, docente o sede.</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0">
+                        <CloseIcon className="w-6 h-6 text-slate-400"/>
+                    </button>
+                </div>
+                
+                <div className="p-4 border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <div className="relative">
+                        <SearchIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Ej. Matemáticas, Sede Principal, Transición..." 
+                            autoFocus
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+                    {searchTerm.trim() === '' ? (
+                        <div className="p-8 text-center text-slate-500 font-medium">Empieza a escribir para buscar asignaturas...</div>
+                    ) : filteredClasses.length === 0 ? (
+                        <div className="p-8 text-center text-slate-500 font-medium">No se encontraron asignaturas.</div>
+                    ) : (
+                        <div className="grid gap-2">
+                            {filteredClasses.map((c: any) => {
+                                const teacher = teachers.find((t: any) => t.id === c.teacherId);
+                                const campus = campuses?.find((cmp: any) => cmp.id === teacher?.campusId);
+                                
+                                return (
+                                    <button 
+                                        key={c.id}
+                                        onClick={() => { onSelect(c.id); onClose(); }}
+                                        className="text-left w-full p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-transparent hover:border-blue-100 dark:hover:border-blue-800 transition-all flex items-center justify-between group"
+                                    >
+                                        <div>
+                                            <p className="font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                {c.subject} <span className="text-slate-400 font-normal ml-2">({c.class} {c.section && `- ${c.section}`})</span>
+                                            </p>
+                                            <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                                {campus && <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-slate-600 dark:text-slate-400 rounded flex items-center gap-1 font-medium border border-slate-200 dark:border-slate-700"><AcademicCapIcon className="w-3 h-3"/> {campus.name}</span>}
+                                                {teacher && <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">🏫 {teacher.name}</span>}
+                                            </div>
+                                        </div>
+                                        <ChevronRightIcon className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </Card>
+        </div>
+    );
+};
 
 const RankingPage: React.FC = () => {
     const { user } = useAuth();
-    const { assignments, students, grades, globalSettings, teachers } = useData();
+    const { assignments, students, grades, globalSettings, teachers, campuses } = useData();
     const [selectedClassId, setSelectedClassId] = useState<string>('');
+    const [isClassSearchModalOpen, setIsClassSearchModalOpen] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState<string>('');
-    const [selectedPeriod, setSelectedPeriod] = useState<number>(1);
+    const [selectedPeriod, setSelectedPeriod] = useState<number>(0);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,30 +113,39 @@ const RankingPage: React.FC = () => {
         if (globalSettings && globalSettings.numberOfPeriods) {
             setNumberOfPeriods(globalSettings.numberOfPeriods);
         }
+    }, [globalSettings]);
 
+    useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
-        setSelectedPeriod(getPeriodFromDate(today, numberOfPeriods));
+        const currentActivePeriod = getPeriodFromDate(today, numberOfPeriods);
+        setSelectedPeriod(prev => prev === 0 ? currentActivePeriod : prev);
+    }, [numberOfPeriods]);
 
-        if (user) {
+    useEffect(() => {
+        if (user && !selectedClassId) {
             if (user.role === UserRole.TEACHER || isAdmin) {
                 const available = isAdmin ? assignments : assignments.filter(a => a.teacherId === teacherId);
-                if (available.length > 0 && !selectedClassId) {
+                if (available.length > 0) {
                     setSelectedClassId(available[0].id);
-                }
-            } else if (isStudentOrParent) {
-                const targetStudent = user.role === UserRole.STUDENT 
-                    ? students.find(s => s.id === user.id)
-                    : students.find(s => s.id === (user as any).studentId);
-                
-                if (targetStudent) {
-                    const studentGrades = grades.filter(g => g.studentId === targetStudent.id);
-                    if (studentGrades.length > 0) {
-                        setSelectedSubject(studentGrades[0].subject);
-                    }
                 }
             }
         }
-    }, [user, assignments, numberOfPeriods, students, grades, isStudentOrParent, teacherId, isAdmin, selectedClassId]);
+    }, [user, assignments, teacherId, isAdmin, selectedClassId]);
+
+    useEffect(() => {
+        if (user && isStudentOrParent && !selectedSubject) {
+            const targetStudent = user.role === UserRole.STUDENT 
+                ? students.find(s => s.id === user.id)
+                : students.find(s => s.id === (user as any).studentId);
+            
+            if (targetStudent) {
+                const studentGrades = grades.filter(g => g.studentId === targetStudent.id);
+                if (studentGrades.length > 0) {
+                    setSelectedSubject(studentGrades[0].subject);
+                }
+            }
+        }
+    }, [user, isStudentOrParent, students, grades, selectedSubject]);
 
     const selectedClass = useMemo(() => {
         if (user?.role === UserRole.TEACHER || isAdmin) {
@@ -77,7 +162,13 @@ const RankingPage: React.FC = () => {
 
     const availableSubjects = useMemo(() => {
         if (!selectedClass) return [];
-        const classGrades = grades.filter(g => g.class === selectedClass.class);
+        const normalizeStr = (s: string) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+        const targetClass = normalizeStr(selectedClass.class);
+        
+        const classGrades = grades.filter(g => {
+            const gradeClass = normalizeStr(g.class);
+            return gradeClass === targetClass || grades.some(s => s.studentId === g.studentId && normalizeStr(s.class) === gradeClass);
+        });
         return Array.from(new Set(classGrades.map(g => g.subject))).sort();
     }, [selectedClass, grades]);
 
@@ -93,6 +184,9 @@ const RankingPage: React.FC = () => {
         let groupStudents = students.filter(s => s.status !== 'inactive');
 
         if (selectedClass) {
+            const assignedTeacher = teachers.find(t => t.id === (selectedClass as any).teacherId);
+            const targetCampusId = assignedTeacher?.campusId;
+
             groupStudents = groupStudents.filter(s => {
                 const normalize = (str: string | undefined | null) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
                 const replaceEncodingErrors = (str: string) => str.replace('transicin', 'transicion').replace('dimesion', 'dimension');
@@ -110,7 +204,7 @@ const RankingPage: React.FC = () => {
                 const isSectionMatch = studentSection === teacherSection || 
                                      (!studentSection && studentClass.includes(teacherSection));
 
-                return isClassMatch && isSectionMatch;
+                return isClassMatch && isSectionMatch && (!targetCampusId || s.campusId === targetCampusId);
             });
         }
 
@@ -120,18 +214,35 @@ const RankingPage: React.FC = () => {
 
         if (!currentSubject) return [];
 
+        const normalizeSubject = (s: string) => String(s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+        const targetSubject = normalizeSubject(currentSubject);
+        const targetClass = normalizeSubject((selectedClass as any)?.class);
+
         return groupStudents.map(student => {
-            const studentGrades = grades.filter(g => 
-                g.studentId === student.id && 
-                g.subject === currentSubject &&
-                getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod
-            );
+            const studentGrades = grades.filter(g => {
+                const isSameStudent = g.studentId === student.id;
+                const isSamePeriod = getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod;
+                const isSameSubject = normalizeSubject(g.subject) === targetSubject;
+                // Some historical grades might have saved student.class instead of selectedClass.class. We check both.
+                const gradeClass = normalizeSubject(g.class);
+                const isSameClass = !targetClass || gradeClass === targetClass || gradeClass === normalizeSubject(student.class);
+
+                return isSameStudent && isSamePeriod && isSameSubject && isSameClass;
+            });
 
             let average = 0;
-            if (studentGrades.length > 0) {
-                const totalWeighted = studentGrades.reduce((acc, g) => acc + (g.score * (g.percentage / 100)), 0);
-                const totalPercentage = studentGrades.reduce((acc, g) => acc + g.percentage, 0);
+            const validGrades = studentGrades.filter(g => typeof g.score === 'number' && typeof g.percentage === 'number');
+            if (validGrades.length > 0) {
+                const totalWeighted = validGrades.reduce((acc, g) => acc + (g.score * (g.percentage / 100)), 0);
+                const totalPercentage = validGrades.reduce((acc, g) => acc + g.percentage, 0);
                 average = totalPercentage > 0 ? (totalWeighted / totalPercentage) * 100 : 0;
+            } else if (studentGrades.length > 0) {
+                // Si no hay porcentaje, hacer un promedio simple
+                const validScores = studentGrades.filter(g => g.score !== undefined && g.score !== null && !isNaN(Number(g.score)));
+                if (validScores.length > 0) {
+                    const sum = validScores.reduce((acc, g) => acc + Number(g.score), 0);
+                    average = sum / validScores.length;
+                }
             }
 
             return {
@@ -230,16 +341,20 @@ const RankingPage: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
                     {(user?.role === UserRole.TEACHER || isAdmin) ? (
-                        <div className="flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 w-full md:w-auto overflow-x-auto">
-                            {displayClasses.map(c => (
-                                <button
-                                    key={c.id}
-                                    onClick={() => setSelectedClassId(c.id)}
-                                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${selectedClassId === c.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}
-                                >
-                                    {c.class}-{c.section} <span className="opacity-60 font-normal ml-1">({c.subject})</span>
-                                </button>
-                            ))}
+                        <div className="relative group">
+                            <button
+                                onClick={() => setIsClassSearchModalOpen(true)}
+                                className="pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 min-w-[300px] max-w-[450px] text-left truncate transition-colors relative flex items-center shadow-sm"
+                            >
+                                {selectedClass ? (
+                                    <span className="truncate">
+                                        {(selectedClass as any).subject} <span className="text-slate-400 font-normal ml-1">({selectedClass.class} {selectedClass.section && `- ${selectedClass.section}`})</span>
+                                    </span>
+                                ) : (
+                                    <span className="text-slate-400">Buscar Asignatura...</span>
+                                )}
+                                <SearchIcon className="w-5 h-5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-blue-500 transition-colors" />
+                            </button>
                         </div>
                     ) : (
                         <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 w-full sm:w-auto">
@@ -394,6 +509,15 @@ const RankingPage: React.FC = () => {
                     <h3 className="text-xl font-bold text-slate-800 dark:text-white">Sin datos suficientes</h3>
                     <p className="text-slate-500 mt-2">Registra calificaciones en el periodo activo para ver el ranking.</p>
                 </div>
+            )}
+            {isClassSearchModalOpen && (
+                <ClassSearchModal 
+                    onClose={() => setIsClassSearchModalOpen(false)}
+                    onSelect={(id: string) => setSelectedClassId(id)}
+                    myClasses={displayClasses}
+                    teachers={teachers}
+                    campuses={campuses}
+                />
             )}
         </div>
     );

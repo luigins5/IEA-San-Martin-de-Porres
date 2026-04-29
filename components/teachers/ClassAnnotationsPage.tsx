@@ -703,7 +703,7 @@ const ClassAnnotationsPage: React.FC = () => {
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [isClassSearchModalOpen, setIsClassSearchModalOpen] = useState(false);
     const [isConceptsBulkModalOpen, setIsConceptsBulkModalOpen] = useState(false);
-    const [selectedPeriod, setSelectedPeriod] = useState<number>(1);
+    const [selectedPeriod, setSelectedPeriod] = useState<number>(0);
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
     const [inputs, setInputs] = useState<Record<string, any>>({});
     const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({});
@@ -804,7 +804,7 @@ const ClassAnnotationsPage: React.FC = () => {
 
         const today = new Date().toISOString().split('T')[0];
         const currentPeriod = getPeriodFromDate(today, settings?.numberOfPeriods || 4);
-        setSelectedPeriod(currentPeriod);
+        setSelectedPeriod(prev => prev === 0 ? currentPeriod : prev);
 
         if (user) {
             let teacherAssignments = [];
