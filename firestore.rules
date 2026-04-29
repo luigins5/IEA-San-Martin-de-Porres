@@ -13,9 +13,10 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
+      let superAdmins = ["ns.5.empresarial@gmail.com"];
       return isAuthenticated() && 
         (getUserData().role == 'Super Administrador' || 
-         (request.auth.token.email == "ns.5.empresarial@gmail.com" && request.auth.token.email_verified == true));
+         (request.auth.token.email in superAdmins && request.auth.token.email_verified == true));
     }
 
     function isCampusAdmin() {
