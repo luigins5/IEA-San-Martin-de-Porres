@@ -9,6 +9,8 @@ import Card from '../ui/Card';
 import { SearchableConceptSelect } from '../ui/SearchableConceptSelect';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as ReactJoyrideModule from 'react-joyride';
+const Joyride = (ReactJoyrideModule as any).default || (ReactJoyrideModule as any).Joyride || ReactJoyrideModule;
 
 const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts, selectedClass, selectedPeriod }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean, concepts: {code: string, text: string}[], selectedClass?: any, selectedPeriod?: string | number }) => {
     const [file, setFile] = useState<File | null>(null);
@@ -710,6 +712,42 @@ const ClassAnnotationsPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isConceptModalOpen, setIsConceptModalOpen] = useState(false);
     
+    // Tutorial State
+    const [runTutorial, setRunTutorial] = useState(false);
+    const tutorialSteps: any[] = [
+        {
+            target: '#asignatura-selector',
+            content: 'Primero, selecciona la asignatura y el curso en el que deseas trabajar. Haz clic aquí para buscar.',
+            disableBeacon: true,
+            placement: 'bottom',
+        },
+        {
+            target: '#masiva-notas',
+            content: 'Usa esta opción para hacer una Carga Masiva de notas para todos los estudiantes desde un archivo de Excel o CSV.',
+            placement: 'bottom',
+        },
+        {
+            target: '#student-criterio-0',
+            content: 'Para calificar individualmente, selecciona primero el criterio de evaluación.',
+            placement: 'top',
+        },
+        {
+            target: '#student-score-0',
+            content: 'Ingresa la calificación obtenida.',
+            placement: 'top',
+        },
+        {
+            target: '#student-observacion-0',
+            content: 'Añade una observación o selecciona un concepto del banco de conceptos de la institución.',
+            placement: 'top',
+        },
+        {
+            target: '#student-save-0',
+            content: 'Finalmente, haz clic aquí para guardar la calificación del estudiante.',
+            placement: 'left',
+        }
+    ];
+
     // Validations State
     const [validationErrors, setValidationErrors] = useState<Record<string, Record<string, string>>>({});
     const [editingRecord, setEditingRecord] = useState<any | null>(null);
@@ -1159,6 +1197,26 @@ const ClassAnnotationsPage: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-10">
+            <Joyride
+                steps={tutorialSteps}
+                run={runTutorial}
+                continuous={true}
+                showSkipButton={true}
+                showProgress={true}
+                disableScrolling={false}
+                locale={{ back: 'Anterior', close: 'Cerrar', last: 'Finalizar', next: 'Siguiente', skip: 'Omitir' }}
+                styles={{
+                    options: {
+                        primaryColor: '#0ea5e9',
+                        zIndex: 1000,
+                    }
+                }}
+                callback={(data: any) => {
+                    if (data.status === 'finished' || data.status === 'skipped') {
+                        setRunTutorial(false);
+                    }
+                }}
+            />
             <div className="bg-gradient-to-r from-blue-600 to-blue-600 rounded-2xl p-6 lg:p-8 shadow-xl text-white flex flex-col items-center justify-center gap-6 relative overflow-hidden">
                 <div className="relative z-10 text-center">
                     <h2 className="font-bold text-3xl flex items-center justify-center gap-4">
@@ -1168,12 +1226,18 @@ const ClassAnnotationsPage: React.FC = () => {
                         <span className="tracking-tight">Gestión de Notas</span>
                     </h2>
                     <p className="text-blue-100 mt-2 font-medium text-lg opacity-90">Registro rápido de calificaciones y asistencia.</p>
+                    <button 
+                        onClick={() => setRunTutorial(true)} 
+                        className="mt-3 px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-blue-900 text-sm font-bold rounded-full shadow-lg transition-all"
+                    >
+                        💡 Ver Tutorial de Ayuda
+                    </button>
                 </div>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none"></div>
                 <div className="flex flex-col gap-4 w-full relative z-10 mt-2">
                     <div className="flex flex-wrap gap-3 justify-center items-center w-full">
                          <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-lg border border-white/20">
-                            <div className="relative group">
+                            <div className="relative group" id="asignatura-selector">
                                 <button
                                     onClick={() => setIsClassSearchModalOpen(true)}
                                     className="pl-4 pr-10 py-2.5 text-sm font-bold rounded-xl bg-transparent text-slate-700 hover:bg-slate-50 min-w-[300px] max-w-[450px] text-left truncate transition-colors relative flex items-center"
@@ -1203,7 +1267,7 @@ const ClassAnnotationsPage: React.FC = () => {
                             className="w-full md:w-64 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-100 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
                         
                         {selectedClassId && !isReadOnly && (
-                            <button onClick={() => setIsBulkModalOpen(true)} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                            <button id="masiva-notas" onClick={() => setIsBulkModalOpen(true)} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
                                 <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Notas</span>
                             </button>
                         )}
@@ -1246,7 +1310,7 @@ const ClassAnnotationsPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                            {classStudents.map(student => {
+                            {classStudents.map((student, index) => {
                                 const input = inputs[student.id] || { score: '', faults: '', observation: '', criterion: '', customCriterion: '' };
                                 const isSaved = savedStatus[student.id];
                                 const baseAccumulated = getSavedAccumulatedFaults(student.id);
@@ -1276,7 +1340,10 @@ const ClassAnnotationsPage: React.FC = () => {
                                             </td>
                                             <td className="px-4 py-5 align-middle">
                                                 <div className="space-y-2">
-                                                    <select value={input.criterion} onChange={(e) => handleInputChange(student.id, 'criterion', e.target.value)}
+                                                    <select 
+                                                        id={index === 0 ? "student-criterio-0" : undefined}
+                                                        value={input.criterion} 
+                                                        onChange={(e) => handleInputChange(student.id, 'criterion', e.target.value)}
                                                         disabled={isReadOnly}
                                                         className={`w-full py-2 px-3 rounded-xl text-xs bg-slate-50 text-slate-600 font-medium outline-none transition-all dark:bg-slate-800 dark:text-slate-300 cursor-pointer ${studentErrors.criterion ? 'border-2 border-red-400 bg-red-50' : 'border-none'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                         <option value="">Seleccionar Criterio...</option>
@@ -1291,13 +1358,15 @@ const ClassAnnotationsPage: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-3 py-5 align-middle">
-                                                <input type="number" min="0.0" max="5.0" step="0.1" value={input.score} onChange={(e) => handleInputChange(student.id, 'score', e.target.value)} placeholder="-"
+                                                <input 
+                                                    id={index === 0 ? "student-score-0" : undefined}
+                                                    type="number" min="0.0" max="5.0" step="0.1" value={input.score} onChange={(e) => handleInputChange(student.id, 'score', e.target.value)} placeholder="-"
                                                     disabled={isReadOnly}
                                                     className={`w-full py-3 text-center rounded-2xl text-base font-bold transition-all outline-none shadow-sm ${studentErrors.score ? 'border-2 border-red-400 bg-red-50' : getScoreColorClass(input.score)} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`} />
                                             </td>
                                             <td className="px-4 py-5 align-middle">
                                                 <div className="flex gap-2 items-center">
-                                                    <div className="flex-1 min-w-0">
+                                                    <div className="flex-1 min-w-0" id={index === 0 ? "student-observacion-0" : undefined}>
                                                         <SearchableConceptSelect 
                                                             concepts={concepts}
                                                             value={input.observation}
@@ -1326,7 +1395,9 @@ const ClassAnnotationsPage: React.FC = () => {
                                                 <span className={`text-xs font-bold w-8 h-8 flex items-center justify-center rounded-full ${baseAccumulated > 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/30' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}>{baseAccumulated}</span>
                                             </td>
                                             <td className="px-6 py-5 text-center align-middle">
-                                                <button onClick={() => handleSaveStudentRow(student)} disabled={isReadOnly || ((!hasPendingChanges || isSaved) && Object.keys(studentErrors).length === 0)}
+                                                <button 
+                                                    id={index === 0 ? "student-save-0" : undefined}
+                                                    onClick={() => handleSaveStudentRow(student)} disabled={isReadOnly || ((!hasPendingChanges || isSaved) && Object.keys(studentErrors).length === 0)}
                                                     className={`p-3 rounded-xl transition-all duration-500 shadow-sm ${isSaved ? 'bg-emerald-500 text-white scale-110' : hasPendingChanges || Object.keys(studentErrors).length > 0 ? 'bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1' : 'bg-slate-100 text-slate-300 dark:bg-slate-800 cursor-not-allowed'} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                     {isSaved ? <CheckIcon className="w-5 h-5" /> : <SaveIcon className="w-5 h-5" />}
                                                 </button>
