@@ -414,11 +414,12 @@ const CRITERIA_OPTIONS = [
     'Otro'
 ];
 
-const BulkUploadConceptsModal = ({ onClose, onSave, concepts }: { onClose: () => void, onSave: (data: any[]) => void, concepts: {code: string, text: string}[] }) => {
+const BulkUploadConceptsModal = ({ onClose, onSave, concepts, onDelete }: { onClose: () => void, onSave: (data: any[]) => void, concepts: {code: string, text: string}[], onDelete: (code: string) => Promise<void> }) => {
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [errors, setErrors] = useState<string[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [deletingConcept, setDeletingConcept] = useState<string | null>(null);
 
     const downloadTemplate = () => {
         const headers = "concepto\n";
@@ -602,6 +603,31 @@ const BulkUploadConceptsModal = ({ onClose, onSave, concepts }: { onClose: () =>
                             </div>
                         </div>
                     )}
+                    
+                    <div className="mt-8 border-t dark:border-slate-800 pt-6">
+                         <h4 className="font-bold text-slate-800 dark:text-white mb-4">Gestión de Conceptos Actuales</h4>
+                         {concepts.length === 0 ? (
+                             <p className="text-sm text-slate-500">No hay conceptos guardados actualmente.</p>
+                         ) : (
+                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto custom-scrollbar p-2">
+                                 {concepts.map(c => (
+                                     <div key={c.code} className="flex justify-between items-center p-3 hover:bg-white dark:hover:bg-slate-800 rounded-lg group transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+                                         <div className="flex flex-col min-w-0 pr-4">
+                                            <span className="text-xs font-bold text-slate-500 bg-slate-200 dark:bg-slate-700 w-max px-2 py-0.5 rounded mb-1">{c.code}</span>
+                                            <span className="text-sm text-slate-700 dark:text-slate-300 truncate" title={c.text}>{c.text}</span>
+                                         </div>
+                                         <button 
+                                             onClick={() => setDeletingConcept(c.code)}
+                                             className="opacity-0 group-hover:opacity-100 p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all"
+                                             title={`Eliminar concepto ${c.code}`}
+                                         >
+                                             <TrashIcon className="w-4 h-4"/>
+                                         </button>
+                                     </div>
+                                 ))}
+                             </div>
+                         )}
+                    </div>
                 </div>
 
                 <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t dark:border-slate-800 flex gap-3 shrink-0">
@@ -617,6 +643,42 @@ const BulkUploadConceptsModal = ({ onClose, onSave, concepts }: { onClose: () =>
                     </button>
                 </div>
             </Card>
+
+            {/* Custom Confirm Modal for Delete */}
+            {deletingConcept && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 dark:border-slate-700 animate-fade-in-up">
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-500">
+                                <TrashIcon className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-white">¿Eliminar Concepto?</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                    Estás a punto de eliminar el concepto <strong>{deletingConcept}</strong>. Esta acción no se puede deshacer.
+                                </p>
+                            </div>
+                            <div className="flex gap-3 w-full mt-2">
+                                <button
+                                    onClick={() => setDeletingConcept(null)}
+                                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        await onDelete(deletingConcept);
+                                        setDeletingConcept(null);
+                                    }}
+                                    className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-rose-500/30"
+                                >
+                                    Sí, eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -698,7 +760,7 @@ const ClassSearchModal = ({ onClose, onSelect, myClasses, teachers, campuses }: 
 
 const ClassAnnotationsPage: React.FC = () => {
     const { user } = useAuth();
-    const { assignments, teachers, campuses, students: allStudents, attendanceRecords, saveAttendance, addGrade, updateGrade, grades, deleteGrade, deleteAttendance, exams, getUserSetting, setUserSetting, globalSettings, campusSettings, concepts, addConcept } = useData();
+    const { assignments, teachers, campuses, students: allStudents, attendanceRecords, saveAttendance, addGrade, updateGrade, grades, deleteGrade, deleteAttendance, exams, getUserSetting, setUserSetting, globalSettings, campusSettings, concepts, addConcept, deleteConcept } = useData();
     const [myClasses, setMyClasses] = useState<TeacherCourseAssignment[]>([]);
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [isClassSearchModalOpen, setIsClassSearchModalOpen] = useState(false);
@@ -832,8 +894,7 @@ const ClassAnnotationsPage: React.FC = () => {
 
             setMyClasses(uniqueAssignments);
             setSelectedClassId(prev => {
-                if (!prev && uniqueAssignments.length > 0) return uniqueAssignments[0].id;
-                if (prev && !uniqueAssignments.find(a => a.id === prev) && uniqueAssignments.length > 0) return uniqueAssignments[0].id;
+                if (prev && !uniqueAssignments.find(a => a.id === prev)) return '';
                 return prev;
             });
         }
@@ -1244,9 +1305,9 @@ const ClassAnnotationsPage: React.FC = () => {
                                 >
                                     {selectedClassId ? (() => {
                                         const c = myClasses.find(cls => cls.id === selectedClassId);
-                                        if (!c) return "Buscar o seleccionar asignatura...";
+                                        if (!c) return "Buscar o seleccionar asignatura (Ej: Matemáticas...)";
                                         return `${c.subject} (${c.class}${c.section ? `-${c.section}` : ''})`;
-                                    })() : "Buscar o seleccionar asignatura..."}
+                                    })() : "Buscar o seleccionar asignatura (Ej: Matemáticas...)"}
                                     <SearchIcon className="w-4 h-4 text-slate-400 absolute right-3 pointer-none"/>
                                 </button>
                             </div>
@@ -1263,12 +1324,18 @@ const ClassAnnotationsPage: React.FC = () => {
                                 <ChevronDownIcon className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-none"/>
                             </div>
                         </div>
-                        <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                        <input type="text" placeholder="Buscar estudiante..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full md:w-64 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-100 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
                         
                         {selectedClassId && !isReadOnly && (
                             <button id="masiva-notas" onClick={() => setIsBulkModalOpen(true)} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
                                 <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Notas</span>
+                            </button>
+                        )}
+
+                        {(user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && (
+                            <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Gestión Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
+                                <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
                             </button>
                         )}
                     </div>
@@ -1285,9 +1352,11 @@ const ClassAnnotationsPage: React.FC = () => {
                                     <button onClick={() => handleSelectAllClassRecords(classStudents)} title="Seleccionar y limpiar todas las notas" className="bg-rose-500/20 hover:bg-rose-500/40 text-white border border-rose-400/30 font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md backdrop-blur-sm">
                                         <TrashIcon className="w-5 h-5"/> <span className="inline">Limpiar Todo</span>
                                     </button>
-                                    <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Carga Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
-                                        <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Conceptos</span>
-                                    </button>
+                                    {(user?.role !== UserRole.SUPER_ADMIN && user?.role !== UserRole.CAMPUS_ADMIN) && (
+                                        <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Carga Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
+                                            <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Conceptos</span>
+                                        </button>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -1499,6 +1568,7 @@ const ClassAnnotationsPage: React.FC = () => {
                 <BulkUploadConceptsModal
                     onClose={() => setIsConceptsBulkModalOpen(false)}
                     concepts={concepts}
+                    onDelete={deleteConcept}
                     onSave={async (data) => {
                         let count = 0;
                         let nextCodeNumber = concepts.length > 0 ? 

@@ -149,6 +149,7 @@ interface DataContextType {
 
     concepts: { code: string; text: string }[];
     addConcept: (data: { code: string; text: string }) => Promise<void>;
+    deleteConcept: (code: string) => Promise<void>;
 
     updateUserAvatar: (userId: string, role: UserRole, avatar: string) => Promise<void>;
     updateUserName: (userId: string, role: UserRole, name: string) => Promise<void>;
@@ -736,6 +737,15 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
     };
 
+    const deleteConcept = async (code: string) => {
+        try {
+            await deleteDoc(doc(db, 'concepts', code));
+            logAction(AuditAction.DELETE, `Concepto eliminado: ${code}`);
+        } catch (error) {
+            handleFirestoreError(error, OperationType.DELETE, 'concepts');
+        }
+    };
+
     const assignTemporaryPassword = async (userId: string, role: UserRole, tempPass: string) => {
         // In Firebase, we don't store passwords in Firestore. 
         // We can store a flag or a temporary password field if needed for legacy compatibility,
@@ -791,7 +801,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         addEvent, updateEvent, deleteEvent,
         updateUserAvatar, updateUserName, saveAttendance, deleteAttendance,
         assignTemporaryPassword,
-        concepts, addConcept,
+        concepts, addConcept, deleteConcept,
         getUserSetting, setUserSetting
     };
 
