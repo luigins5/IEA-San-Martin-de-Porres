@@ -20,7 +20,8 @@ import {
     orderBy, 
     Timestamp,
     getDocFromServer,
-    or
+    or,
+    writeBatch
 } from 'firebase/firestore';
 
 enum OperationType {
@@ -739,8 +740,38 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
     const deleteConcept = async (code: string) => {
         try {
+            // Eliminar el concepto seleccionado
             await deleteDoc(doc(db, 'concepts', code));
             logAction(AuditAction.DELETE, `Concepto eliminado: ${code}`);
+
+            // Obtener el resto de conceptos y ordenarlos por su número actual
+            const remainingConcepts = concepts.filter(c => c.code !== code).sort((a, b) => {
+                const aNum = parseInt(a.code.replace(/[^\d]/g, '')) || 0;
+                const bNum = parseInt(b.code.replace(/[^\d]/g, '')) || 0;
+                return aNum - bNum; 
+            });
+
+            // Reasignar códigos consecutivos (C01, C02, etc.) según ClassAnnotationsPage (pad de 2 o 3, usemos 3 para más capacidad como estaba o vemos los ceros? ClassAnnotationsPage padding es padStart(3, '0') en líneas individuales y padStart(2, '0') en masivos, unifiquemos a padStart(3, '0'))
+            const batch = writeBatch(db);
+            let nextNum = 1;
+            
+            for (const c of remainingConcepts) {
+                // Determine pattern from existing formatting conventions:
+                // Assuming we use 3 digits like C001, C002... if the app historically used 'C' + paddedNum
+                const expectedCode = `C${nextNum.toString().padStart(3, '0')}`;
+                
+                if (c.code !== expectedCode) {
+                    batch.set(doc(db, 'concepts', expectedCode), {
+                        code: expectedCode,
+                        text: c.text,
+                    });
+                    batch.delete(doc(db, 'concepts', c.code));
+                }
+                nextNum++;
+            }
+            
+            await batch.commit();
+
         } catch (error) {
             handleFirestoreError(error, OperationType.DELETE, 'concepts');
         }

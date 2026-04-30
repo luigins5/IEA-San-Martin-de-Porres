@@ -414,7 +414,7 @@ const CRITERIA_OPTIONS = [
     'Otro'
 ];
 
-const BulkUploadConceptsModal = ({ onClose, onSave, concepts, onDelete }: { onClose: () => void, onSave: (data: any[]) => void, concepts: {code: string, text: string}[], onDelete: (code: string) => Promise<void> }) => {
+const BulkUploadConceptsModal = ({ onClose, onSave, concepts, onDelete, isAdmin }: { onClose: () => void, onSave: (data: any[]) => void, concepts: {code: string, text: string}[], onDelete: (code: string) => Promise<void>, isAdmin: boolean }) => {
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [errors, setErrors] = useState<string[]>([]);
@@ -604,30 +604,32 @@ const BulkUploadConceptsModal = ({ onClose, onSave, concepts, onDelete }: { onCl
                         </div>
                     )}
                     
-                    <div className="mt-8 border-t dark:border-slate-800 pt-6">
-                         <h4 className="font-bold text-slate-800 dark:text-white mb-4">Gestión de Conceptos Actuales</h4>
-                         {concepts.length === 0 ? (
-                             <p className="text-sm text-slate-500">No hay conceptos guardados actualmente.</p>
-                         ) : (
-                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto custom-scrollbar p-2">
-                                 {concepts.map(c => (
-                                     <div key={c.code} className="flex justify-between items-center p-3 hover:bg-white dark:hover:bg-slate-800 rounded-lg group transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
-                                         <div className="flex flex-col min-w-0 pr-4">
-                                            <span className="text-xs font-bold text-slate-500 bg-slate-200 dark:bg-slate-700 w-max px-2 py-0.5 rounded mb-1">{c.code}</span>
-                                            <span className="text-sm text-slate-700 dark:text-slate-300 truncate" title={c.text}>{c.text}</span>
+                    {isAdmin && (
+                        <div className="mt-8 border-t dark:border-slate-800 pt-6">
+                             <h4 className="font-bold text-slate-800 dark:text-white mb-4">Gestión de Conceptos Actuales</h4>
+                             {concepts.length === 0 ? (
+                                 <p className="text-sm text-slate-500">No hay conceptos guardados actualmente.</p>
+                             ) : (
+                                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto custom-scrollbar p-2">
+                                     {concepts.map(c => (
+                                         <div key={c.code} className="flex justify-between items-center p-3 hover:bg-white dark:hover:bg-slate-800 rounded-lg group transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+                                             <div className="flex flex-col min-w-0 pr-4">
+                                                <span className="text-xs font-bold text-slate-500 bg-slate-200 dark:bg-slate-700 w-max px-2 py-0.5 rounded mb-1">{c.code}</span>
+                                                <span className="text-sm text-slate-700 dark:text-slate-300 truncate" title={c.text}>{c.text}</span>
+                                             </div>
+                                             <button 
+                                                 onClick={() => setDeletingConcept(c.code)}
+                                                 className="opacity-0 group-hover:opacity-100 p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all"
+                                                 title={`Eliminar concepto ${c.code}`}
+                                             >
+                                                 <TrashIcon className="w-4 h-4"/>
+                                             </button>
                                          </div>
-                                         <button 
-                                             onClick={() => setDeletingConcept(c.code)}
-                                             className="opacity-0 group-hover:opacity-100 p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all"
-                                             title={`Eliminar concepto ${c.code}`}
-                                         >
-                                             <TrashIcon className="w-4 h-4"/>
-                                         </button>
-                                     </div>
-                                 ))}
-                             </div>
-                         )}
-                    </div>
+                                     ))}
+                                 </div>
+                             )}
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t dark:border-slate-800 flex gap-3 shrink-0">
@@ -686,7 +688,7 @@ const BulkUploadConceptsModal = ({ onClose, onSave, concepts, onDelete }: { onCl
 const ClassSearchModal = ({ onClose, onSelect, myClasses, teachers, campuses }: any) => {
     const [searchTerm, setSearchTerm] = useState('');
     
-    const filteredClasses = searchTerm.trim() === '' ? [] : myClasses.filter((c: any) => {
+    const filteredClasses = searchTerm.trim() === '' ? myClasses : myClasses.filter((c: any) => {
         const teacher = teachers.find((t: any) => t.id === c.teacherId);
         const campus = campuses?.find((cmp: any) => cmp.id === teacher?.campusId);
         const searchString = `${c.subject} ${c.class} ${c.section || ''} ${teacher?.name || ''} ${campus?.name || ''}`.toLowerCase();
@@ -721,9 +723,7 @@ const ClassSearchModal = ({ onClose, onSelect, myClasses, teachers, campuses }: 
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                    {searchTerm.trim() === '' ? (
-                        <div className="p-8 text-center text-slate-500 font-medium">Empieza a escribir para buscar asignaturas...</div>
-                    ) : filteredClasses.length === 0 ? (
+                    {filteredClasses.length === 0 ? (
                         <div className="p-8 text-center text-slate-500 font-medium">No se encontraron asignaturas.</div>
                     ) : (
                         <div className="grid gap-2">
@@ -907,7 +907,7 @@ const ClassAnnotationsPage: React.FC = () => {
         if (user && text.trim() !== '') {
             const nextCodeNumber = concepts.length > 0 ? 
                 Math.max(...concepts.map(c => parseInt(c.code.replace(/[^\d]/g, '')) || 0)) + 1 
-                : 530;
+                : 1;
                 
             const paddedNum = nextCodeNumber.toString().padStart(3, '0');
             const newConcept = { code: `C${paddedNum}`, text };
@@ -1569,6 +1569,7 @@ const ClassAnnotationsPage: React.FC = () => {
                     onClose={() => setIsConceptsBulkModalOpen(false)}
                     concepts={concepts}
                     onDelete={deleteConcept}
+                    isAdmin={user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN}
                     onSave={async (data) => {
                         let count = 0;
                         let nextCodeNumber = concepts.length > 0 ? 
@@ -1578,7 +1579,7 @@ const ClassAnnotationsPage: React.FC = () => {
                         for(const item of data) {
                             if (!concepts.find(c => c.text.toLowerCase() === item.text.toLowerCase())) {
                                 try {
-                                    const codeStr = nextCodeNumber.toString().padStart(2, '0');
+                                    const codeStr = `C${nextCodeNumber.toString().padStart(3, '0')}`;
                                     await addConcept({ code: codeStr, text: item.text });
                                     nextCodeNumber++;
                                     count++;
