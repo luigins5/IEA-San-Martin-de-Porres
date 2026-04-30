@@ -14,9 +14,86 @@ const Joyride = (ReactJoyrideModule as any).default || (ReactJoyrideModule as an
 
 const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts, selectedClass, selectedPeriod }: { onClose: () => void, onSave: (data: any[]) => void, classStudents: Student[], isReadOnly: boolean, concepts: {code: string, text: string}[], selectedClass?: any, selectedPeriod?: string | number }) => {
     const [file, setFile] = useState<File | null>(null);
+    const [csvData, setCsvData] = useState<string>('');
     const [parsedData, setParsedData] = useState<any[]>([]);
     const [errors, setErrors] = useState<string[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    const processCSVText = (text: string) => {
+        setIsProcessing(true);
+        setErrors([]);
+        setParsedData([]);
+
+        try {
+            const rows = text.split('\n').filter(r => r.trim());
+            if (rows.length <= 1) {
+                setErrors(["El texto proporcionado está vacío o solo contiene encabezados."]);
+                setIsProcessing(false);
+                return;
+            }
+
+            const dataRows = rows.slice(1);
+            const results: any[] = [];
+            const newErrors: string[] = [];
+
+            dataRows.forEach((row, index) => {
+                const separator = row.includes(';') ? ';' : ',';
+                const cols = row.split(separator).map(c => c.trim().replace(/^"|"$/g, ''));
+                if (cols.length < 2) return;
+
+                const hasNameCol = cols.length >= 6; 
+                const docNum = cols[0].replace(/^\uFEFF/, '');
+                const criterion = (hasNameCol ? cols[2] : cols[1]) || 'Examen';
+                const scoreRaw = hasNameCol ? cols[3] : cols[2];
+                let observation = (hasNameCol ? cols[4] : cols[3]) || '';
+                const faultsRaw = hasNameCol ? cols[5] : cols[4];
+
+                if (observation && concepts && concepts.length > 0) {
+                    const trimmedCode = observation.trim();
+                    const matchedConcept = concepts.find(c => c.code.toLowerCase() === trimmedCode.toLowerCase());
+                    if (matchedConcept) {
+                        observation = matchedConcept.text;
+                    }
+                }
+
+                const student = classStudents.find(s => s.documentNumber === docNum || s.name.replace(/;/g, '') === docNum);
+                
+                let score: number | undefined = undefined;
+                if (scoreRaw !== undefined && scoreRaw !== '') {
+                     score = parseFloat(scoreRaw.replace(',', '.'));
+                }
+                
+                let faults: number | undefined = undefined;
+                if (faultsRaw !== undefined && faultsRaw !== '') {
+                    faults = parseInt(faultsRaw);
+                }
+
+                if (!student) {
+                    newErrors.push(`Fila ${index + 2}: El estudiante con documento/nombre ${docNum} no pertenece a esta clase.`);
+                } else if (score !== undefined && (isNaN(score) || score < 0 || score > 5)) {
+                    newErrors.push(`Fila ${index + 2}: La nota (${scoreRaw}) debe ser un número entre 0.0 y 5.0 para ${student.name}.`);
+                } else if (score === undefined && faults === undefined) {
+                    newErrors.push(`Fila ${index + 2}: Debe ingresar una nota o una cantidad de faltas para el estudiante ${student.name}.`);
+                } else {
+                    results.push({
+                        studentId: student.id,
+                        studentName: student.name,
+                        score,
+                        criterion,
+                        observation,
+                        faults
+                    });
+                }
+            });
+
+            setParsedData(results);
+            setErrors(newErrors);
+        } catch (err) {
+            setErrors(["Error al procesar. Asegúrese de que sea un formato válido."]);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     const downloadTemplate = () => {
         const headers = ["documento_identidad", "nombre_estudiante", "criterio", "nota", "observacion", "faltas"];
@@ -82,87 +159,12 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts,
         if (!f) return;
         
         setFile(f);
-        setIsProcessing(true);
-        setErrors([]);
-        setParsedData([]);
-
+        setCsvData('');
+        
         const reader = new FileReader();
         reader.onload = (ev) => {
-            try {
-                const text = ev.target?.result as string;
-                const rows = text.split('\n').filter(r => r.trim());
-                if (rows.length <= 1) {
-                    setErrors(["El archivo está vacío o solo contiene encabezados."]);
-                    setIsProcessing(false);
-                    return;
-                }
-
-                const dataRows = rows.slice(1);
-                const results: any[] = [];
-                const newErrors: string[] = [];
-
-                dataRows.forEach((row, index) => {
-                    // Try to split by semicolon first, if not, use comma (European standard vs US)
-                    const separator = row.includes(';') ? ';' : ',';
-                    const cols = row.split(separator).map(c => c.trim().replace(/^"|"$/g, ''));
-                    if (cols.length < 2) return;
-
-                    // Support backwards compatibility or new format
-                    const hasNameCol = cols.length >= 6; 
-                    // Remove BOM from first column if present
-                    const docNum = cols[0].replace(/^\uFEFF/, '');
-                    const criterion = (hasNameCol ? cols[2] : cols[1]) || 'Examen';
-                    const scoreRaw = hasNameCol ? cols[3] : cols[2];
-                    let observation = (hasNameCol ? cols[4] : cols[3]) || '';
-                    const faultsRaw = hasNameCol ? cols[5] : cols[4];
-
-                    // Interpretar código de concepto si el usuario digitó un código en lugar del texto
-                    if (observation && concepts && concepts.length > 0) {
-                        const trimmedCode = observation.trim();
-                        const matchedConcept = concepts.find(c => c.code.toLowerCase() === trimmedCode.toLowerCase());
-                        if (matchedConcept) {
-                            observation = matchedConcept.text;
-                        }
-                    }
-
-                    const student = classStudents.find(s => s.documentNumber === docNum);
-                    
-                    let score: number | undefined = undefined;
-                    if (scoreRaw !== undefined && scoreRaw !== '') {
-                         // Parse score with comma or dot decimal separator
-                         score = parseFloat(scoreRaw.replace(',', '.'));
-                    }
-                    
-                    let faults: number | undefined = undefined;
-                    if (faultsRaw !== undefined && faultsRaw !== '') {
-                        faults = parseInt(faultsRaw);
-                    }
-
-                    if (!student) {
-                        newErrors.push(`Fila ${index + 2}: El estudiante con documento ${docNum} no pertenece a esta clase.`);
-                    } else if (score !== undefined && (isNaN(score) || score < 0 || score > 5)) {
-                        newErrors.push(`Fila ${index + 2}: La nota (${scoreRaw}) debe ser un número entre 0.0 y 5.0 para ${student.name}.`);
-                    } else if (score === undefined && faults === undefined) {
-                        newErrors.push(`Fila ${index + 2}: Debe ingresar una nota o una cantidad de faltas para el estudiante ${student.name}.`);
-                    } else {
-                        results.push({
-                            studentId: student.id,
-                            studentName: student.name,
-                            score,
-                            criterion,
-                            observation,
-                            faults
-                        });
-                    }
-                });
-
-                setParsedData(results);
-                setErrors(newErrors);
-            } catch (err) {
-                setErrors(["Error al procesar el archivo. Asegúrese de que sea un CSV válido."]);
-            } finally {
-                setIsProcessing(false);
-            }
+            const text = ev.target?.result as string;
+            processCSVText(text);
         };
         reader.readAsText(f);
     };
@@ -203,13 +205,33 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts,
                         </div>
                     </div>
 
-                    {/* File Dropzone */}
-                    <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group">
-                        <input type="file" accept=".csv" onChange={handleFileChange} disabled={isReadOnly} className="absolute inset-0 opacity-0 cursor-pointer" />
-                        <div className="pointer-events-none">
-                            <UploadIcon className="w-12 h-12 mx-auto text-slate-300 group-hover:text-blue-500 transition-colors mb-4"/>
-                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{file ? file.name : 'Haz clic o arrastra tu archivo CSV aquí'}</p>
-                            <p className="text-xs text-slate-400 mt-2">Tamaño máximo: 5MB</p>
+                    {/* File Dropzone and Text Field */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group flex flex-col items-center justify-center min-h-[220px]">
+                            <input type="file" accept=".csv" onChange={handleFileChange} disabled={isReadOnly} className="absolute inset-0 opacity-0 cursor-pointer" />
+                            <div className="pointer-events-none">
+                                <UploadIcon className="w-10 h-10 mx-auto text-slate-300 group-hover:text-blue-500 transition-colors mb-3"/>
+                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{file ? file.name : 'Click o arrastra tu archivo CSV'}</p>
+                                <p className="text-xs text-slate-400 mt-2">Tamaño máximo: 5MB</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 relative">
+                            <textarea
+                                value={csvData}
+                                onChange={(e) => setCsvData(e.target.value)}
+                                disabled={isReadOnly}
+                                placeholder={`O pega los datos aquí desde Excel/Sheets...\Ej:\nNombreEstudiante;Evaluacion;4.5;Sin Novedad;0\n...`}
+                                className="w-full text-xs font-mono p-4 border border-slate-300 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex-1 min-h-[220px] resize-none"
+                            />
+                            {csvData.trim() && (
+                                <button
+                                    onClick={() => processCSVText(csvData)}
+                                    disabled={isProcessing}
+                                    className="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white shadow-lg text-xs font-bold py-1.5 px-3 rounded-lg transition-colors border-none"
+                                >
+                                    Procesar Texto
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -833,7 +855,7 @@ const ClassAnnotationsPage: React.FC = () => {
             alert("No hay notas ni faltas registradas en este periodo para esta asignatura.");
             return;
         }
-        setSelectedHistoryRecords(allHistIds);
+        setDeleteTarget(allHistIds);
     };
 
     const executeDeleteHistoryRecords = async () => {
@@ -1326,41 +1348,51 @@ const ClassAnnotationsPage: React.FC = () => {
                         </div>
                         <input type="text" placeholder="Buscar estudiante..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full md:w-64 pl-4 pr-4 py-3 text-sm rounded-2xl bg-white/20 text-white placeholder-blue-100 border border-white/30 focus:bg-white/30 focus:border-white focus:outline-none transition-all backdrop-blur-sm shadow-inner"/>
-                        
-                        {selectedClassId && !isReadOnly && (
-                            <button id="masiva-notas" onClick={() => setIsBulkModalOpen(true)} className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md">
-                                <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Notas</span>
-                            </button>
-                        )}
+                    </div>
+                    {/* Action Buttons Row */}
+                    <div className="flex flex-wrap gap-3 justify-center items-center w-full pt-2 border-t border-white/10">
+                        {(!isReadOnly || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && (
+                            <>
+                                <button 
+                                    id="masiva-notas" 
+                                    onClick={() => {
+                                        if (!selectedClassId) {
+                                            alert("Seleccione una asignatura primero.");
+                                            return;
+                                        }
+                                        setIsBulkModalOpen(true);
+                                    }} 
+                                    className="bg-blue-500 hover:bg-blue-400 text-white border border-blue-400/50 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md shrink-0"
+                                >
+                                    <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Notas</span>
+                                </button>
+                                
+                                {(user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && (
+                                    <button 
+                                        onClick={() => setIsConceptsBulkModalOpen(true)} 
+                                        title="Gestión Masiva de Conceptos" 
+                                        className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50 shrink-0"
+                                    >
+                                        <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
+                                    </button>
+                                )}
 
-                        {(user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && (
-                            <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Gestión Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
-                                <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
+                                <button 
+                                    onClick={() => handleSelectAllClassRecords(classStudents)} 
+                                    title="Limpiar todas las notas de esta asignatura" 
+                                    className="bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-rose-400/50 shrink-0"
+                                >
+                                    <TrashIcon className="w-5 h-5"/> <span className="hidden sm:inline">Limpiar Todo</span>
+                                </button>
+                            </>
+                        )}
+                        
+                        {selectedClassId && allStudentsGraded && (
+                            <button onClick={handleDownloadGrades} className="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-emerald-400/50 shrink-0">
+                                <DownloadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Descargar Notas</span>
                             </button>
                         )}
                     </div>
-                    {/* Action Buttons Row */}
-                    {selectedClassId && (
-                        <div className="flex flex-wrap gap-3 justify-center items-center w-full pt-2 border-t border-white/10">
-                            {allStudentsGraded && (
-                                <button onClick={handleDownloadGrades} className="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-emerald-400/50">
-                                    <DownloadIcon className="w-5 h-5" /> <span className="inline">Descargar Notas</span>
-                                </button>
-                            )}
-                            {!isReadOnly && (
-                                <>
-                                    <button onClick={() => handleSelectAllClassRecords(classStudents)} title="Seleccionar y limpiar todas las notas" className="bg-rose-500/20 hover:bg-rose-500/40 text-white border border-rose-400/30 font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md backdrop-blur-sm">
-                                        <TrashIcon className="w-5 h-5"/> <span className="inline">Limpiar Todo</span>
-                                    </button>
-                                    {(user?.role !== UserRole.SUPER_ADMIN && user?.role !== UserRole.CAMPUS_ADMIN) && (
-                                        <button onClick={() => setIsConceptsBulkModalOpen(true)} title="Carga Masiva de Conceptos" className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-2.5 px-5 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50">
-                                            <UploadIcon className="w-5 h-5" /> <span className="inline">Masiva Conceptos</span>
-                                        </button>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    )}
                 </div>
             </div>
 
