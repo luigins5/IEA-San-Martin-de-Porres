@@ -151,7 +151,7 @@ const MyStudentsPage: React.FC = () => {
     };
 
     const calculateFinalGrade = (studentId: string) => {
-        const studentGrades = grades.filter(g => g.studentId === studentId && g.subject === selectedClass?.subject && getPeriodFromDate(g.date, numberOfPeriods) === activePeriod);
+        const studentGrades = grades.filter(g => g.studentId === studentId && g.subject === selectedClass?.subject && ((g as any).period === activePeriod || getPeriodFromDate(g.date, numberOfPeriods) === activePeriod));
         if (studentGrades.length === 0) return 0;
         
         const totalScore = studentGrades.reduce((acc, g) => acc + (g.score * g.percentage / 100), 0);
@@ -374,14 +374,18 @@ const MyStudentsPage: React.FC = () => {
         </div>
         
         {/* Modals */}
-        {managingStudent && (
+        {managingStudent && selectedClass && (
             <GradesManagementModal
                 student={managingStudent}
-                grades={grades.filter(g => g.studentId === managingStudent.id)}
+                grades={grades.filter(g => 
+                    g.studentId === managingStudent.id && 
+                    g.subject === selectedClass.subject &&
+                    ((g as any).period === activePeriod || getPeriodFromDate(g.date, numberOfPeriods) === activePeriod)
+                )}
                 onClose={() => setManagingStudent(null)}
                 onSaveGrade={handleSaveGrade}
                 onDeleteGrade={handleDeleteGrade}
-                teacherSubjects={teacherSubjects}
+                teacherSubjects={[selectedClass.subject]}
                 concepts={concepts}
                 activePeriod={activePeriod}
                 numberOfPeriods={numberOfPeriods}
@@ -406,6 +410,7 @@ const MyStudentsPage: React.FC = () => {
                 teacherSubjects={teacherSubjects}
                 allGrades={grades}
                 isPeriodLocked={false}
+                activePeriod={activePeriod}
             />
         )}
         </>
