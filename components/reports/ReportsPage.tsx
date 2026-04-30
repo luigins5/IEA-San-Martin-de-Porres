@@ -10,12 +10,13 @@ import { getPeriodFromDate } from '../teachers/GradesPage';
 
 const ReportsPage: React.FC = () => {
     const { user } = useAuth();
-    const { students: allStudents, grades, attendanceRecords, teachers, assignments, globalSettings, campusSettings, concepts } = useData();
+    const { students: allStudents, grades, attendanceRecords, teachers, assignments, globalSettings, campusSettings, concepts, campuses } = useData();
     const [searchQuery, setSearchQuery] = useState('');
     const [numberOfPeriods, setNumberOfPeriods] = useState(4);
 
     // Form States
     const [reportType, setReportType] = useState<'boletin' | 'puestos' | 'consolidado' | 'valoracion' | 'libro_final' | 'lista_auxiliar' | 'sabana_perdidos'>('boletin');
+    const [filterCampus, setFilterCampus] = useState('');
     const [filterClass, setFilterClass] = useState('');
     const [filterSection, setFilterSection] = useState('');
     const [filterPeriod, setFilterPeriod] = useState(1);
@@ -60,6 +61,9 @@ const ReportsPage: React.FC = () => {
         if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
             const campusTeacherIds = new Set(teachers.filter(t => t.campusId === user.campusId).map(t => t.id));
             filtered = filtered.filter(a => campusTeacherIds.has(a.teacherId));
+        } else if (user?.role === UserRole.SUPER_ADMIN && filterCampus) {
+            const campusTeacherIds = new Set(teachers.filter(t => t.campusId === filterCampus).map(t => t.id));
+            filtered = filtered.filter(a => campusTeacherIds.has(a.teacherId));
         }
         if (filterTeacher) {
             filtered = filtered.filter(a => a.teacherId === filterTeacher);
@@ -74,7 +78,7 @@ const ReportsPage: React.FC = () => {
             filtered = filtered.filter(a => a.section === filterSection);
         }
         return filtered;
-    }, [assignments, teachers, user, filterTeacher, filterSubject, filterClass, filterSection]);
+    }, [assignments, teachers, user, filterCampus, filterTeacher, filterSubject, filterClass, filterSection]);
 
     const availableClasses = useMemo(() => {
         if (filterTeacher || filterSubject) {
@@ -95,6 +99,9 @@ const ReportsPage: React.FC = () => {
         if (user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER) {
             const campusTeacherIds = new Set(teachers.filter(t => t.campusId === user.campusId).map(t => t.id));
             filtered = filtered.filter(a => campusTeacherIds.has(a.teacherId));
+        } else if (user?.role === UserRole.SUPER_ADMIN && filterCampus) {
+            const campusTeacherIds = new Set(teachers.filter(t => t.campusId === filterCampus).map(t => t.id));
+            filtered = filtered.filter(a => campusTeacherIds.has(a.teacherId));
         }
         if (filterTeacher) {
             filtered = filtered.filter(a => a.teacherId === filterTeacher);
@@ -106,7 +113,7 @@ const ReportsPage: React.FC = () => {
             filtered = filtered.filter(a => a.section === filterSection);
         }
         return Array.from(new Set(filtered.map(a => a.subject))).sort();
-    }, [assignments, teachers, user, filterTeacher, filterClass, filterSection]);
+    }, [assignments, teachers, user, filterCampus, filterTeacher, filterClass, filterSection]);
 
     // Filtered students for dropdown and table
     const studentsForContext = useMemo(() => {
@@ -122,6 +129,8 @@ const ReportsPage: React.FC = () => {
         
         if (user.role === UserRole.CAMPUS_ADMIN || user.role === UserRole.TEACHER) {
             filtered = filtered.filter(s => s.campusId === user.campusId);
+        } else if (user.role === UserRole.SUPER_ADMIN && filterCampus) {
+            filtered = filtered.filter(s => s.campusId === filterCampus);
         }
         
         if (filterClass) {
@@ -137,7 +146,7 @@ const ReportsPage: React.FC = () => {
         }
 
         return filtered.sort((a, b) => a.name.localeCompare(b.name));
-    }, [user, allStudents, filterClass, filterSection, filterTeacher, filterSubject, availableAssignments]);
+    }, [user, allStudents, filterCampus, filterClass, filterSection, filterTeacher, filterSubject, availableAssignments]);
 
     const accessibleStudents = useMemo(() => {
         return studentsForContext.filter(s => 
@@ -415,8 +424,8 @@ const ReportsPage: React.FC = () => {
             const { lastName, firstName } = splitName(student.name);
             return {
                 code: student.documentNumber,
-                lastName: firstName.toUpperCase(),
-                firstName: lastName.toUpperCase(),
+                lastName: lastName.toUpperCase(),
+                firstName: firstName.toUpperCase(),
                 pAvg: periodAverage,
                 val: getQualitativeScore(periodAverage)
             };
@@ -491,8 +500,8 @@ const ReportsPage: React.FC = () => {
             const { lastName, firstName } = splitName(student.name);
             return {
                 code: student.documentNumber,
-                lastName: firstName.toUpperCase(),
-                firstName: lastName.toUpperCase(),
+                lastName: lastName.toUpperCase(),
+                firstName: firstName.toUpperCase(),
                 pAvg: periodAverage,
             };
         });
@@ -560,8 +569,8 @@ const ReportsPage: React.FC = () => {
                 return [
                     (sIndex + 1).toString(),
                     student.documentNumber,
-                    firstName.toUpperCase(),
                     lastName.toUpperCase(),
+                    firstName.toUpperCase(),
                     '', '', '', '', ''
                 ];
             });
@@ -626,12 +635,12 @@ const ReportsPage: React.FC = () => {
             // 1. Student Information Table (Replicating the screenshot layout)
             autoTable(doc, {
                 startY: 45,
-                head: [['id', 'Código', 'Apellido', 'Nombre']],
+                head: [['id', 'Código', 'Apellidos', 'Nombres']],
                 body: [[
                     student.documentNumber.slice(-3) || '000', // Mocking short ID from screenshot
                     student.documentNumber,
-                    firstName.toUpperCase(),
-                    lastName.toUpperCase()
+                    lastName.toUpperCase(),
+                    firstName.toUpperCase()
                 ]],
                 theme: 'plain',
                 styles: { fontSize: 9, cellPadding: 1, lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },
@@ -757,11 +766,13 @@ const ReportsPage: React.FC = () => {
     const generateBoletinContent = (student: Student, doc: any) => {
         getSchoolHeader(doc);
 
+        const { lastName, firstName } = splitName(student.name);
+
         const studentInfoBody = [[
             student.id.substring(0,6) || '-',
             student.documentNumber,
-            student.name.split(' ')[1] || '',
-            student.name.split(' ')[0] || '',
+            lastName.toUpperCase(),
+            firstName.toUpperCase(),
             student.class + ' ' + student.section,
             student.campusName || 'Principal',
             'Diurna'
@@ -769,7 +780,7 @@ const ReportsPage: React.FC = () => {
 
         autoTable(doc, {
             startY: 45,
-            head: [['Id', 'Código', 'Apellido', 'Nombre', 'Curso:', 'Sede:', 'Jornada:']],
+            head: [['Id', 'Código', 'Apellidos', 'Nombres', 'Curso:', 'Sede:', 'Jornada:']],
             body: studentInfoBody,
             theme: 'plain',
             styles: { fontSize: 9, cellPadding: 1, lineColor: [0, 0, 0], lineWidth: 0.1 },
@@ -788,7 +799,7 @@ const ReportsPage: React.FC = () => {
             const periodData: any = {};
             
             for(let p = 1; p <= numberOfPeriods; p++) {
-                const pGrades = subjectGrades.filter(g => getPeriodFromDate(g.date, numberOfPeriods) === p);
+                const pGrades = subjectGrades.filter(g => getPeriodFromDate(g.date, numberOfPeriods) === p || (g as any).period === p);
                 if (pGrades.length > 0) {
                     const totalScore = pGrades.reduce((acc, g) => acc + (g.score * g.percentage/100), 0);
                     const totalPerc = pGrades.reduce((acc, g) => acc + g.percentage, 0);
@@ -818,8 +829,20 @@ const ReportsPage: React.FC = () => {
             const qualitative = getQualitativeScore(avgGrade);
             const teacher = teachers.find(t => t.subject === subject && t.campusId === student.campusId);
             const teacherName = teacher ? teacher.name : 'N/A';
-            const lastGrade = subjectGrades[subjectGrades.length - 1];
-            const descriptor = getConceptText(lastGrade?.conceptCode) || "El estudiante demuestra las competencias básicas esperadas para el grado.";
+            
+            const currentPeriodGrades = subjectGrades.filter(g => (g as any).period === filterPeriod || getPeriodFromDate(g.date, numberOfPeriods) === filterPeriod);
+            const lastGrade = currentPeriodGrades.length > 0 ? currentPeriodGrades[currentPeriodGrades.length - 1] : subjectGrades[subjectGrades.length - 1];
+            
+            const conceptText = getConceptText(lastGrade?.conceptCode);
+            let descriptor = "El estudiante demuestra las competencias básicas esperadas para el grado.";
+            
+            if (conceptText && lastGrade?.comments && lastGrade.comments !== 'Nota rápida' && lastGrade.comments !== 'Carga masiva') {
+                descriptor = `Concepto: ${conceptText} | Obs: ${lastGrade.comments}`;
+            } else if (conceptText) {
+                descriptor = `Concepto: ${conceptText}`;
+            } else if (lastGrade?.comments && lastGrade.comments !== 'Nota rápida' && lastGrade.comments !== 'Carga masiva') {
+                descriptor = `Obs: ${lastGrade.comments}`;
+            }
 
             const rowData = [
                 subject.toUpperCase(),
@@ -998,7 +1021,7 @@ const ReportsPage: React.FC = () => {
 
             {/* Form */}
             <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border dark:border-gray-700 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4">
+                <div className={`grid grid-cols-1 md:grid-cols-2 ${user?.role === UserRole.SUPER_ADMIN ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6 mb-4`}>
                     {/* Report Type */}
                     <div>
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Tipo de Informe</label>
@@ -1016,6 +1039,22 @@ const ReportsPage: React.FC = () => {
                             <option value="sabana_perdidos">Sábana de Perdidos</option>
                         </select>
                     </div>
+
+                    {user?.role === UserRole.SUPER_ADMIN && (
+                        <div>
+                            <label className="block text-sm font-bold mb-1 dark:text-gray-300">Sede</label>
+                            <select 
+                                value={filterCampus}
+                                onChange={e => { setFilterCampus(e.target.value); setFilterTeacher(''); setSelectedStudentId(''); }}
+                                className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                            >
+                                <option value="">Todas las Sedes...</option>
+                                {campuses.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {/* Period */}
                     <div>
@@ -1038,7 +1077,13 @@ const ReportsPage: React.FC = () => {
                             className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">Todos los Profesores...</option>
-                            {teachers.filter(t => user?.role === UserRole.SUPER_ADMIN || t.campusId === user?.campusId).map(t => (
+                            {teachers.filter(t => {
+                                if (user?.role === UserRole.SUPER_ADMIN) {
+                                    if (filterCampus) return t.campusId === filterCampus;
+                                    return true;
+                                }
+                                return t.campusId === user?.campusId;
+                            }).map(t => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
                         </select>

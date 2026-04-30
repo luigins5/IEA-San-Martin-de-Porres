@@ -27,8 +27,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const SUPER_ADMIN_EMAILS = ['ns.5.empresarial@gmail.com', 'luissalberto26@gmail.com'];
+
 const syncUserCampusId = async (userData: User, userDocRef: any) => {
-    if (userData.email === 'ns.5.empresarial@gmail.com') {
+    if (userData.email && SUPER_ADMIN_EMAILS.includes((userData.email as string).trim().toLowerCase())) {
         userData.role = UserRole.SUPER_ADMIN;
     } else {
         // Enforce role based on bulk uploaded data if it exists
@@ -87,7 +89,11 @@ const syncUserCampusId = async (userData: User, userDocRef: any) => {
     }
     
     // Always persist standard claims
-    await setDoc(userDocRef, { role: userData.role, campusId: userData.campusId }, { merge: true });
+    const updateData: any = { role: userData.role };
+    if (userData.campusId !== undefined) {
+        updateData.campusId = userData.campusId;
+    }
+    await setDoc(userDocRef, updateData, { merge: true });
     return userData;
 };
 
@@ -156,12 +162,13 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         }
         const userData = await syncUserCampusId(userDataRaw, userDocRef);
         
-        if (firebaseUser.email === 'ns.5.empresarial@gmail.com' && userData.role !== UserRole.SUPER_ADMIN) {
+        const isSuperAdminUser = firebaseUser.email ? SUPER_ADMIN_EMAILS.includes(firebaseUser.email.trim().toLowerCase()) : false;
+        if (isSuperAdminUser && userData.role !== UserRole.SUPER_ADMIN) {
              userData.role = UserRole.SUPER_ADMIN;
              await setDoc(userDocRef, { role: UserRole.SUPER_ADMIN }, { merge: true });
         }
 
-        if (userData.role !== role && firebaseUser.email !== 'ns.5.empresarial@gmail.com') {
+        if (userData.role !== role && !isSuperAdminUser) {
            // Instead of throwing an error, we gracefully accept the synced role from our master collections
            console.log(`Role mismatch: frontend requested ${role}, but sync resolved to ${userData.role}. Using synced role.`);
         }
@@ -179,17 +186,22 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         logAuditAction(userData, AuditAction.LOGIN, 'Inicio de sesión con Google');
       } else {
         const safeEmail = (firebaseUser.email || '').trim().toLowerCase();
+        const isSuperAdminDefault = SUPER_ADMIN_EMAILS.includes(safeEmail);
         let defaultUser: User = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
           email: safeEmail,
-          role: safeEmail === 'ns.5.empresarial@gmail.com' ? UserRole.SUPER_ADMIN : role,
-          campusId: role !== UserRole.SUPER_ADMIN ? campusId : undefined,
+          role: isSuperAdminDefault ? UserRole.SUPER_ADMIN : role,
+          campusId: role !== UserRole.SUPER_ADMIN && !isSuperAdminDefault ? campusId : undefined,
           avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
         };
         defaultUser = await syncUserCampusId(defaultUser, userDocRef);
-        await setDoc(userDocRef, defaultUser);
+        
+        const saveUser = { ...defaultUser };
+        if (saveUser.campusId === undefined) delete saveUser.campusId;
+        
+        await setDoc(userDocRef, saveUser);
         setUser(defaultUser);
         logAuditAction(defaultUser, AuditAction.LOGIN, 'Inicio de sesión con Google (Nuevo usuario)');
       }
@@ -235,12 +247,13 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         }
         const userData = await syncUserCampusId(userDataRaw, userDocRef);
         
-        if (firebaseUser.email === 'ns.5.empresarial@gmail.com' && userData.role !== UserRole.SUPER_ADMIN) {
+        const isSuperAdminUser = firebaseUser.email ? SUPER_ADMIN_EMAILS.includes(firebaseUser.email.trim().toLowerCase()) : false;
+        if (isSuperAdminUser && userData.role !== UserRole.SUPER_ADMIN) {
              userData.role = UserRole.SUPER_ADMIN;
              await setDoc(userDocRef, { role: UserRole.SUPER_ADMIN }, { merge: true });
         }
 
-        if (userData.role !== role && firebaseUser.email !== 'ns.5.empresarial@gmail.com') {
+        if (userData.role !== role && !isSuperAdminUser) {
            console.log(`Role mismatch: expected ${role}, resolving to ${userData.role}`);
         }
         
@@ -261,17 +274,22 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         // If user doesn't exist in Firestore, create a default profile (for testing/initial setup)
         // In a real app, users would be created by an admin
         const safeEmail = (firebaseUser.email || email).trim().toLowerCase();
+        const isSuperAdminDefault = SUPER_ADMIN_EMAILS.includes(safeEmail);
         let defaultUser: User = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || safeEmail.split('@')[0],
           email: safeEmail,
-          role: safeEmail === 'ns.5.empresarial@gmail.com' ? UserRole.SUPER_ADMIN : role,
-          campusId: role !== UserRole.SUPER_ADMIN ? campusId : undefined,
+          role: isSuperAdminDefault ? UserRole.SUPER_ADMIN : role,
+          campusId: role !== UserRole.SUPER_ADMIN && !isSuperAdminDefault ? campusId : undefined,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
         };
         defaultUser = await syncUserCampusId(defaultUser, userDocRef);
-        await setDoc(userDocRef, defaultUser);
+        
+        const saveUser = { ...defaultUser };
+        if (saveUser.campusId === undefined) delete saveUser.campusId;
+        
+        await setDoc(userDocRef, saveUser);
         setUser(defaultUser);
         logAuditAction(defaultUser, AuditAction.LOGIN, 'Inicio de sesión con Email (Nuevo usuario)');
       }

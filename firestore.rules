@@ -14,7 +14,7 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
-      let superAdmins = ["ns.5.empresarial@gmail.com"];
+      let superAdmins = ["ns.5.empresarial@gmail.com", "luissalberto26@gmail.com"];
       let data = getUserData();
       let roleIsSuper = data != null && data.role == 'Super Administrador';
       let emailIsSuper = request.auth.token.email != null && request.auth.token.email in superAdmins; // Removed email_verified check because Google signin without verification fails here
