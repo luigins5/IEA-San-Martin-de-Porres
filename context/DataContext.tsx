@@ -213,11 +213,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         setIsLoading(true);
         const unsubscribes: (() => void)[] = [];
 
-        const collections = [
+        const baseCollections = [
             { name: 'campuses', setter: setCampuses },
-            { name: 'admins', setter: setAdmins },
-            { name: 'teachers', setter: setTeachers },
-            { name: 'students', setter: setStudents },
             { name: 'assignments', setter: setAssignments },
             { name: 'attendance', setter: setAttendanceRecords },
             { name: 'communications', setter: setCommunications },
@@ -226,6 +223,15 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             { name: 'events', setter: setEvents },
             { name: 'grades', setter: setGrades }
         ];
+
+        let collections = [...baseCollections];
+        if (user?.role === 'Super Administrador' || user?.role === 'Administrador de Sede') {
+            collections.push({ name: 'admins', setter: setAdmins });
+            collections.push({ name: 'teachers', setter: setTeachers });
+            collections.push({ name: 'students', setter: setStudents });
+        } else if (user?.role === 'Profesor') {
+            collections.push({ name: 'students', setter: setStudents });
+        }
 
         collections.forEach(({ name, setter }) => {
             const unsub = onSnapshot(collection(db, name), (snapshot) => {
