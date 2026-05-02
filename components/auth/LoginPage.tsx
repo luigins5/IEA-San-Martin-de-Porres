@@ -14,6 +14,8 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole | ''>('');
   const [selectedCampus, setSelectedCampus] = useState('');
+  const [campusSearch, setCampusSearch] = useState('');
+  const [showCampusDropdown, setShowCampusDropdown] = useState(false);
   const { login, sendPasswordReset } = useAuth();
   const { globalSettings } = useData();
   const [error, setError] = useState('');
@@ -33,6 +35,7 @@ const LoginPage: React.FC = () => {
           name: doc.data().name
         }));
         setAvailableCampuses(campusList);
+        // Default selected campus name to empty string if none selected
         setCampusesLoading(false);
       } catch (err: any) {
         console.error("Error fetching campuses:", err);
@@ -42,6 +45,8 @@ const LoginPage: React.FC = () => {
     };
     fetchCampuses();
   }, []);
+
+  const filteredCampuses = availableCampuses.filter(c => c.name.toLowerCase().includes(campusSearch.toLowerCase()));
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,6 +124,57 @@ const LoginPage: React.FC = () => {
               <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{schoolName}</h1>
               <p className="text-slate-500 text-sm dark:text-slate-400 font-medium tracking-wide uppercase -mt-1">Portal Académico</p>
           </div>
+
+          {/* Sede selector (Independent Box) */}
+          {role !== UserRole.SUPER_ADMIN && (
+            <Card className="shadow-xl border border-slate-200/60 dark:border-slate-800/60 rounded-2xl overflow-visible mb-6 p-0 relative">
+              <div className="p-5 relative">
+                <label className="block text-slate-700 text-xs font-bold mb-2 uppercase tracking-wider dark:text-slate-300" htmlFor="campus-search">
+                  Buscar Sede
+                </label>
+                <input
+                  id="campus-search"
+                  type="text"
+                  value={campusSearch}
+                  onChange={(e) => {
+                    setCampusSearch(e.target.value);
+                    setSelectedCampus('');
+                    setShowCampusDropdown(true);
+                  }}
+                  onFocus={() => setShowCampusDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowCampusDropdown(false), 200)}
+                  className="appearance-none border border-slate-200 rounded-xl w-full py-3 px-4 text-sm text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white placeholder-slate-400"
+                  placeholder={campusesLoading ? "Cargando sedes..." : "Escriba para buscar sede..."}
+                  disabled={campusesLoading}
+                />
+                {showCampusDropdown && campusSearch && (
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-48 overflow-y-auto left-0">
+                    {filteredCampuses.length > 0 ? (
+                      filteredCampuses.map(c => (
+                        <div
+                          key={c.id}
+                          className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-sm text-slate-700 dark:text-slate-200 transition-colors"
+                          onClick={() => {
+                            setSelectedCampus(c.id);
+                            setCampusSearch(c.name);
+                            setShowCampusDropdown(false);
+                            setError('');
+                          }}
+                        >
+                          {c.name}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
+                        No se encontraron sedes.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           <Card className="shadow-xl border border-slate-200/60 dark:border-slate-800/60 rounded-2xl overflow-hidden">
             <form onSubmit={handleLogin} className="p-2">
               {error && (
@@ -194,34 +250,6 @@ const LoginPage: React.FC = () => {
                     </div>
                 </div>
               </div>
-
-              {role !== UserRole.SUPER_ADMIN && (
-                <div className="mb-8">
-                  <label className="block text-slate-700 text-xs font-bold mb-2 uppercase tracking-wider dark:text-slate-300" htmlFor="campus">
-                    Sede
-                  </label>
-                  <div className="relative">
-                      <select
-                      id="campus"
-                      value={selectedCampus}
-                      onChange={(e) => {
-                        setSelectedCampus(e.target.value);
-                        setError('');
-                      }}
-                      disabled={campusesLoading}
-                      className="appearance-none border border-slate-200 rounded-xl w-full py-3 px-4 text-sm text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white cursor-pointer disabled:opacity-50"
-                      >
-                      <option value="">{campusesLoading ? '-- Cargando Sedes... --' : '-- Seleccione una Sede --'}</option>
-                      {availableCampuses.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
-                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                      </div>
-                  </div>
-                </div>
-              )}
 
               <div className="flex flex-col gap-4">
                 <button

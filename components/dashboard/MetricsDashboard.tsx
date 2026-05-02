@@ -28,6 +28,12 @@ export const MetricsDashboard: React.FC = () => {
         return n;
     }, [globalSettings, campusSettings]);
 
+    const currentUserTeacherId = useMemo(() => {
+        if (!user || user.role !== UserRole.TEACHER) return null;
+        const currentTeacher = teachers.find(t => t.email?.trim().toLowerCase() === user.email?.trim().toLowerCase());
+        return currentTeacher?.id || user.id;
+    }, [user, teachers]);
+
     const availableAssignments = useMemo(() => {
         let filtered = assignments;
         if (user?.role === UserRole.SUPER_ADMIN) {
@@ -43,14 +49,14 @@ export const MetricsDashboard: React.FC = () => {
                 return t?.campusId === user.campusId;
             });
         } else if (user?.role === UserRole.TEACHER) {
-            filtered = filtered.filter(a => a.teacherId === user.id);
+            filtered = filtered.filter(a => a.teacherId === currentUserTeacherId);
         }
         if (filterTeacher) filtered = filtered.filter(a => a.teacherId === filterTeacher);
         if (filterSubject) filtered = filtered.filter(a => a.subject === filterSubject);
         if (filterClass) filtered = filtered.filter(a => a.class === filterClass);
         if (filterSection) filtered = filtered.filter(a => a.section === filterSection);
         return filtered;
-    }, [assignments, teachers, user, filterCampus, filterTeacher, filterSubject, filterClass, filterSection]);
+    }, [assignments, teachers, user, filterCampus, filterTeacher, filterSubject, filterClass, filterSection, currentUserTeacherId]);
 
     const availableClasses = useMemo(() => {
         if (filterTeacher || filterSubject) return Array.from(new Set(availableAssignments.map(a => a.class))).sort();
@@ -77,13 +83,13 @@ export const MetricsDashboard: React.FC = () => {
                 return t?.campusId === user.campusId;
             });
         } else if (user?.role === UserRole.TEACHER) {
-            filtered = filtered.filter(a => a.teacherId === user.id);
+            filtered = filtered.filter(a => a.teacherId === currentUserTeacherId);
         }
         if (filterTeacher) filtered = filtered.filter(a => a.teacherId === filterTeacher);
         if (filterClass) filtered = filtered.filter(a => a.class === filterClass);
         if (filterSection) filtered = filtered.filter(a => a.section === filterSection);
         return Array.from(new Set(filtered.map(a => a.subject))).sort();
-    }, [assignments, teachers, user, filterCampus, filterTeacher, filterClass, filterSection]);
+    }, [assignments, teachers, user, filterCampus, filterTeacher, filterClass, filterSection, currentUserTeacherId]);
 
     const studentsForContext = useMemo(() => {
         if (!user) return [];
@@ -95,7 +101,7 @@ export const MetricsDashboard: React.FC = () => {
         } else if (user.role === UserRole.TEACHER) {
             filtered = filtered.filter(s => s.campusId === user.campusId);
             // Further restrict students for teachers to only those in their assigned classes
-            const validClasses = new Set(assignments.filter(a => a.teacherId === user.id).map(a => `${a.class}-${a.section}`));
+            const validClasses = new Set(assignments.filter(a => a.teacherId === currentUserTeacherId).map(a => `${a.class}-${a.section}`));
             filtered = filtered.filter(s => validClasses.has(`${s.class}-${s.section}`));
         }
         if (filterClass) filtered = filtered.filter(s => s.class === filterClass);
@@ -110,12 +116,29 @@ export const MetricsDashboard: React.FC = () => {
     const filteredGrades = useMemo(() => {
         const studentIds = new Set(studentsForContext.map(s => s.id));
         let g = grades.filter(gr => studentIds.has(gr.studentId));
+
+        if (filterTeacher || user?.role === UserRole.TEACHER) {
+            const mapStudentToClassSection = new Map(studentsForContext.map(s => [s.id, `${s.class}-${s.section}`]));
+            const relevantTeacher = filterTeacher || currentUserTeacherId;
+            
+            const teacherAssignmentSigs = new Set(
+                assignments
+                    .filter(a => a.teacherId === relevantTeacher)
+                    .map(a => `${a.class}-${a.section}-${a.subject}`)
+            );
+            
+            g = g.filter(gr => {
+                const classSection = mapStudentToClassSection.get(gr.studentId);
+                return teacherAssignmentSigs.has(`${classSection}-${gr.subject}`);
+            });
+        }
+
         if (filterSubject) g = g.filter(gr => gr.subject === filterSubject);
         if (filterPeriod !== 'all') {
             g = g.filter(gr => getPeriodFromDate(gr.date, numberOfPeriods) === filterPeriod);
         }
         return g;
-    }, [grades, studentsForContext, filterSubject, filterPeriod, numberOfPeriods]);
+    }, [grades, studentsForContext, filterSubject, filterPeriod, numberOfPeriods, filterTeacher, assignments, user]);
 
     // Calculate Metrics
     const metricsData = useMemo(() => {

@@ -87,7 +87,7 @@ const MyStudentsPage: React.FC = () => {
 
     useEffect(() => {
         if (user) {
-            const currentTeacher = teachers.find(t => t.email === user.email);
+            const currentTeacher = teachers.find(t => t.email?.trim().toLowerCase() === user.email?.trim().toLowerCase());
             const teacherId = currentTeacher?.id || user.id;
             const teacherAssignments = assignments.filter(a => a.teacherId === teacherId);
             setMyClasses(teacherAssignments);
