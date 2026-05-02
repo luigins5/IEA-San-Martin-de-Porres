@@ -29,29 +29,48 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SUPER_ADMIN_EMAILS = ['ns.5.empresarial@gmail.com', 'luissalberto26@gmail.com'];
 
-const syncUserCampusId = async (userData: User, userDocRef: any) => {
+const syncUserCampusId = async (userData: User, userDocRef: any, originalEmailInput?: string) => {
     if (userData.email && SUPER_ADMIN_EMAILS.includes((userData.email as string).trim().toLowerCase())) {
         userData.role = UserRole.SUPER_ADMIN;
     } else {
         // Enforce role based on bulk uploaded data if it exists
         try {
             const emailLower = (userData.email || '').trim().toLowerCase();
-            const adminQ = query(collection(db, 'admins'), where('email', '==', emailLower));
-            const adminSnap = await getDocs(adminQ);
-            if (!adminSnap.empty) {
+            
+            // Check Admins (small collection, safe to scan for case-insensitive matching)
+            const adminSnap = await getDocs(collection(db, 'admins'));
+            const adminMatch = adminSnap.docs.find(d => {
+                const e = d.data().email;
+                return e && typeof e === 'string' && e.trim().toLowerCase() === emailLower;
+            });
+            
+            if (adminMatch) {
                 userData.role = UserRole.CAMPUS_ADMIN;
-                const record = adminSnap.docs[0].data();
+                const record = adminMatch.data();
                 if (record.campusId) userData.campusId = record.campusId;
             } else {
-                const teacherQ = query(collection(db, 'teachers'), where('email', '==', emailLower));
-                const teacherSnap = await getDocs(teacherQ);
-                if (!teacherSnap.empty) {
+                // Check Teachers (small collection, safe to scan for case-insensitive matching)
+                const teacherSnap = await getDocs(collection(db, 'teachers'));
+                const teacherMatch = teacherSnap.docs.find(d => {
+                    const e = d.data().email;
+                    return e && typeof e === 'string' && e.trim().toLowerCase() === emailLower;
+                });
+                
+                if (teacherMatch) {
                     userData.role = UserRole.TEACHER;
-                    const record = teacherSnap.docs[0].data();
+                    const record = teacherMatch.data();
                     if (record.campusId) userData.campusId = record.campusId;
                 } else {
-                    const studentQ = query(collection(db, 'students'), where('email', '==', emailLower));
+                    // Check Students using email variations (large collection, avoid full scan)
+                    const emailVariations = Array.from(new Set([
+                        emailLower,
+                        originalEmailInput?.trim() || emailLower,
+                        originalEmailInput ? originalEmailInput.trim().toLowerCase() : emailLower,
+                        originalEmailInput ? originalEmailInput.trim().charAt(0).toUpperCase() + originalEmailInput.trim().slice(1).toLowerCase() : emailLower.charAt(0).toUpperCase() + emailLower.slice(1)
+                    ]));
+                    const studentQ = query(collection(db, 'students'), where('email', 'in', emailVariations));
                     const studentSnap = await getDocs(studentQ);
+                    
                     if (!studentSnap.empty) {
                         userData.role = UserRole.STUDENT;
                         const record = studentSnap.docs[0].data();
@@ -63,28 +82,6 @@ const syncUserCampusId = async (userData: User, userDocRef: any) => {
             }
         } catch(e) {
             console.error("Error syncing role from collections:", e);
-        }
-    }
-
-    if (!userData.campusId && userData.role !== UserRole.SUPER_ADMIN) {
-        let collectionName = '';
-        if (userData.role === UserRole.CAMPUS_ADMIN) collectionName = 'admins';
-        else if (userData.role === UserRole.TEACHER) collectionName = 'teachers';
-        else if (userData.role === UserRole.STUDENT || userData.role === UserRole.PARENT) collectionName = 'students';
-        
-        if (collectionName) {
-            try {
-                const q = query(collection(db, collectionName), where('email', '==', userData.email));
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    const record = querySnapshot.docs[0].data();
-                    if (record.campusId) {
-                        userData.campusId = record.campusId;
-                    }
-                }
-            } catch (error) {
-                console.error("Error syncing campusId:", error);
-            }
         }
     }
     
@@ -124,7 +121,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            const userData = await syncUserCampusId(userDoc.data() as User, userDocRef);
+            const userData = await syncUserCampusId(userDoc.data() as User, userDocRef, firebaseUser.email || undefined);
             setUser(userData);
           } else {
             // Handle case where user is in Auth but not in Firestore
@@ -160,7 +157,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         if (userDataRaw.email && typeof userDataRaw.email === 'string') {
            userDataRaw.email = userDataRaw.email.trim().toLowerCase();
         }
-        const userData = await syncUserCampusId(userDataRaw, userDocRef);
+        const userData = await syncUserCampusId(userDataRaw, userDocRef, firebaseUser.email || undefined);
         
         const isSuperAdminUser = firebaseUser.email ? SUPER_ADMIN_EMAILS.includes(firebaseUser.email.trim().toLowerCase()) : false;
         if (isSuperAdminUser && userData.role !== UserRole.SUPER_ADMIN) {
@@ -196,7 +193,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
         };
-        defaultUser = await syncUserCampusId(defaultUser, userDocRef);
+        defaultUser = await syncUserCampusId(defaultUser, userDocRef, firebaseUser.email || undefined);
         
         const saveUser = { ...defaultUser };
         if (saveUser.campusId === undefined) delete saveUser.campusId;
@@ -245,7 +242,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         if (userDataRaw.email && typeof userDataRaw.email === 'string') {
            userDataRaw.email = userDataRaw.email.trim().toLowerCase();
         }
-        const userData = await syncUserCampusId(userDataRaw, userDocRef);
+        const userData = await syncUserCampusId(userDataRaw, userDocRef, firebaseUser.email || email);
         
         const isSuperAdminUser = firebaseUser.email ? SUPER_ADMIN_EMAILS.includes(firebaseUser.email.trim().toLowerCase()) : false;
         if (isSuperAdminUser && userData.role !== UserRole.SUPER_ADMIN) {
@@ -284,7 +281,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
         };
-        defaultUser = await syncUserCampusId(defaultUser, userDocRef);
+        defaultUser = await syncUserCampusId(defaultUser, userDocRef, firebaseUser.email || email);
         
         const saveUser = { ...defaultUser };
         if (saveUser.campusId === undefined) delete saveUser.campusId;

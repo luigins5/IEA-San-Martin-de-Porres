@@ -14,7 +14,7 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole | ''>('');
   const [selectedCampus, setSelectedCampus] = useState('');
-  const { login, loginWithGoogle, sendPasswordReset } = useAuth();
+  const { login, sendPasswordReset } = useAuth();
   const { globalSettings } = useData();
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,59 +42,6 @@ const LoginPage: React.FC = () => {
     };
     fetchCampuses();
   }, []);
-
-  useEffect(() => {
-    const checkUserRoleAndCampus = async () => {
-      if (!email || !email.includes('@')) {
-        return;
-      }
-      try {
-        const emailLower = email.trim().toLowerCase();
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where("email", "==", emailLower));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
-          if (userData.role) {
-            setRole(userData.role);
-          }
-          if (userData.campusId) {
-            setSelectedCampus(userData.campusId);
-          }
-        } else {
-           const tQ = query(collection(db, 'teachers'), where("email", "==", emailLower));
-           const tSnap = await getDocs(tQ);
-           if (!tSnap.empty) {
-               const userData = tSnap.docs[0].data();
-               setRole(UserRole.TEACHER);
-               if (userData.campusId) setSelectedCampus(userData.campusId);
-           } else {
-               const aQ = query(collection(db, 'admins'), where("email", "==", emailLower));
-               const aSnap = await getDocs(aQ);
-               if (!aSnap.empty) {
-                   const userData = aSnap.docs[0].data();
-                   setRole(UserRole.CAMPUS_ADMIN);
-                   if (userData.campusId) setSelectedCampus(userData.campusId);
-               } else {
-                   const sQ = query(collection(db, 'students'), where("email", "==", emailLower));
-                   const sSnap = await getDocs(sQ);
-                   if (!sSnap.empty) {
-                       const userData = sSnap.docs[0].data();
-                       setRole(UserRole.STUDENT);
-                       if (userData.campusId) setSelectedCampus(userData.campusId);
-                   }
-               }
-           }
-        }
-      } catch (err) {
-        console.error("Error looking up user info:", err);
-      }
-    };
-
-    const timeoutId = setTimeout(checkUserRoleAndCampus, 800);
-    return () => clearTimeout(timeoutId);
-  }, [email]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,34 +229,6 @@ const LoginPage: React.FC = () => {
                   type="submit"
                 >
                   Ingresar al Sistema
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!role) {
-                        setError('Por favor, seleccione un rol antes de continuar con Google.');
-                        return;
-                    }
-                    if (role !== UserRole.SUPER_ADMIN && !selectedCampus) {
-                      setError('Por favor, seleccione una sede antes de continuar con Google.');
-                      return;
-                    }
-                    setError('');
-                    try {
-                      await loginWithGoogle(role as UserRole, selectedCampus);
-                    } catch (err: any) {
-                      setError(err.message || 'Error al iniciar sesión con Google.');
-                    }
-                  }}
-                  className="w-full flex items-center justify-center py-3 px-4 border border-slate-200 rounded-xl shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:border-slate-700 transition-colors"
-                >
-                  <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                  </svg>
-                  Iniciar sesión con Google
                 </button>
                 <button
                   type="button"

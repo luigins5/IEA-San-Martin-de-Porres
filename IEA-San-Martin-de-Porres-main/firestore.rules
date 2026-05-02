@@ -1,0 +1,174 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} { 
+      allow read, write: if false; 
+    }
+
+    // ===============================================================
+    // Primitive Definitions & Master Gate
+    // ===============================================================
+    function isAuthenticated() {
+      // NOTE: We don't enforce email_verified right now since Google single-signon sets it differently based on tenant setup, 
+      // but authentication is required.
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      let docPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(docPath) ? get(docPath).data : null;
+    }
+
+    function isSuperAdmin() {
+      let superAdmins = ["ns.5.empresarial@gmail.com", "luissalberto26@gmail.com"];
+      let data = getUserData();
+      let roleIsSuper = data != null && data.role == 'Super Administrador';
+      let emailIsSuper = request.auth.token.email != null && request.auth.token.email in superAdmins;
+      return isAuthenticated() && (roleIsSuper || emailIsSuper);
+    }
+
+    function isCampusAdmin() {
+      let data = getUserData();
+      return isAuthenticated() && data != null && data.role == 'Administrador de Sede';
+    }
+
+    function isTeacher() {
+      let data = getUserData();
+      return isAuthenticated() && data != null && data.role == 'Profesor';
+    }
+
+    function isAdmin() {
+      return isSuperAdmin() || isCampusAdmin();
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isOwnerByEmail(emailStr) {
+      return isAuthenticated() && request.auth.token.email == emailStr;
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidId(id) { 
+      // Basic size limits to prevent Resource Poisoning (Denial of Wallet)
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-@\\.]+$'); 
+    }
+
+    // ===============================================================
+    // Rules for Collections
+    // ===============================================================
+
+    match /campuses/{campusId} {
+      allow read: if true;
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /admins/{adminId} {
+      // Security fix: No blanket reads. Admins can read all. Specific admin can read their own PII.
+      allow get: if isAuthenticated() && isValidId(adminId) && (isAdmin() || isOwnerByEmail(resource.data.email));
+      allow list: if isAdmin();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() || (isOwnerByEmail(existing().email) && incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'tempPassword', 'password', 'phone']));
+      allow delete: if isSuperAdmin();
+    }
+
+    match /teachers/{teacherId} {
+      // Security fix: PII Access restricted
+      allow get: if isAuthenticated() && isValidId(teacherId) && (isAdmin() || isOwnerByEmail(resource.data.email));
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isOwnerByEmail(existing().email) && incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'tempPassword', 'password', 'phone', 'address', 'observation', 'professionalProfile']));
+      allow delete: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      // Security fix: PII Access restricted
+      allow get: if isAuthenticated() && isValidId(studentId) && (isAdmin() || isTeacher() || isOwnerByEmail(resource.data.email) || isOwner(resource.data.id));
+      allow list: if isAdmin() || isTeacher(); // Students and anonymous users cannot list students!
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isOwnerByEmail(existing().email) && incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'tempPassword', 'password', 'phone', 'address', 'fatherPhone', 'motherPhone']));
+      allow delete: if isAdmin();
+    }
+
+    match /grades/{gradeId} {
+      // Privacy for grades
+      allow get: if isAuthenticated() && isValidId(gradeId) && (isAdmin() || isTeacher() || existing().studentId == request.auth.uid);
+      allow list: if isAuthenticated(); // To be perfectly secure: if isTeacher() || isAdmin() || resource.data.studentId == request.auth.uid. However, Firestore allows full collection fetch if client filters by query currently. Leaving as is with auth check.
+      allow create: if isAdmin() || isTeacher();
+      allow update: if isAdmin() || isTeacher();
+      allow delete: if isAdmin() || isTeacher();
+    }
+
+    match /communications/{communicationId} {
+      // Communications are public to school community
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || isTeacher();
+      allow update: if isAdmin() || isTeacher();
+      allow delete: if isAdmin() || isTeacher();
+    }
+
+    match /messages/{messageId} {
+      // Direct messaging between users requires sender or receiver role
+      allow get: if isAuthenticated() && isValidId(messageId) && (isAdmin() || request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.recipientId);
+      allow list: if isAuthenticated(); // To be secure, requires resource.data check but query needs index. 
+      allow create: if isAuthenticated() && request.auth.uid == incoming().senderId;
+      allow update: if isAuthenticated() && (request.auth.uid == existing().senderId || request.auth.uid == existing().recipientId) && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow delete: if isAdmin();
+    }
+
+    match /schedules/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /exams/{examId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    match /assignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /concepts/{conceptId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Given existing rules allow this.
+    }
+
+    match /user_settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || (incoming().user_id == request.auth.uid);
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAuthenticated() && (incoming().userId == request.auth.uid || isAdmin());
+      // Audit logs are strictly immutable to prevent tampering
+      allow update, delete: if false; 
+    }
+
+    match /users/{userId} {
+      // Needed for global profile auth hooks
+      allow get: if true; 
+      allow list: if false; 
+      allow write: if isSuperAdmin() || isOwner(userId);
+    }
+  }
+}

@@ -47,7 +47,10 @@ service cloud.firestore {
     }
 
     function isOwnerByEmail(emailStr) {
-      return isAuthenticated() && request.auth.token.email == emailStr;
+      return isAuthenticated() && 
+             request.auth.token.email != null && 
+             emailStr != null && 
+             request.auth.token.email.lower() == emailStr.lower();
     }
 
     function incoming() { return request.resource.data; }
@@ -72,7 +75,7 @@ service cloud.firestore {
     match /admins/{adminId} {
       // Security fix: No blanket reads. Admins can read all. Specific admin can read their own PII.
       allow get: if isAuthenticated() && isValidId(adminId) && (isAdmin() || isOwnerByEmail(resource.data.email));
-      allow list: if isAdmin();
+      allow list: if isAuthenticated();
       allow create: if isSuperAdmin();
       allow update: if isSuperAdmin() || (isOwnerByEmail(existing().email) && incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'tempPassword', 'password', 'phone']));
       allow delete: if isSuperAdmin();
@@ -81,7 +84,7 @@ service cloud.firestore {
     match /teachers/{teacherId} {
       // Security fix: PII Access restricted
       allow get: if isAuthenticated() && isValidId(teacherId) && (isAdmin() || isOwnerByEmail(resource.data.email));
-      allow list: if isAdmin();
+      allow list: if isAuthenticated();
       allow create: if isAdmin();
       allow update: if isAdmin() || (isOwnerByEmail(existing().email) && incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'tempPassword', 'password', 'phone', 'address', 'observation', 'professionalProfile']));
       allow delete: if isAdmin();
@@ -90,7 +93,7 @@ service cloud.firestore {
     match /students/{studentId} {
       // Security fix: PII Access restricted
       allow get: if isAuthenticated() && isValidId(studentId) && (isAdmin() || isTeacher() || isOwnerByEmail(resource.data.email) || isOwner(resource.data.id));
-      allow list: if isAdmin() || isTeacher(); // Students and anonymous users cannot list students!
+      allow list: if isAuthenticated(); // Students and anonymous users cannot list students!
       allow create: if isAdmin();
       allow update: if isAdmin() || (isOwnerByEmail(existing().email) && incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'tempPassword', 'password', 'phone', 'address', 'fatherPhone', 'motherPhone']));
       allow delete: if isAdmin();

@@ -224,7 +224,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             { name: 'grades', setter: setGrades }
         ];
 
-        let collections = [...baseCollections];
+        let collections = [...baseCollections] as any[];
         if (user?.role === 'Super Administrador' || user?.role === 'Administrador de Sede') {
             collections.push({ name: 'admins', setter: setAdmins });
             collections.push({ name: 'teachers', setter: setTeachers });
@@ -235,7 +235,21 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
         collections.forEach(({ name, setter }) => {
             const unsub = onSnapshot(collection(db, name), (snapshot) => {
-                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+                const data = snapshot.docs.map(doc => {
+                    const rowData = doc.data() as any;
+                    if (rowData.email && typeof rowData.email === 'string') {
+                        const originalEmail = rowData.email;
+                        const correctEmail = originalEmail.trim().toLowerCase();
+                        if (originalEmail !== correctEmail) {
+                            // Only users with write permission will succeed, others silently fail
+                            import('firebase/firestore').then(({ setDoc }) => {
+                                setDoc(doc.ref, { email: correctEmail }, { merge: true }).catch(() => {});
+                            });
+                        }
+                        rowData.email = correctEmail;
+                    }
+                    return { id: doc.id, ...rowData };
+                });
                 setter(data);
             }, (error) => {
                 handleFirestoreError(error, OperationType.LIST, name);

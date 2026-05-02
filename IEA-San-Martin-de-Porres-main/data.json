@@ -1,0 +1,46 @@
+{
+  "campuses": [
+    {
+      "id": "1",
+      "name": "Sede Principal",
+      "address": "Av. Central 123",
+      "phone": "555-0100",
+      "email": "principal@colegio.com",
+      "status": "active"
+    }
+  ],
+  "admins": [
+    {
+      "id": "1",
+      "campusId": "1",
+      "firstName": "Luis",
+      "lastName": "Alberto",
+      "name": "Luis Alberto",
+      "email": "luissalberto26@gmail.com",
+      "passwordHash": "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+      "role": "super_admin"
+    }
+  ],
+  "teachers": [],
+  "students": [],
+  "parents": [],
+  "schedules": [],
+  "attendance": [],
+  "assignments": [],
+  "exams": [],
+  "grades": [],
+  "communications": [],
+  "events": [],
+  "messages": [],
+  "user_settings": [
+    {
+      "user_id": "global",
+      "key": "school_settings",
+      "value": {
+        "schoolName": "I.E A San Martin De Porres",
+        "schoolLogo": "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHBsMGdhaWJpamQ0OGxuYm85N2pyZ2F3YWdycjR2Ymtza2s2dzJhYyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/m7t3XLkAB0fX7WEFs0/giphy.gif",
+        "maintenanceMode": false
+      }
+    }
+  ]
+}
