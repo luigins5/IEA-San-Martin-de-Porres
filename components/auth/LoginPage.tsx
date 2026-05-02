@@ -8,6 +8,7 @@ import { EyeIcon, EyeSlashIcon } from '../icons';
 import Footer from '../layout/Footer';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -24,6 +25,9 @@ const LoginPage: React.FC = () => {
   const schoolLogo = 'https://i.ibb.co/kV9jYF31/Logo-CEIE.png';
   const [availableCampuses, setAvailableCampuses] = useState<{id: string, name: string}[]>([]);
   const [campusesLoading, setCampusesLoading] = useState(true);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+
+  const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
 
   useEffect(() => {
     const fetchCampuses = async () => {
@@ -52,6 +56,10 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     if (!email || !password || !role || (!selectedCampus && role !== UserRole.SUPER_ADMIN)) {
       setError('Por favor, diligencie todos los campos requeridos (correo, contraseña, rol y sede).');
+      return;
+    }
+    if (!recaptchaToken) {
+      setError('Por favor, verifique que no es un robot.');
       return;
     }
     setError('');
@@ -249,6 +257,14 @@ const LoginPage: React.FC = () => {
                         <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
                     </div>
                 </div>
+              </div>
+
+              <div className="mb-8 flex justify-center">
+                <ReCAPTCHA
+                  sitekey={recaptchaSiteKey}
+                  onChange={(token) => setRecaptchaToken(token)}
+                  onExpired={() => setRecaptchaToken(null)}
+                />
               </div>
 
               <div className="flex flex-col gap-4">
