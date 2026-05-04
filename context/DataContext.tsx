@@ -221,16 +221,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             { name: 'schedules', setter: setSchedules },
             { name: 'exams', setter: setExams },
             { name: 'events', setter: setEvents },
-            { name: 'grades', setter: setGrades }
+            { name: 'grades', setter: setGrades },
+            { name: 'teachers', setter: setTeachers },
+            { name: 'students', setter: setStudents }
         ];
 
         let collections = [...baseCollections] as any[];
         if (user?.role === 'Super Administrador' || user?.role === 'Administrador de Sede') {
             collections.push({ name: 'admins', setter: setAdmins });
-            collections.push({ name: 'teachers', setter: setTeachers });
-            collections.push({ name: 'students', setter: setStudents });
-        } else if (user?.role === 'Profesor') {
-            collections.push({ name: 'students', setter: setStudents });
         }
 
         collections.forEach(({ name, setter }) => {
