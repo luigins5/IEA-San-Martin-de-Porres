@@ -19,7 +19,8 @@ export interface User {
 }
 
 export interface AdminUser extends User {
-    campusName: string;
+    campusName?: string;
+    campusIds?: string[]; // Support for multiple campuses
     status: 'active' | 'inactive';
 }
 

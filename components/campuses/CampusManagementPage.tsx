@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Campus, User, UserRole } from '../../types';
 import Card from '../ui/Card';
 import { BuildingOfficeIcon, EditIcon, TrashIcon, CloseIcon, ClipboardDocumentListIcon, UploadIcon, DownloadIcon, PlusIcon } from '../icons';
@@ -496,7 +496,7 @@ const BulkDeleteConfirmationModal: React.FC<{ count: number; onClose: () => void
 );
 
 const CampusManagementPage: React.FC = () => {
-    const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin, addAdmin, addTeacher, addStudent, addAssignment, teachers, students } = useData();
+    const { campuses, addCampus, updateCampus, deleteCampus, admins, updateAdmin, deleteAdmin, addAdmin, addTeacher, updateTeacher, deleteTeacher, addStudent, updateStudent, deleteStudent, addAssignment, assignments, teachers, students } = useData();
     const { impersonateUser } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -509,6 +509,60 @@ const CampusManagementPage: React.FC = () => {
         setNotification({ message, type });
         setTimeout(() => setNotification(null), 5000);
     };
+
+    // Auto-cleanup for previous duplicates
+    useEffect(() => {
+        const cleanup = async () => {
+            const byEmailAdmin = new Map<string, any[]>();
+            admins.forEach(a => {
+                const e = a.email.toLowerCase().trim();
+                if (!byEmailAdmin.has(e)) byEmailAdmin.set(e, []);
+                byEmailAdmin.get(e)!.push(a);
+            });
+            for (const [e, docs] of byEmailAdmin.entries()) {
+                if (docs.length > 1) {
+                    const keep = docs[0];
+                    const remove = docs.slice(1);
+                    const allIds = new Set<string>();
+                    docs.forEach(dr => {
+                        if (dr.campusId) allIds.add(dr.campusId);
+                        if (dr.campusIds) dr.campusIds.forEach((c: string) => allIds.add(c));
+                    });
+                    await updateAdmin(keep.id, { campusIds: Array.from(allIds), campusId: undefined });
+                    for (const r of remove) await deleteAdmin(r.id);
+                }
+            }
+
+            const byEmailTeacher = new Map<string, any[]>();
+            teachers.forEach(a => {
+                const e = a.email.toLowerCase().trim();
+                if (!byEmailTeacher.has(e)) byEmailTeacher.set(e, []);
+                byEmailTeacher.get(e)!.push(a);
+            });
+            for (const [e, docs] of byEmailTeacher.entries()) {
+                if (docs.length > 1) {
+                    const remove = docs.slice(1);
+                    for (const r of remove) await deleteTeacher(r.id);
+                }
+            }
+
+            const byEmailStudent = new Map<string, any[]>();
+            students.forEach(a => {
+                const e = a.email.toLowerCase().trim();
+                if (!byEmailStudent.has(e)) byEmailStudent.set(e, []);
+                byEmailStudent.get(e)!.push(a);
+            });
+            for (const [e, docs] of byEmailStudent.entries()) {
+                if (docs.length > 1) {
+                    const remove = docs.slice(1);
+                    for (const r of remove) await deleteStudent(r.id);
+                }
+            }
+        };
+        if (admins.length > 0 && teachers.length > 0) {
+            cleanup();
+        }
+    }, [admins, teachers, students]);
 
     const handleBulkSave = async (parsedData: any[]) => {
         setIsBulkModalOpen(false);
@@ -560,54 +614,93 @@ const CampusManagementPage: React.FC = () => {
                 }
 
                 if (tipo === 'admin') {
-                    await addAdmin({
-                        name: row.nombreUsuario,
-                        email: row.emailUsuario,
-                        campusId: campusId,
-                        campusName: actualCampusName,
-                        status: 'active'
-                    });
+                    const existingAdmin = admins.find(a => a.email.toLowerCase() === row.emailUsuario.toLowerCase());
+                    if (existingAdmin) {
+                        const currentIds = existingAdmin.campusIds || [existingAdmin.campusId].filter(Boolean) as string[];
+                        if (campusId && !currentIds.includes(campusId)) {
+                            await updateAdmin(existingAdmin.id, {
+                                campusIds: [...currentIds, campusId],
+                                campusId: undefined // Migrate away from single campusId if needed, or leave it. Let's just maintain both for backward compatibility.
+                            });
+                        }
+                    } else {
+                        await addAdmin({
+                            name: row.nombreUsuario,
+                            email: row.emailUsuario,
+                            campusId: campusId,
+                            campusIds: campusId ? [campusId] : [],
+                            campusName: actualCampusName,
+                            status: 'active'
+                        });
+                    }
                     successCount++;
                 } else if (tipo === 'profesor') {
-                    const teacherId = await addTeacher({
-                        name: row.nombreUsuario,
-                        email: row.emailUsuario,
-                        documentNumber: row.documentoUsuario || '',
-                        phone: row.telefonoUsuario || '',
-                        campusId: campusId,
-                        campusName: actualCampusName,
-                        subject: row.asignaturaProfesor || '',
-                        status: 'active'
-                    });
+                    let teacherId: string | undefined;
+                    const existingTeacher = teachers.find(t => t.email.toLowerCase() === row.emailUsuario.toLowerCase());
+                    
+                    if (existingTeacher) {
+                        teacherId = existingTeacher.id;
+                        // Reactivate if inactive
+                        if (existingTeacher.status !== 'active') {
+                             await updateTeacher(teacherId, { status: 'active', campusId: campusId || existingTeacher.campusId, campusName: actualCampusName || existingTeacher.campusName });
+                        }
+                    } else {
+                        teacherId = await addTeacher({
+                            name: row.nombreUsuario,
+                            email: row.emailUsuario,
+                            documentNumber: row.documentoUsuario || '',
+                            phone: row.telefonoUsuario || '',
+                            campusId: campusId,
+                            campusName: actualCampusName,
+                            subject: row.asignaturaProfesor || '',
+                            status: 'active'
+                        });
+                    }
                     
                     if (teacherId && row.assignments && row.assignments.length > 0) {
                         for (const assignment of row.assignments) {
                             if (assignment.subject && assignment.class && assignment.section) {
-                                await addAssignment({
-                                    teacherId: teacherId,
-                                    subject: assignment.subject,
-                                    class: assignment.class,
-                                    section: assignment.section,
-                                    intensidadHoraria: assignment.intensidadHoraria
-                                });
+                                // Prevent duplicate assignments
+                                const existingAssign = assignments?.find((a: any) => 
+                                    a.teacherId === teacherId && 
+                                    a.subject === assignment.subject && 
+                                    a.class === assignment.class && 
+                                    a.section === assignment.section
+                                );
+                                if (!existingAssign) {
+                                    await addAssignment({
+                                        teacherId: teacherId,
+                                        subject: assignment.subject,
+                                        class: assignment.class,
+                                        section: assignment.section,
+                                        intensidadHoraria: assignment.intensidadHoraria
+                                    });
+                                }
                             }
                         }
                     }
                     successCount++;
                 } else if (tipo === 'estudiante') {
-                    await addStudent({
-                        name: row.nombreUsuario,
-                        email: row.emailUsuario,
-                        documentNumber: row.documentoUsuario || '',
-                        phone: row.telefonoUsuario || '',
-                        campusId: campusId,
-                        campusName: actualCampusName,
-                        class: row.gradoEstudiante || '',
-                        section: row.seccionEstudiante || '',
-                        status: 'active',
-                        schoolPeriod: 'A',
-                        schoolYear: new Date().getFullYear()
-                    });
+                    const existingStudent = students.find(s => s.email.toLowerCase() === row.emailUsuario.toLowerCase());
+                    if (existingStudent) {
+                        if (existingStudent.status !== 'active') {
+                             await updateStudent(existingStudent.id, { status: 'active', campusId: campusId || existingStudent.campusId, campusName: actualCampusName || existingStudent.campusName });
+                        }
+                    } else {
+                        await addStudent({
+                            name: row.nombreUsuario,
+                            email: row.emailUsuario,
+                            documentNumber: row.documentoUsuario || '',
+                            phone: row.telefonoUsuario || '',
+                            campusId: campusId,
+                            campusName: actualCampusName,
+                            class: row.gradoEstudiante || '',
+                            section: row.seccionEstudiante || '',
+                            status: 'active',
+                            schoolPeriod: 'A',
+                            schoolYear: new Date().getFullYear()
+                        });
+                    }
                     successCount++;
                 }
             } catch (e) {

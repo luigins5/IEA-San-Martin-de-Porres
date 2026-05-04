@@ -37,9 +37,22 @@ const MaintenanceView: React.FC<{ logout: () => void }> = ({ logout }) => (
     </div>
 );
 
+import Fix from './src/Fix';
+
 const AppContent: React.FC = () => {
     const { isAuthenticated, user, logout, isLoading: isAuthLoading } = useAuth();
     const { isLoading: isDataLoading, globalSettings } = useData();
+    const [path, setPath] = React.useState(window.location.hash);
+
+    React.useEffect(() => {
+        const handleHashChange = () => setPath(window.location.hash);
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    if (path === '#/fix') {
+        return <Fix />;
+    }
 
     // Activar el temporizador de inactividad (cierra sesión tras 30 min sin actividad)
     useInactivityTimeout();

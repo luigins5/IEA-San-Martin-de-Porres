@@ -29,7 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SUPER_ADMIN_EMAILS = ['ns.5.empresarial@gmail.com', 'luissalberto26@gmail.com'];
 
-const syncUserCampusId = async (userData: User, userDocRef: any, originalEmailInput?: string) => {
+const syncUserCampusId = async (userData: User, userDocRef: any, attemptedCampusId?: string, originalEmailInput?: string) => {
     if (userData.email && SUPER_ADMIN_EMAILS.includes((userData.email as string).trim().toLowerCase())) {
         userData.role = UserRole.SUPER_ADMIN;
     } else {
@@ -47,7 +47,12 @@ const syncUserCampusId = async (userData: User, userDocRef: any, originalEmailIn
             if (adminMatch) {
                 userData.role = UserRole.CAMPUS_ADMIN;
                 const record = adminMatch.data();
-                if (record.campusId) userData.campusId = record.campusId;
+                const validIds = record.campusIds || [record.campusId].filter(Boolean);
+                if (attemptedCampusId && validIds.includes(attemptedCampusId)) {
+                    userData.campusId = attemptedCampusId;
+                } else if (validIds.length > 0) {
+                    userData.campusId = validIds[0];
+                }
             } else {
                 // Check Teachers (small collection, safe to scan for case-insensitive matching)
                 const teacherSnap = await getDocs(collection(db, 'teachers'));
@@ -121,7 +126,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            const userData = await syncUserCampusId(userDoc.data() as User, userDocRef, firebaseUser.email || undefined);
+            const userData = await syncUserCampusId(userDoc.data() as User, userDocRef, undefined, firebaseUser.email || undefined);
             setUser(userData);
           } else {
             // Handle case where user is in Auth but not in Firestore
@@ -157,7 +162,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         if (userDataRaw.email && typeof userDataRaw.email === 'string') {
            userDataRaw.email = userDataRaw.email.trim().toLowerCase();
         }
-        const userData = await syncUserCampusId(userDataRaw, userDocRef, firebaseUser.email || undefined);
+        const userData = await syncUserCampusId(userDataRaw, userDocRef, campusId, firebaseUser.email || undefined);
         
         const isSuperAdminUser = firebaseUser.email ? SUPER_ADMIN_EMAILS.includes(firebaseUser.email.trim().toLowerCase()) : false;
         if (isSuperAdminUser && userData.role !== UserRole.SUPER_ADMIN) {
@@ -193,7 +198,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
         };
-        defaultUser = await syncUserCampusId(defaultUser, userDocRef, firebaseUser.email || undefined);
+        defaultUser = await syncUserCampusId(defaultUser, userDocRef, campusId, firebaseUser.email || undefined);
         
         const saveUser = { ...defaultUser };
         if (saveUser.campusId === undefined) delete saveUser.campusId;
@@ -242,7 +247,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
         if (userDataRaw.email && typeof userDataRaw.email === 'string') {
            userDataRaw.email = userDataRaw.email.trim().toLowerCase();
         }
-        const userData = await syncUserCampusId(userDataRaw, userDocRef, firebaseUser.email || email);
+        const userData = await syncUserCampusId(userDataRaw, userDocRef, campusId, firebaseUser.email || email);
         
         const isSuperAdminUser = firebaseUser.email ? SUPER_ADMIN_EMAILS.includes(firebaseUser.email.trim().toLowerCase()) : false;
         if (isSuperAdminUser && userData.role !== UserRole.SUPER_ADMIN) {
@@ -281,7 +286,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'U')}&background=random`,
           lastLogin: new Date().toISOString()
         };
-        defaultUser = await syncUserCampusId(defaultUser, userDocRef, firebaseUser.email || email);
+        defaultUser = await syncUserCampusId(defaultUser, userDocRef, campusId, firebaseUser.email || email);
         
         const saveUser = { ...defaultUser };
         if (saveUser.campusId === undefined) delete saveUser.campusId;

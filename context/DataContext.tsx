@@ -213,7 +213,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         setIsLoading(true);
         const unsubscribes: (() => void)[] = [];
 
-        const baseCollections = [
+        const baseCollections: Array<{name: string, setter: any}> = [
             { name: 'campuses', setter: setCampuses },
             { name: 'assignments', setter: setAssignments },
             { name: 'attendance', setter: setAttendanceRecords },
