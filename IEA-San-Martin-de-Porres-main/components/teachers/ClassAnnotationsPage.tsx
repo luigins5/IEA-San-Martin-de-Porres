@@ -1361,6 +1361,14 @@ const ClassAnnotationsPage: React.FC = () => {
                     </div>
                     {/* Action Buttons Row */}
                     <div className="flex flex-wrap gap-3 justify-center items-center w-full pt-2 border-t border-white/10">
+                        <button 
+                            onClick={() => setIsConceptsBulkModalOpen(true)} 
+                            title="Gestión Masiva de Conceptos" 
+                            className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50 shrink-0"
+                        >
+                            <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
+                        </button>
+                        
                         {(!isReadOnly || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && (
                             <>
                                 <button 
@@ -1377,14 +1385,6 @@ const ClassAnnotationsPage: React.FC = () => {
                                     <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Notas</span>
                                 </button>
                                 
-                                <button 
-                                    onClick={() => setIsConceptsBulkModalOpen(true)} 
-                                    title="Gestión Masiva de Conceptos" 
-                                    className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50 shrink-0"
-                                >
-                                    <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
-                                </button>
-
                                 <button 
                                     onClick={() => handleSelectAllClassRecords(classStudents)} 
                                     title="Limpiar todas las notas de esta asignatura" 
@@ -1609,7 +1609,7 @@ const ClassAnnotationsPage: React.FC = () => {
                     onClose={() => setIsConceptsBulkModalOpen(false)}
                     concepts={concepts}
                     onDelete={deleteConcept}
-                    isAdmin={user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN}
+                    isAdmin={user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN || user?.role === UserRole.TEACHER}
                     onSave={async (data) => {
                         let count = 0;
                         let nextCodeNumber = concepts.length > 0 ? 
