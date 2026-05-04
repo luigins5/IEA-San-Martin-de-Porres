@@ -1116,6 +1116,7 @@ const ClassAnnotationsPage: React.FC = () => {
                     const existingGrade = grades.find(g => 
                         g.studentId === item.studentId && 
                         g.assignmentTitle === item.criterion &&
+                        g.subject === selectedClass.subject &&
                         (g.period === selectedPeriod || (!g.period && getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod))
                     );
 

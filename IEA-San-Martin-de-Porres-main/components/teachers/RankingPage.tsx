@@ -221,7 +221,7 @@ const RankingPage: React.FC = () => {
         return groupStudents.map(student => {
             const studentGrades = grades.filter(g => {
                 const isSameStudent = g.studentId === student.id;
-                const isSamePeriod = getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod;
+                const isSamePeriod = g.period === selectedPeriod || (!g.period && getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod);
                 const isSameSubject = normalizeSubject(g.subject) === targetSubject;
                 // Some historical grades might have saved student.class instead of selectedClass.class. We check both.
                 const gradeClass = normalizeSubject(g.class);
