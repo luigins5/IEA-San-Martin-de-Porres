@@ -69,9 +69,11 @@ export interface Campus {
   id: string;
   name: string;
   address: string;
-  admin: string;
-  teachers: number;
-  students: number;
+  admin: string; // ID of the admin user
+  teachers: number; // Count of teachers
+  students: number; // Count of students
+  parentCampusId?: string; // If this is a subcampus, ID of the parent campus
+  isMainCampus?: boolean;
 }
 
 export interface Grade {

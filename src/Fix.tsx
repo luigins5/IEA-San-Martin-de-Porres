@@ -13,9 +13,21 @@ const Fix: React.FC = () => {
             await cleanCollection('teachers');
             setStatus('Cleaning duplicated students...');
             await cleanCollection('students');
-            setStatus('Done! All duplicates removed.');
+            setStatus('Fixing campuses...');
+            await fixCampuses();
+            setStatus('Done! All duplicates removed and campuses fixed.');
         } catch (e: any) {
             setStatus('Error: ' + e.message);
+        }
+    };
+
+    const fixCampuses = async () => {
+        const snap = await getDocs(collection(db, 'campuses'));
+        for (const docSnap of snap.docs) {
+             const data = docSnap.data();
+             if (data.isMainCampus === undefined) {
+                 await updateDoc(doc(db, 'campuses', docSnap.id), { isMainCampus: true });
+             }
         }
     };
 

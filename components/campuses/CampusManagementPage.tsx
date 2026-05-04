@@ -415,25 +415,35 @@ const CampusFormModal: React.FC<{
     onSave: (campus: Omit<Campus, 'id' | 'teachers' | 'students'>) => void;
     campusToEdit: Campus | null;
     admins: User[];
-}> = ({ onClose, onSave, campusToEdit, admins }) => {
+    campuses: Campus[];
+}> = ({ onClose, onSave, campusToEdit, admins, campuses }) => {
     const isEditing = !!campusToEdit;
     const [formData, setFormData] = useState({
         name: campusToEdit?.name || '',
         address: campusToEdit?.address || '',
         admin: campusToEdit?.admin || '',
+        isMainCampus: campusToEdit ? !!campusToEdit.isMainCampus : true,
+        parentCampusId: campusToEdit?.parentCampusId || ''
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
+        setFormData({ ...formData, [e.target.name]: value });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData);
+        onSave({
+            name: formData.name,
+            address: formData.address,
+            admin: formData.admin,
+            isMainCampus: formData.isMainCampus,
+            parentCampusId: formData.isMainCampus ? undefined : (formData.parentCampusId || undefined)
+        });
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4 backdrop-blur-sm shadow-xl">
             <Card className="w-full max-w-lg">
                 <div className="flex justify-between items-center mb-6 pb-3 border-b dark:border-gray-700">
                     <h2 className="text-lg font-bold text-gray-800 dark:text-white">{isEditing ? 'Editar Sede' : 'Nueva Sede'}</h2>
@@ -448,6 +458,33 @@ const CampusFormModal: React.FC<{
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Dirección</label>
                         <input type="text" name="address" value={formData.address} onChange={handleChange} className="w-full p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white" required />
                     </div>
+                    
+                    <div className="flex items-center gap-2">
+                        <input 
+                            type="checkbox" 
+                            id="isMainCampus"
+                            name="isMainCampus" 
+                            checked={formData.isMainCampus} 
+                            onChange={handleChange} 
+                            className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600"
+                        />
+                        <label htmlFor="isMainCampus" className="text-sm font-bold dark:text-gray-300 cursor-pointer">
+                            Es Sede Principal
+                        </label>
+                    </div>
+
+                    {!formData.isMainCampus && (
+                        <div>
+                            <label className="block text-sm font-bold mb-1 dark:text-gray-300">Sede Principal a la que pertenece</label>
+                            <select name="parentCampusId" value={formData.parentCampusId} onChange={handleChange} className="w-full p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white" required>
+                                <option value="">Seleccione una Sede Principal</option>
+                                {campuses.filter(c => c.isMainCampus || !c.parentCampusId).map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div>
                         <label className="block text-sm font-bold mb-1 dark:text-gray-300">Nombre del Administrador (Opcional)</label>
                         <select name="admin" value={formData.admin} onChange={handleChange} className="w-full p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-primary outline-none dark:bg-slate-800 dark:border-slate-700 dark:text-white">
@@ -457,6 +494,7 @@ const CampusFormModal: React.FC<{
                             ))}
                         </select>
                     </div>
+                    
                     <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700 mt-6">
                         <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
                         <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-blue-700 shadow-sm transition-colors">
@@ -579,21 +617,32 @@ const CampusManagementPage: React.FC = () => {
             campusNameMap.set(campus.id, campus.name);
         }
 
+        let currentMainCampusId: string | null = null;
+
         for (const row of parsedData) {
             try {
                 const tipo = row.tipoPerfil?.toLowerCase();
-                if (tipo === 'sede') {
+                const isMain = tipo === 'sede' || tipo === 'sede principal';
+                const isSub = tipo === 'subsede';
+                
+                if (isMain || isSub) {
                     if (!campusMap.has(row.nombreSede.toLowerCase())) {
                         const id = await addCampus({
                             name: row.nombreSede,
                             address: row.direccionSede,
-                            admin: row.nombreUsuario || ''
+                            admin: row.nombreUsuario || '',
+                            isMainCampus: isMain,
+                            parentCampusId: isSub && currentMainCampusId ? currentMainCampusId : undefined
                         });
                         if (id) {
                             campusMap.set(row.nombreSede.toLowerCase(), id);
                             campusNameMap.set(id, row.nombreSede);
+                            if (isMain) currentMainCampusId = id;
                         }
                         successCount++;
+                    } else {
+                        const id = campusMap.get(row.nombreSede.toLowerCase());
+                        if (isMain && id) currentMainCampusId = id;
                     }
                 }
             } catch (e) {
@@ -789,61 +838,122 @@ const CampusManagementPage: React.FC = () => {
                     </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {campuses.map(campus => (
-                        <div key={campus.id} className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-100 dark:border-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow duration-300 relative">
-                            <div className="p-6">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl dark:bg-blue-900/20 dark:text-blue-400">
-                                        <BuildingOfficeIcon className="w-6 h-6"/>
+                <div className="space-y-12">
+                    {campuses.filter(c => c.isMainCampus || !c.parentCampusId).map(mainCampus => (
+                        <div key={mainCampus.id} className="space-y-6">
+                            {/* Main Campus header/card */}
+                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border-2 border-primary/20 dark:border-primary/30 flex flex-col justify-between hover:shadow-md transition-shadow duration-300 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-2 h-full bg-primary/80"></div>
+                                <div className="p-6 pl-8">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="p-3 bg-blue-50 text-blue-600 rounded-xl dark:bg-blue-900/20 dark:text-blue-400">
+                                            <BuildingOfficeIcon className="w-6 h-6"/>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <EmergencyNukeButton campusId={mainCampus.id} campusName={mainCampus.name} onSuccess={() => {}} />
+                                            <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded dark:bg-slate-800">{mainCampus.teachers + mainCampus.students} Usuarios</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <EmergencyNukeButton campusId={campus.id} campusName={campus.name} onSuccess={() => {}} />
-                                        <span className="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded dark:bg-slate-800">{campus.teachers + campus.students} Usuarios</span>
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-1">{mainCampus.name} <span className="text-xs ml-2 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full dark:bg-blue-900/40 dark:text-blue-300">Sede Principal</span></h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                        {mainCampus.address}
+                                    </p>
+                                    
+                                    <div className="mt-6 flex flex-wrap gap-6">
+                                        <div className="flex items-center gap-2 text-sm border-r border-slate-100 pr-6 dark:border-slate-800">
+                                            <span className="text-slate-500">Admin:</span>
+                                            <span className="font-semibold text-slate-700 dark:text-slate-300">{mainCampus.admin || 'Sin asignar'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm border-r border-slate-100 pr-6 dark:border-slate-800">
+                                            <span className="text-slate-500">Profesores:</span>
+                                            <span className="font-semibold text-slate-700 dark:text-slate-300">{mainCampus.teachers}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <span className="text-slate-500">Estudiantes:</span>
+                                            <span className="font-semibold text-slate-700 dark:text-slate-300">{mainCampus.students}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{campus.name}</h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                    {campus.address}
-                                </p>
                                 
-                                <div className="mt-6 space-y-3">
-                                    <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-2 dark:border-slate-800">
-                                        <span className="text-slate-500">Admin</span>
-                                        <span className="font-semibold text-slate-700 dark:text-slate-300">{campus.admin || 'Sin asignar'}</span>
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 pl-8 rounded-b-xl border-t border-slate-100 dark:border-slate-800 flex justify-between items-center flex-wrap gap-2">
+                                    <div className="flex gap-4">
+                                         <button onClick={() => openEditModal(mainCampus)} className="text-sm font-bold text-primary hover:text-blue-700 flex items-center gap-1.5 transition-colors">
+                                            <ClipboardDocumentListIcon className="w-4 h-4" /> Detalles
+                                        </button>
+                                        <button onClick={() => setViewingProfilesCampus(mainCampus)} className="text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 transition-colors">
+                                            <UsersIcon className="w-4 h-4" /> Observar
+                                        </button>
                                     </div>
-                                    <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-2 dark:border-slate-800">
-                                        <span className="text-slate-500">Profesores</span>
-                                        <span className="font-semibold text-slate-700 dark:text-slate-300">{campus.teachers}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-500">Estudiantes</span>
-                                        <span className="font-semibold text-slate-700 dark:text-slate-300">{campus.students}</span>
+                                    <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                                        <button onClick={() => openEditModal(mainCampus)} className="p-2 rounded-full bg-white text-slate-500 border border-slate-200 hover:border-amber-300 hover:text-amber-600 hover:shadow-sm transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:text-amber-400" title="Editar"><EditIcon className="w-4 h-4"/></button>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-b-xl border-t border-slate-100 dark:border-slate-800 flex justify-between items-center flex-wrap gap-2">
-                                <div className="flex gap-2">
-                                     <button onClick={() => openEditModal(campus)} className="text-sm font-bold text-primary hover:text-blue-700 flex items-center gap-1.5 transition-colors">
-                                        <ClipboardDocumentListIcon className="w-4 h-4" /> Detalles
-                                    </button>
-                                    <button onClick={() => setViewingProfilesCampus(campus)} className="text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 transition-colors">
-                                        <UsersIcon className="w-4 h-4" /> Observar
-                                    </button>
+
+                            {/* Subcampuses */}
+                            {campuses.filter(c => c.parentCampusId === mainCampus.id).length > 0 && (
+                                <div className="ml-4 md:ml-12 pl-6 md:pl-8 border-l border-indigo-200 dark:border-indigo-800/50">
+                                    <h4 className="text-sm font-bold text-slate-400 dark:text-slate-500 mb-4 tracking-wider uppercase">Subsedes Asociadas</h4>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        {campuses.filter(c => c.parentCampusId === mainCampus.id).map(subCampus => (
+                                            <div key={subCampus.id} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow duration-300 relative">
+                                                <div className="p-5">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg dark:bg-indigo-900/20 dark:text-indigo-400">
+                                                                <BuildingOfficeIcon className="w-5 h-5"/>
+                                                            </div>
+                                                            <h3 className="text-base font-bold text-slate-800 dark:text-white line-clamp-1" title={subCampus.name}>{subCampus.name}</h3>
+                                                        </div>
+                                                        <EmergencyNukeButton campusId={subCampus.id} campusName={subCampus.name} onSuccess={() => {}} />
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mb-4">
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                                        {subCampus.address}
+                                                    </p>
+                                                    
+                                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
+                                                            <span className="text-slate-500 block mb-0.5">Admin</span>
+                                                            <span className="font-semibold text-slate-700 dark:text-slate-300 truncate block">{subCampus.admin || 'Sin asignar'}</span>
+                                                        </div>
+                                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded flex justify-between items-center">
+                                                            <div className="text-center w-1/2 border-r border-slate-200 dark:border-slate-700">
+                                                                <span className="text-slate-500 block">Profs</span>
+                                                                <span className="font-semibold text-slate-700 dark:text-slate-300">{subCampus.teachers}</span>
+                                                            </div>
+                                                            <div className="text-center w-1/2">
+                                                                <span className="text-slate-500 block">Estds</span>
+                                                                <span className="font-semibold text-slate-700 dark:text-slate-300">{subCampus.students}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 rounded-b-xl border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                                                    <div className="flex gap-3">
+                                                         <button onClick={() => openEditModal(subCampus)} className="text-xs font-bold text-primary hover:text-blue-700 flex items-center gap-1 transition-colors">
+                                                            <ClipboardDocumentListIcon className="w-3.5 h-3.5" /> Detalles
+                                                        </button>
+                                                        <button onClick={() => setViewingProfilesCampus(subCampus)} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                                                            <UsersIcon className="w-3.5 h-3.5" /> Observar
+                                                        </button>
+                                                    </div>
+                                                    <button onClick={() => openEditModal(subCampus)} className="p-1.5 rounded-full bg-white text-slate-500 border border-slate-200 hover:border-amber-300 hover:text-amber-600 hover:shadow-sm transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:text-amber-400" title="Editar"><EditIcon className="w-3.5 h-3.5"/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                                    <button onClick={() => openEditModal(campus)} className="p-2 rounded-full bg-white text-slate-500 border border-slate-200 hover:border-amber-300 hover:text-amber-600 hover:shadow-sm transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:text-amber-400" title="Editar"><EditIcon className="w-4 h-4"/></button>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     ))}
                 </div>
             </Card>
 
             {isBulkModalOpen && <BulkUploadModal onClose={() => setIsBulkModalOpen(false)} onSave={handleBulkSave} />}
-            {isModalOpen && <CampusFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} campusToEdit={editingCampus} admins={admins} />}
+            {isModalOpen && <CampusFormModal onClose={() => setIsModalOpen(false)} onSave={handleSave} campusToEdit={editingCampus} admins={admins} campuses={campuses} />}
             {deletingCampus && <DeleteConfirmationModal campus={deletingCampus} onClose={() => setDeletingCampus(null)} onConfirm={handleDelete} />}
             {viewingProfilesCampus && (
                 <ViewProfilesModal 

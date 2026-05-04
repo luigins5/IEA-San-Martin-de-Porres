@@ -213,7 +213,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         setIsLoading(true);
         const unsubscribes: (() => void)[] = [];
 
-        const baseCollections: Array<{name: string, setter: any}> = [
+        const baseCollections: Array<{name: string, setter: Function}> = [
             { name: 'campuses', setter: setCampuses },
             { name: 'assignments', setter: setAssignments },
             { name: 'attendance', setter: setAttendanceRecords },
@@ -226,7 +226,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             { name: 'students', setter: setStudents }
         ];
 
-        let collections = [...baseCollections] as any[];
+        let collections: Array<{name: string, setter: Function}> = [...baseCollections];
         if (user?.role === 'Super Administrador' || user?.role === 'Administrador de Sede') {
             collections.push({ name: 'admins', setter: setAdmins });
         }
