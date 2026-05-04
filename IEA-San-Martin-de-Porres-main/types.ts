@@ -13,6 +13,7 @@ export interface User {
   email: string;
   role: UserRole;
   campusId?: string; 
+  campusIds?: string[];
   campusName?: string;
   avatar: string;
   lastLogin?: string;
@@ -84,6 +85,7 @@ export interface Grade {
     date: string;
     comments?: string;
     conceptCode?: string;
+    period?: number;
 }
 
 export interface AttendanceRecord {

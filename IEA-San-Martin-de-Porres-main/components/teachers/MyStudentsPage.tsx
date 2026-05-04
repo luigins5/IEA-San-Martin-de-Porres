@@ -338,13 +338,13 @@ const MyStudentsPage: React.FC = () => {
                                                                 <div className="bg-white p-3 rounded border dark:bg-slate-800 dark:border-slate-700">
                                                                     <h4 className="font-bold text-xs mb-2">Desglose de Notas (P{activePeriod})</h4>
                                                                     <ul className="space-y-1 text-xs">
-                                                                        {grades.filter(g => g.studentId === student.id && g.subject === selectedClass.subject && getPeriodFromDate(g.date, numberOfPeriods) === activePeriod).map(g => (
+                                                                        {grades.filter(g => g.studentId === student.id && g.subject === selectedClass.subject && ((g as any).period === activePeriod || getPeriodFromDate(g.date, numberOfPeriods) === activePeriod)).map(g => (
                                                                             <li key={g.id} className="flex justify-between border-b pb-1">
                                                                                 <span>{g.assignmentTitle}</span>
                                                                                 <span className="font-bold">{g.score} ({g.percentage}%)</span>
                                                                             </li>
                                                                         ))}
-                                                                        {grades.filter(g => g.studentId === student.id && g.subject === selectedClass.subject && getPeriodFromDate(g.date, numberOfPeriods) === activePeriod).length === 0 && <li className="text-gray-400">Sin notas</li>}
+                                                                        {grades.filter(g => g.studentId === student.id && g.subject === selectedClass.subject && ((g as any).period === activePeriod || getPeriodFromDate(g.date, numberOfPeriods) === activePeriod)).length === 0 && <li className="text-gray-400">Sin notas</li>}
                                                                     </ul>
                                                                 </div>
                                                                 <div className="bg-white p-3 rounded border dark:bg-slate-800 dark:border-slate-700">

@@ -626,8 +626,7 @@ const BulkUploadConceptsModal = ({ onClose, onSave, concepts, onDelete, isAdmin 
                         </div>
                     )}
                     
-                    {isAdmin && (
-                        <div className="mt-8 border-t dark:border-slate-800 pt-6">
+                    <div className="mt-8 border-t dark:border-slate-800 pt-6">
                              <h4 className="font-bold text-slate-800 dark:text-white mb-4">Gestión de Conceptos Actuales</h4>
                              {concepts.length === 0 ? (
                                  <p className="text-sm text-slate-500">No hay conceptos guardados actualmente.</p>
@@ -651,7 +650,6 @@ const BulkUploadConceptsModal = ({ onClose, onSave, concepts, onDelete, isAdmin 
                                  </div>
                              )}
                         </div>
-                    )}
                 </div>
 
                 <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t dark:border-slate-800 flex gap-3 shrink-0">
@@ -1077,7 +1075,8 @@ const ClassAnnotationsPage: React.FC = () => {
                     percentage: 10,
                     date: today,
                     comments: input.observation || 'Nota rápida',
-                    conceptCode: selectedConcept ? selectedConcept.code : '' 
+                    conceptCode: selectedConcept ? selectedConcept.code : '',
+                    period: selectedPeriod
                 });
             }
 
@@ -1117,7 +1116,7 @@ const ClassAnnotationsPage: React.FC = () => {
                     const existingGrade = grades.find(g => 
                         g.studentId === item.studentId && 
                         g.assignmentTitle === item.criterion &&
-                        getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod
+                        (g.period === selectedPeriod || (!g.period && getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod))
                     );
 
                     if (existingGrade) {
@@ -1139,7 +1138,8 @@ const ClassAnnotationsPage: React.FC = () => {
                             percentage: 10,
                             date: today,
                             comments: item.observation || 'Carga masiva',
-                            conceptCode: selectedConcept ? selectedConcept.code : ''
+                            conceptCode: selectedConcept ? selectedConcept.code : '',
+                            period: selectedPeriod
                         });
                         count++;
                     }
@@ -1215,7 +1215,7 @@ const ClassAnnotationsPage: React.FC = () => {
 
     const getStudentHistory = (studentId: string) => {
         const studentGrades = grades
-            .filter(g => g.studentId === studentId && getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod)
+            .filter(g => g.studentId === studentId && (g.period === selectedPeriod || (!g.period && getPeriodFromDate(g.date, numberOfPeriods) === selectedPeriod)))
             .map(g => ({ ...g, type: 'Nota', value: g.score, detail: g.assignmentTitle, id: g.id, date: g.date, raw: g, studentId }));
         
         const studentAttendance = attendanceRecords
@@ -1251,31 +1251,40 @@ const ClassAnnotationsPage: React.FC = () => {
         const selectedClass = myClasses.find(c => c.id === selectedClassId);
         if (!selectedClass) return;
         
-        const headers = ["Documento", "Nombre Estudiante", "Nota Final", "Faltas", "Observación"];
+        const doc = new jsPDF();
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Reporte de Notas - ${selectedClass.subject} - ${selectedClass.class} ${selectedClass.section || ''}`, 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Periodo: ${selectedPeriod} | Fecha: ${new Date().toLocaleDateString()}`, 14, 28);
+
+        const headers = [["Documento", "Nombre Estudiante", "Nota Final", "Faltas", "Observación"]];
         const rows = classStudents.map(s => {
             const history = getStudentHistory(s.id);
             const nota = history.find(h => h.type === 'Nota');
             const faltas = history.filter(h => h.type === 'Falla').reduce((acc, curr) => acc + (curr.value as number), 0);
-            const observation = nota ? ((nota.raw as any).comments || '').replace(/,/g, ' ') : '-';
+            const observation = nota ? ((nota.raw as any).comments || '') : '-';
             return [
                 s.documentNumber,
-                `"${s.name}"`,
+                s.name,
                 nota ? nota.value : '-',
                 faltas,
-                `"${observation}"`
-            ].join(',');
+                observation
+            ];
         });
-        
-        const csvContent = "\uFEFF" + headers.join(',') + '\n' + rows.join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Notas_${selectedClass.subject.replace(/\s+/g,'_')}_P${selectedPeriod}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+
+        autoTable(doc, {
+            head: headers,
+            body: rows,
+            startY: 35,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [41, 128, 185] }
+        });
+
+        const safeFilename = `Notas_${selectedClass.subject}_${selectedClass.class}_P${selectedPeriod}.pdf`.replace(/[^a-z0-9_.-]/gi, '_');
+        doc.save(safeFilename);
     };
 
     return (
@@ -1367,15 +1376,13 @@ const ClassAnnotationsPage: React.FC = () => {
                                     <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Notas</span>
                                 </button>
                                 
-                                {(user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && (
-                                    <button 
-                                        onClick={() => setIsConceptsBulkModalOpen(true)} 
-                                        title="Gestión Masiva de Conceptos" 
-                                        className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50 shrink-0"
-                                    >
-                                        <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
-                                    </button>
-                                )}
+                                <button 
+                                    onClick={() => setIsConceptsBulkModalOpen(true)} 
+                                    title="Gestión Masiva de Conceptos" 
+                                    className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50 shrink-0"
+                                >
+                                    <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
+                                </button>
 
                                 <button 
                                     onClick={() => handleSelectAllClassRecords(classStudents)} 

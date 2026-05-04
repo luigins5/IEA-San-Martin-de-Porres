@@ -525,21 +525,34 @@ const CampusManagementPage: React.FC = () => {
             campusNameMap.set(campus.id, campus.name);
         }
 
+        let currentMainCampusId: string | null = null;
+
         for (const row of parsedData) {
             try {
                 const tipo = row.tipoPerfil?.toLowerCase();
-                if (tipo === 'sede') {
+                if (tipo === 'sede' || tipo === 'sede principal' || tipo === 'subsede') {
+                    const isMain = tipo === 'sede' || tipo === 'sede principal';
                     if (!campusMap.has(row.nombreSede.toLowerCase())) {
                         const id = await addCampus({
                             name: row.nombreSede,
-                            address: row.direccionSede,
-                            admin: row.nombreUsuario || ''
+                            address: row.direccionSede || 'N/A',
+                            admin: row.nombreUsuario || '',
+                            isMainCampus: isMain,
+                            parentCampusId: isMain ? undefined : (currentMainCampusId || undefined)
                         });
                         if (id) {
                             campusMap.set(row.nombreSede.toLowerCase(), id);
                             campusNameMap.set(id, row.nombreSede);
+                            if (isMain) {
+                                currentMainCampusId = id;
+                            }
                         }
                         successCount++;
+                    } else {
+                        // Already exists, just track it if it's main
+                        if (isMain) {
+                            currentMainCampusId = campusMap.get(row.nombreSede.toLowerCase()) || null;
+                        }
                     }
                 }
             } catch (e) {
@@ -554,20 +567,32 @@ const CampusManagementPage: React.FC = () => {
                 const campusId = campusMap.get(row.nombreSede?.toLowerCase());
                 const actualCampusName = campusId ? campusNameMap.get(campusId) : row.nombreSede;
                 
-                if (!campusId && tipo !== 'sede') {
+                if (!campusId && tipo !== 'sede' && tipo !== 'sede principal' && tipo !== 'subsede') {
                     errorCount++;
                     continue;
                 }
 
                 if (tipo === 'admin') {
-                    await addAdmin({
-                        name: row.nombreUsuario,
-                        email: row.emailUsuario,
-                        campusId: campusId,
-                        campusName: actualCampusName,
-                        status: 'active'
-                    });
-                    successCount++;
+                    const existingAdmin = admins.find(a => a.email.toLowerCase() === row.emailUsuario.toLowerCase());
+                    if (existingAdmin) {
+                        const currentCampusIds = existingAdmin.campusIds || (existingAdmin.campusId ? [existingAdmin.campusId] : []);
+                        if (campusId && !currentCampusIds.includes(campusId)) {
+                             await updateAdmin(existingAdmin.id, { 
+                                 campusIds: [...currentCampusIds, campusId]
+                             });
+                        }
+                        successCount++;
+                    } else {
+                        await addAdmin({
+                            name: row.nombreUsuario,
+                            email: row.emailUsuario,
+                            campusId: campusId,
+                            campusIds: campusId ? [campusId] : [],
+                            campusName: actualCampusName,
+                            status: 'active'
+                        });
+                        successCount++;
+                    }
                 } else if (tipo === 'profesor') {
                     const teacherId = await addTeacher({
                         name: row.nombreUsuario,
