@@ -110,7 +110,7 @@ const MyStudentsPage: React.FC = () => {
             setActivePeriod(getPeriodFromDate(today, settings.numberOfPeriods));
         }
 
-    }, [user, assignments, globalSettings, campusSettings]);
+    }, [user, assignments, teachers, globalSettings, campusSettings]);
 
     const myStudents = useMemo(() => {
         if (!selectedClass) return [];
