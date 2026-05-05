@@ -32,6 +32,9 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts,
                 return;
             }
 
+            const headerRow = rows[0].toLowerCase();
+            const hasNameColGlobally = headerRow.includes('nombre');
+
             const dataRows = rows.slice(1);
             const results: any[] = [];
             const newErrors: string[] = [];
@@ -41,18 +44,31 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts,
                 const cols = row.split(separator).map(c => c.trim().replace(/^"|"$/g, ''));
                 if (cols.length < 2) return;
 
-                const hasNameCol = cols.length >= 6; 
                 const docNum = cols[0].replace(/^\uFEFF/, '');
-                const criterion = (hasNameCol ? cols[2] : cols[1]) || 'Examen';
-                const scoreRaw = hasNameCol ? cols[3] : cols[2];
-                let observation = (hasNameCol ? cols[4] : cols[3]) || '';
-                const faultsRaw = hasNameCol ? cols[5] : cols[4];
+                const criterion = (hasNameColGlobally ? cols[2] : cols[1]) || 'Examen';
+                const scoreRaw = hasNameColGlobally ? cols[3] : cols[2];
+                let observation = (hasNameColGlobally ? cols[4] : cols[3]) || '';
+                const faultsRaw = hasNameColGlobally ? cols[5] : cols[4];
 
+                let conceptCodeMatch = '';
                 if (observation && concepts && concepts.length > 0) {
-                    const trimmedCode = observation.trim();
-                    const matchedConcept = concepts.find(c => c.code.toLowerCase() === trimmedCode.toLowerCase());
+                    const trimmedObs = observation.trim();
+                    const trimmedLower = trimmedObs.toLowerCase();
+                    const numVal = parseInt(trimmedLower.replace(/^c/, ''), 10);
+                    
+                    const matchedConcept = concepts.find(c => {
+                         if (c.code.toLowerCase() === trimmedLower) return true;
+                         if (c.text.toLowerCase() === trimmedLower) return true;
+                         if (!isNaN(numVal)) {
+                             const cNumVal = parseInt(c.code.toLowerCase().replace(/^c/, ''), 10);
+                             if (cNumVal === numVal) return true;
+                         }
+                         return false;
+                    });
+                    
                     if (matchedConcept) {
                         observation = matchedConcept.text;
+                        conceptCodeMatch = matchedConcept.code;
                     }
                 }
 
@@ -72,8 +88,8 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts,
                     newErrors.push(`Fila ${index + 2}: El estudiante con documento/nombre ${docNum} no pertenece a esta clase.`);
                 } else if (score !== undefined && (isNaN(score) || score < 0 || score > 5)) {
                     newErrors.push(`Fila ${index + 2}: La nota (${scoreRaw}) debe ser un número entre 0.0 y 5.0 para ${student.name}.`);
-                } else if (score === undefined && faults === undefined) {
-                    newErrors.push(`Fila ${index + 2}: Debe ingresar una nota o una cantidad de faltas para el estudiante ${student.name}.`);
+                } else if (score === undefined && faults === undefined && !conceptCodeMatch && !observation) {
+                    newErrors.push(`Fila ${index + 2}: Debe ingresar una nota, cantidad de faltas o un concepto para el estudiante ${student.name}.`);
                 } else {
                     results.push({
                         studentId: student.id,
@@ -81,7 +97,8 @@ const BulkUploadModal = ({ onClose, onSave, classStudents, isReadOnly, concepts,
                         score,
                         criterion,
                         observation,
-                        faults
+                        faults,
+                        conceptCode: conceptCodeMatch
                     });
                 }
             });
@@ -1110,9 +1127,13 @@ const ClassAnnotationsPage: React.FC = () => {
         
         for (const item of data) {
             try {
-                const selectedConcept = concepts.find(c => c.text === item.observation);
+                let conceptCode = item.conceptCode;
+                if (!conceptCode) {
+                    const selectedConcept = concepts.find(c => c.text === item.observation);
+                    if (selectedConcept) conceptCode = selectedConcept.code;
+                }
                 
-                if (item.score !== undefined) {
+                if (item.score !== undefined || item.observation || conceptCode) {
                     const existingGrade = grades.find(g => 
                         g.studentId === item.studentId && 
                         g.assignmentTitle === item.criterion &&
@@ -1121,11 +1142,15 @@ const ClassAnnotationsPage: React.FC = () => {
                     );
 
                     if (existingGrade) {
-                        if (existingGrade.score !== item.score || existingGrade.comments !== (item.observation || 'Carga masiva')) {
+                        const newScore = item.score !== undefined ? item.score : existingGrade.score;
+                        const newComments = item.observation || existingGrade.comments || 'Carga masiva';
+                        const newConceptCode = conceptCode || existingGrade.conceptCode || '';
+
+                        if (existingGrade.score !== newScore || existingGrade.comments !== newComments || existingGrade.conceptCode !== newConceptCode) {
                             await updateGrade(existingGrade.id, {
-                                score: item.score,
-                                comments: item.observation || 'Carga masiva',
-                                conceptCode: selectedConcept ? selectedConcept.code : existingGrade.conceptCode
+                                score: newScore,
+                                comments: newComments,
+                                conceptCode: newConceptCode
                             });
                             count++;
                         }
@@ -1135,11 +1160,11 @@ const ClassAnnotationsPage: React.FC = () => {
                             subject: selectedClass.subject,
                             class: selectedClass.class,
                             assignmentTitle: item.criterion,
-                            score: item.score,
+                            score: item.score !== undefined ? item.score : 0,
                             percentage: 10,
                             date: today,
                             comments: item.observation || 'Carga masiva',
-                            conceptCode: selectedConcept ? selectedConcept.code : '',
+                            conceptCode: conceptCode || '',
                             period: selectedPeriod
                         });
                         count++;
