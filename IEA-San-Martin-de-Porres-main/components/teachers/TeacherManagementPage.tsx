@@ -15,9 +15,9 @@ const SUBJECTS_LIST = [
 ];
 
 const GRADES_LIST = [
-    'Pre jardín', 'Jardín', 'Transición', 
+    'Preescolar', 
     '1ro', '2do', '3ro', '4to', '5to', 
-    '6', '7', '8', '9', '10', '11'
+    '6', '7', '8', '9', '10', '11', 'Nocturno'
 ];
 
 const SECTIONS_LIST = ['A', 'B', 'C', '1', '2', '3'];

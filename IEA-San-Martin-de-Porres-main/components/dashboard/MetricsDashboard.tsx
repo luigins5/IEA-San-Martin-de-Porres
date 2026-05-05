@@ -54,7 +54,7 @@ export const MetricsDashboard: React.FC = () => {
 
     const availableClasses = useMemo(() => {
         if (filterTeacher || filterSubject) return Array.from(new Set(availableAssignments.map(a => a.class))).sort();
-        return ['Pre jardín', 'Jardín', 'Transición', '1ro', '2do', '3ro', '4to', '5to', '6', '7', '8', '9', '10', '11'];
+        return ['Preescolar', '1ro', '2do', '3ro', '4to', '5to', '6', '7', '8', '9', '10', '11', 'Nocturno'];
     }, [availableAssignments, filterTeacher, filterSubject]);
 
     const availableSections = useMemo(() => {

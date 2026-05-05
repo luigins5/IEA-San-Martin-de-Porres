@@ -275,9 +275,9 @@ const StudentFormModal: React.FC<{
     };
 
     const gradeOptions = [
-        { category: 'Preescolar', grades: ['Pre jardín', 'Jardín', 'Transición'] },
+        { category: 'Preescolar', grades: ['Preescolar'] },
         { category: 'Primaria', grades: ['1ro', '2do', '3ro', '4to', '5to'] },
-        { category: 'Secundaria', grades: ['6', '7', '8', '9', '10', '11'] }
+        { category: 'Secundaria', grades: ['6', '7', '8', '9', '10', '11', 'Nocturno'] }
     ];
 
     return (
@@ -576,9 +576,9 @@ const StudentManagementPage: React.FC = () => {
     const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
 
     const gradeOptions = [
-        { category: 'Preescolar', grades: ['Pre jardín', 'Jardín', 'Transición'] },
+        { category: 'Preescolar', grades: ['Preescolar'] },
         { category: 'Primaria', grades: ['1ro', '2do', '3ro', '4to', '5to'] },
-        { category: 'Secundaria', grades: ['6', '7', '8', '9', '10', '11'] }
+        { category: 'Secundaria', grades: ['6', '7', '8', '9', '10', '11', 'Nocturno'] }
     ];
 
     return (
