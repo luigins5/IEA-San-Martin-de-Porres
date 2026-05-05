@@ -1386,18 +1386,18 @@ const ClassAnnotationsPage: React.FC = () => {
                     </div>
                     {/* Action Buttons Row */}
                     <div className="flex flex-wrap gap-3 justify-center items-center w-full pt-2 border-t border-white/10">
-                        <button 
-                            onClick={() => setIsConceptsBulkModalOpen(true)} 
-                            title="Gestión Masiva de Conceptos" 
-                            className="bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md border border-teal-400/50 shrink-0"
-                        >
-                            <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
-                        </button>
-                        
-                        {(!isReadOnly || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && (
-                            <>
                                 <button 
-                                    id="masiva-notas" 
+                                    onClick={() => setIsConceptsBulkModalOpen(true)} 
+                                    title="Gestión Masiva de Conceptos" 
+                                    className="bg-teal-500 hover:bg-teal-400 text-white border border-teal-400/50 font-bold py-3 px-4 rounded-2xl transition-all text-sm flex items-center justify-center gap-2 shadow-md shrink-0"
+                                >
+                                    <UploadIcon className="w-5 h-5" /> <span className="hidden sm:inline">Masiva Conceptos</span>
+                                </button>
+                                
+                                {(!isReadOnly || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.CAMPUS_ADMIN) && (
+                                    <>
+                                        <button 
+                                            id="masiva-notas" 
                                     onClick={() => {
                                         if (!selectedClassId) {
                                             alert("Seleccione una asignatura primero.");
@@ -1497,9 +1497,14 @@ const ClassAnnotationsPage: React.FC = () => {
                                                     type="number" min="0.0" max="5.0" step="0.1" value={input.score} onChange={(e) => handleInputChange(student.id, 'score', e.target.value)} placeholder="-"
                                                     disabled={isReadOnly}
                                                     className={`w-full py-3 text-center rounded-2xl text-base font-bold transition-all outline-none shadow-sm ${studentErrors.score ? 'border-2 border-red-400 bg-red-50' : getScoreColorClass(input.score)} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`} />
+                                                {latestSavedGrade && (
+                                                    <div className="text-[10px] text-slate-400 text-center mt-1 font-medium bg-slate-50 dark:bg-slate-800 rounded-lg py-0.5">
+                                                        Nota: {latestSavedGrade.value}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-4 py-5 align-middle">
-                                                <div className="flex gap-2 items-center">
+                                                <div className="flex gap-2 items-start">
                                                     <div className="flex-1 min-w-0" id={index === 0 ? "student-observacion-0" : undefined}>
                                                         <SearchableConceptSelect 
                                                             concepts={concepts}
@@ -1508,12 +1513,18 @@ const ClassAnnotationsPage: React.FC = () => {
                                                             disabled={isReadOnly}
                                                             hasError={!!studentErrors.observation}
                                                             isSmall
+                                                            placeholder={latestSavedGrade ? (latestSavedGrade.raw as any).comments || "Seleccionar..." : "Seleccionar concepto..."}
                                                         />
+                                                        {latestSavedGrade && (latestSavedGrade.raw as any).comments && (
+                                                            <div className="text-[10px] text-slate-400 mt-1 truncate px-1" title={(latestSavedGrade.raw as any).comments}>
+                                                                {(latestSavedGrade.raw as any).comments}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <button 
                                                         onClick={() => setIsConceptModalOpen(true)}
                                                         disabled={isReadOnly}
-                                                        className={`p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors dark:bg-blue-900/20 dark:text-blue-400 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                                                        className={`p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors dark:bg-blue-900/20 dark:text-blue-400 mt-0.5 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                                         title="Añadir concepto personalizado"
                                                     >
                                                         <PlusIcon className="w-4 h-4" />
